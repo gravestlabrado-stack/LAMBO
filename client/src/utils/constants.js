@@ -65,3 +65,12 @@ export const HEALTH_COLOR_MAP = {
     badge: 'border-[#E57373] text-[#E57373]',
   },
 };
+
+export const CAMPUS_COORDINATES = {
+  lat: 10.130166,
+  lng: 123.545044,
+  name: 'Cebu Technological University - Barili Campus',
+  shortName: 'CTU Barili',
+  location: 'Cagay, Barili, Cebu, Philippines',
+};
+

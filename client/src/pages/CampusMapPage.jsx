@@ -1,9 +1,11 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import treeService from '../services/treeService';
 import { useAuth } from '../hooks/useAuth';
+import { CAMPUS_COORDINATES } from '../utils/constants';
+import { getCurrentCoordinates } from '../utils/geolocation';
 
 // Custom Tactical Leaflet Pin Icons with health status colors & owner indicator
 const createPinIcon = (color, isOwner = false) => {
@@ -38,11 +40,55 @@ const createPinIcon = (color, isOwner = false) => {
   });
 };
 
-// Map controller to fit bounds to loaded specimens or user location
-function MapBoundsController({ trees, userLocation }) {
+// User GPS Beacon Pin Icon
+const createUserGpsIcon = () =>
+  L.divIcon({
+    className: 'user-gps-beacon',
+    html: `
+      <div style="position: relative; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;">
+        <div style="
+          position: absolute;
+          inset: 0;
+          border-radius: 50%;
+          background: #4285F4;
+          opacity: 0.4;
+          animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+        "></div>
+        <div style="
+          position: relative;
+          width: 16px;
+          height: 16px;
+          border-radius: 50%;
+          background: #4285F4;
+          border: 3px solid #FFFFFF;
+          box-shadow: 0 0 10px #4285F4;
+        "></div>
+      </div>
+    `,
+    iconSize: [26, 26],
+    iconAnchor: [13, 13],
+    popupAnchor: [0, -14],
+  });
+
+// Map controller to fly smoothly when a target location is triggered
+function MapFlyToHandler({ target, zoom = 17 }) {
   const map = useMap();
+  useEffect(() => {
+    if (target && target[0] && target[1]) {
+      map.flyTo(target, zoom, { duration: 1.4 });
+    }
+  }, [target, zoom, map]);
+  return null;
+}
+
+// Initial bounds fitter (only runs once on initial tree data load if no manual target requested)
+function MapBoundsController({ trees, hasManualTarget }) {
+  const map = useMap();
+  const hasFittedRef = useRef(false);
 
   useEffect(() => {
+    if (hasManualTarget || hasFittedRef.current) return;
+
     const validCoords = trees
       .map((t) => {
         const lat = t.coordinates?.lat;
@@ -54,10 +100,9 @@ function MapBoundsController({ trees, userLocation }) {
     if (validCoords.length > 0) {
       const bounds = L.latLngBounds(validCoords);
       map.fitBounds(bounds, { padding: [50, 50], maxZoom: 17, duration: 1 });
-    } else if (userLocation) {
-      map.flyTo(userLocation, 16, { duration: 1 });
+      hasFittedRef.current = true;
     }
-  }, [trees, userLocation, map]);
+  }, [trees, hasManualTarget, map]);
 
   return null;
 }
@@ -70,11 +115,17 @@ export default function CampusMapPage() {
   const [loading, setLoading] = useState(true);
   const [scope, setScope] = useState('all'); // 'all' (Global Campus) | 'my' (My Plants/Trees)
   const [selectedHealth, setSelectedHealth] = useState('All');
-  const [userLocation, setUserLocation] = useState(null);
-  const [isLocating, setIsLocating] = useState(false);
 
-  // Default campus center coordinates (fallback)
-  const defaultCenter = [14.1675, 121.2434];
+  // Location states
+  const [flyTarget, setFlyTarget] = useState(null);
+  const [userLocation, setUserLocation] = useState(null);
+  const [userAccuracy, setUserAccuracy] = useState(null);
+  const [isLocating, setIsLocating] = useState(false);
+  const [locationError, setLocationError] = useState('');
+  const [hasManualTarget, setHasManualTarget] = useState(false);
+
+  // Default campus center coordinates: CTU Barili Campus (Cagay, Barili, Cebu)
+  const defaultCenter = [CAMPUS_COORDINATES.lat, CAMPUS_COORDINATES.lng];
 
   // Fetch all campus trees from backend API
   const fetchMapTrees = async () => {
@@ -115,27 +166,31 @@ export default function CampusMapPage() {
     });
   }, [scopedTrees, selectedHealth]);
 
-  // User GPS locator
-  const handleLocateUser = () => {
-    if (!navigator.geolocation) {
-      alert('Geolocation is not supported by your browser');
-      return;
-    }
-
+  // Robust User GPS locator with auto-fallback
+  const handleLocateUser = async () => {
     setIsLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const coords = [pos.coords.latitude, pos.coords.longitude];
-        setUserLocation(coords);
-        setIsLocating(false);
-      },
-      (err) => {
-        setIsLocating(false);
-        alert('Could not determine current location. Please check browser GPS permissions.');
-        console.warn('[GPS] Error:', err.message);
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
+    setLocationError('');
+    setHasManualTarget(true);
+
+    try {
+      const coords = await getCurrentCoordinates({ timeout: 9000 });
+      const pos = [coords.lat, coords.lng];
+      setUserLocation(pos);
+      setUserAccuracy(coords.accuracy);
+      setFlyTarget(pos);
+    } catch (err) {
+      console.warn('[CampusMap] Location error:', err.message);
+      setLocationError(err.message || 'Could not retrieve your location.');
+    } finally {
+      setIsLocating(false);
+    }
+  };
+
+  // Reset to CTU Barili Campus Center
+  const handleResetToCampus = () => {
+    setHasManualTarget(true);
+    setLocationError('');
+    setFlyTarget([CAMPUS_COORDINATES.lat, CAMPUS_COORDINATES.lng]);
   };
 
   // Health color mapping
@@ -163,14 +218,19 @@ export default function CampusMapPage() {
       {/* Page Title & Scope Toggle */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <span className="font-label-sm text-label-sm text-[#A4B566] uppercase font-mono tracking-wider">
-            GEOSPATIAL TELEMETRY
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="font-label-sm text-label-sm text-[#A4B566] uppercase font-mono tracking-wider">
+              GEOSPATIAL TELEMETRY
+            </span>
+            <span className="text-[11px] font-mono text-[#D8DFC8] bg-[#1D230E] px-2 py-0.5 rounded-full border border-[#525E31]">
+              CTU Barili Campus
+            </span>
+          </div>
           <h2 className="font-headline-md text-headline-md text-[#F0F3E8] font-bold">
             Campus Specimen Map
           </h2>
           <p className="font-body-sm text-body-sm text-[#CCD6B8]">
-            Interactive GPS locations &amp; real-time health telemetry of all campus flora
+            Interactive GPS locations &amp; real-time health telemetry across Cebu Technological University – Barili Campus
           </p>
         </div>
 
@@ -204,8 +264,25 @@ export default function CampusMapPage() {
         </div>
       </div>
 
-      {/* Health Status Filter Pills & Locate Button */}
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      {/* Location Error Banner */}
+      {locationError && (
+        <div className="p-3 rounded-xl bg-[#431B1B]/85 border border-[#E57373]/60 text-xs font-mono text-[#FFCDD2] flex items-center justify-between gap-3 animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-[18px] text-[#E57373]">warning</span>
+            <span>{locationError}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setLocationError('')}
+            className="text-[#FFCDD2] hover:text-white"
+          >
+            <span className="material-symbols-outlined text-[16px]">close</span>
+          </button>
+        </div>
+      )}
+
+      {/* Health Status Filter Pills & Quick Location Buttons */}
+      <div className="flex flex-wrap items-center justify-between gap-2.5">
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
           {['All', 'Healthy', 'Monitoring', 'Needs Attention'].map((f) => {
             const count =
@@ -229,31 +306,46 @@ export default function CampusMapPage() {
           })}
         </div>
 
-        <button
-          type="button"
-          onClick={handleLocateUser}
-          disabled={isLocating}
-          className="h-9 px-3.5 rounded-xl bg-[#30371A] hover:bg-[#3D4721] border border-[#525E31] text-[#A4B566] text-xs font-mono font-semibold flex items-center gap-1.5 transition-colors shadow-sm ml-auto"
-        >
-          {isLocating ? (
-            <>
-              <div className="w-3.5 h-3.5 border-2 border-[#A4B566] border-t-transparent rounded-full animate-spin" />
-              <span>Locating...</span>
-            </>
-          ) : (
-            <>
-              <span className="material-symbols-outlined text-[16px]">my_location</span>
-              <span>Find My Location</span>
-            </>
-          )}
-        </button>
+        <div className="flex items-center gap-2 ml-auto">
+          {/* Quick Center to CTU Barili Campus */}
+          <button
+            type="button"
+            onClick={handleResetToCampus}
+            className="h-9 px-3 rounded-xl bg-[#262C14] hover:bg-[#30371A] border border-[#525E31] text-[#C2CE9F] text-xs font-mono font-semibold flex items-center gap-1.5 transition-colors shadow-sm"
+            title="Center map on CTU Barili Campus"
+          >
+            <span className="material-symbols-outlined text-[16px] text-[#A4B566]">school</span>
+            <span>CTU Barili</span>
+          </button>
+
+          {/* Find My Location (GPS) */}
+          <button
+            type="button"
+            onClick={handleLocateUser}
+            disabled={isLocating}
+            className="h-9 px-3.5 rounded-xl bg-[#30371A] hover:bg-[#3D4721] active:scale-95 border border-[#525E31] text-[#A4B566] text-xs font-mono font-semibold flex items-center gap-1.5 transition-colors shadow-sm disabled:opacity-50"
+            title="Find and center on your live GPS location"
+          >
+            {isLocating ? (
+              <>
+                <div className="w-3.5 h-3.5 border-2 border-[#A4B566] border-t-transparent rounded-full animate-spin" />
+                <span>Locating...</span>
+              </>
+            ) : (
+              <>
+                <span className="material-symbols-outlined text-[16px]">my_location</span>
+                <span>Find My Location</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Leaflet Interactive Map Container */}
-      <div className="relative w-full h-[540px] rounded-2xl overflow-hidden border border-[#5D6A37] shadow-2xl bg-[#1D230E] z-0">
+      <div className="relative w-full h-[560px] rounded-2xl overflow-hidden border border-[#5D6A37] shadow-2xl bg-[#1D230E] z-0">
         <MapContainer
           center={defaultCenter}
-          zoom={15}
+          zoom={16}
           scrollWheelZoom={true}
           style={{ height: '100%', width: '100%' }}
         >
@@ -271,36 +363,43 @@ export default function CampusMapPage() {
             }
           />
 
-          <MapBoundsController trees={displayedTrees} userLocation={userLocation} />
+          <MapBoundsController trees={displayedTrees} hasManualTarget={hasManualTarget} />
+          <MapFlyToHandler target={flyTarget} />
 
-          {/* User's Current GPS Location Marker */}
+          {/* User's Current GPS Location Marker with Accuracy Circle */}
           {userLocation && (
-            <Marker
-              position={userLocation}
-              icon={L.divIcon({
-                className: 'user-gps-marker',
-                html: `
-                  <div style="
-                    width: 20px;
-                    height: 20px;
-                    border-radius: 50%;
-                    background: #4285F4;
-                    border: 3px solid #FFFFFF;
-                    box-shadow: 0 0 10px #4285F4;
-                  "></div>
-                `,
-                iconSize: [20, 20],
-                iconAnchor: [10, 10],
-              })}
-            >
-              <Popup>
-                <div className="p-1 font-mono text-xs">
-                  <strong>You are here</strong>
-                  <br />
-                  Current Field Position
-                </div>
-              </Popup>
-            </Marker>
+            <>
+              {userAccuracy && (
+                <Circle
+                  center={userLocation}
+                  radius={userAccuracy}
+                  pathOptions={{
+                    fillColor: '#4285F4',
+                    fillOpacity: 0.15,
+                    color: '#4285F4',
+                    weight: 1.5,
+                  }}
+                />
+              )}
+              <Marker position={userLocation} icon={createUserGpsIcon()}>
+                <Popup>
+                  <div className="p-1 font-mono text-xs text-[#1D230E]">
+                    <strong className="text-[#4285F4] flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[14px]">my_location</span>
+                      You are here
+                    </strong>
+                    <span className="text-[11px] block mt-0.5">
+                      Current GPS field position
+                    </span>
+                    {userAccuracy && (
+                      <span className="text-[10px] text-[#555] block">
+                        Accuracy: ±{userAccuracy}m
+                      </span>
+                    )}
+                  </div>
+                </Popup>
+              </Marker>
+            </>
           )}
 
           {/* Specimen Markers */}

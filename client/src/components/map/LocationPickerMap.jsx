@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
+import { CAMPUS_COORDINATES } from '../../utils/constants';
+import { getCurrentCoordinates } from '../../utils/geolocation';
 
 // Custom Tactical Pin Icon using Material Symbols & SVG
 const createPinIcon = () =>
@@ -46,7 +48,7 @@ function MapClickHandler({ onPositionChange }) {
   return null;
 }
 
-// Controller to smoothly pan/zoom when coordinates update from GPS button
+// Controller to smoothly pan/zoom when coordinates update from GPS button or reset
 function ChangeView({ center }) {
   const map = useMap();
   useEffect(() => {
@@ -58,8 +60,8 @@ function ChangeView({ center }) {
 }
 
 export default function LocationPickerMap({
-  lat = 14.1675,
-  lng = 121.2434,
+  lat = CAMPUS_COORDINATES.lat,
+  lng = CAMPUS_COORDINATES.lng,
   onLocationChange,
 }) {
   const [position, setPosition] = useState([lat, lng]);
@@ -89,42 +91,34 @@ export default function LocationPickerMap({
     onLocationChange?.({ lat: Number(newLat.toFixed(6)), lng: Number(newLng.toFixed(6)) });
   };
 
-  const handleGetCurrentLocation = () => {
-    if (!navigator.geolocation) {
-      setGpsError('Geolocation is not supported by your browser');
-      return;
-    }
-
+  const handleGetCurrentLocation = async () => {
     setIsLocating(true);
     setGpsError('');
 
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const { latitude, longitude, accuracy: acc } = pos.coords;
-        const formattedLat = Number(latitude.toFixed(6));
-        const formattedLng = Number(longitude.toFixed(6));
-        setPosition([formattedLat, formattedLng]);
-        setAccuracy(Math.round(acc));
-        setIsLocating(false);
-        onLocationChange?.({ lat: formattedLat, lng: formattedLng });
-      },
-      (err) => {
-        setIsLocating(false);
-        setGpsError('Could not fetch GPS. Please tap on map to place pin.');
-        console.warn('[GPS] Geolocation error:', err.message);
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0,
-      }
-    );
+    try {
+      const coords = await getCurrentCoordinates({ timeout: 9000 });
+      setPosition([coords.lat, coords.lng]);
+      setAccuracy(coords.accuracy);
+      onLocationChange?.({ lat: coords.lat, lng: coords.lng });
+    } catch (err) {
+      setGpsError(err.message || 'Could not fetch GPS. Please tap on map to place pin.');
+      console.warn('[GPS] Error:', err.message);
+    } finally {
+      setIsLocating(false);
+    }
+  };
+
+  const handleResetToCampus = () => {
+    setPosition([CAMPUS_COORDINATES.lat, CAMPUS_COORDINATES.lng]);
+    setAccuracy(null);
+    setGpsError('');
+    onLocationChange?.({ lat: CAMPUS_COORDINATES.lat, lng: CAMPUS_COORDINATES.lng });
   };
 
   return (
     <div className="space-y-2">
       {/* Map Header & GPS Controls */}
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 min-w-0">
           <span className="material-symbols-outlined text-[16px] text-[#A4B566]">pin_drop</span>
           <span className="font-mono text-xs text-[#D8DFC8] truncate">
@@ -137,36 +131,48 @@ export default function LocationPickerMap({
           )}
         </div>
 
-        <button
-          type="button"
-          onClick={handleGetCurrentLocation}
-          disabled={isLocating}
-          className="h-8 px-3 rounded-lg bg-[#30371A] hover:bg-[#3D4721] active:scale-95 border border-[#525E31] text-[#A4B566] text-xs font-mono font-semibold flex items-center gap-1.5 transition-all disabled:opacity-50 shrink-0"
-          title="Use Device GPS"
-        >
-          {isLocating ? (
-            <>
-              <div className="w-3.5 h-3.5 border-2 border-[#A4B566] border-t-transparent rounded-full animate-spin" />
-              <span>Locating...</span>
-            </>
-          ) : (
-            <>
-              <span className="material-symbols-outlined text-[15px]">my_location</span>
-              <span>Use My GPS</span>
-            </>
-          )}
-        </button>
+        <div className="flex items-center gap-1.5 ml-auto">
+          <button
+            type="button"
+            onClick={handleResetToCampus}
+            className="h-8 px-2.5 rounded-lg bg-[#262C14] hover:bg-[#30371A] border border-[#525E31] text-[#C2CE9F] text-xs font-mono flex items-center gap-1 transition-all"
+            title="Reset to CTU Barili Campus center"
+          >
+            <span className="material-symbols-outlined text-[14px]">school</span>
+            <span>CTU Barili</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleGetCurrentLocation}
+            disabled={isLocating}
+            className="h-8 px-3 rounded-lg bg-[#30371A] hover:bg-[#3D4721] active:scale-95 border border-[#525E31] text-[#A4B566] text-xs font-mono font-semibold flex items-center gap-1.5 transition-all disabled:opacity-50"
+            title="Detect GPS coordinates using device location"
+          >
+            {isLocating ? (
+              <>
+                <div className="w-3.5 h-3.5 border-2 border-[#A4B566] border-t-transparent rounded-full animate-spin" />
+                <span>Locating...</span>
+              </>
+            ) : (
+              <>
+                <span className="material-symbols-outlined text-[15px]">my_location</span>
+                <span>Use My GPS</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       {gpsError && (
-        <p className="text-[11px] font-mono text-[#E57373] flex items-center gap-1">
-          <span className="material-symbols-outlined text-[13px]">warning</span>
+        <div className="p-2.5 rounded-lg bg-[#431B1B]/80 border border-[#E57373]/50 text-[11px] font-mono text-[#FFCDD2] flex items-start gap-2">
+          <span className="material-symbols-outlined text-[15px] text-[#E57373] shrink-0 mt-0.5">warning</span>
           <span>{gpsError}</span>
-        </p>
+        </div>
       )}
 
       {/* Interactive Leaflet Map Container */}
-      <div className="relative w-full h-52 sm:h-64 rounded-xl overflow-hidden border border-[#525E31] bg-[#1D230E] shadow-inner z-0">
+      <div className="relative w-full h-56 sm:h-64 rounded-xl overflow-hidden border border-[#525E31] bg-[#1D230E] shadow-inner z-0">
         <MapContainer
           center={position}
           zoom={16}
@@ -205,7 +211,7 @@ export default function LocationPickerMap({
         <div className="absolute bottom-2 left-2 right-2 pointer-events-none z-[1000]">
           <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#1D230E]/90 backdrop-blur-md border border-[#525E31] text-[11px] font-mono text-[#D8DFC8] shadow-md">
             <span className="w-1.5 h-1.5 rounded-full bg-[#A4B566] animate-pulse" />
-            <span>Tap map or drag pin to adjust plant coordinates</span>
+            <span>Tap map or drag pin to position plant • CTU Barili</span>
           </div>
         </div>
       </div>

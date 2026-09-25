@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTrees } from '../context/TreeContext';
-import { SPECIES_PRESETS, GROWTH_STAGES } from '../utils/constants';
+import { SPECIES_PRESETS, GROWTH_STAGES, CAMPUS_COORDINATES } from '../utils/constants';
 import LocationPickerMap from '../components/map/LocationPickerMap';
 import QRCodeDisplay from '../components/tree/QRCodeDisplay';
 import zoneService from '../services/zoneService';
@@ -25,8 +25,11 @@ export default function RegisterTreePage() {
   const [newZoneName, setNewZoneName] = useState('');
   const [isAddingZone, setIsAddingZone] = useState(false);
 
-  // Map & GPS Coordinates
-  const [coordinates, setCoordinates] = useState({ lat: 14.1675, lng: 121.2434 });
+  // Map & GPS Coordinates (Defaults to CTU Barili Campus)
+  const [coordinates, setCoordinates] = useState({
+    lat: CAMPUS_COORDINATES.lat,
+    lng: CAMPUS_COORDINATES.lng,
+  });
 
   // Baseline Morphometrics
   const [height, setHeight] = useState(25); // in cm
