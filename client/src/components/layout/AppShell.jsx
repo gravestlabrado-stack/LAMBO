@@ -1,7 +1,8 @@
 import React from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation, Navigate } from 'react-router-dom';
 import Header from './Header';
 import BottomNav from './BottomNav';
+import { useAuth } from '../../hooks/useAuth';
 
 const pageTitles = {
   '/': { title: 'Dashboard', subtitle: 'CAMPUS OVERVIEW' },
@@ -14,6 +15,13 @@ const pageTitles = {
 
 export default function AppShell() {
   const location = useLocation();
+  const { isAuthenticated } = useAuth();
+
+  // Redirect to login if not authenticated
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
   const current = pageTitles[location.pathname] || {
     title: 'LAMBO',
     subtitle: 'BOTANICAL MONITORING',

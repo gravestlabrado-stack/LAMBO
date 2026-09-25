@@ -1,14 +1,21 @@
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/auth');
+const upload = require('../middleware/upload');
+const {
+  getGrowthLogs,
+  getGrowthLogById,
+  createGrowthLog,
+  updateGrowthLog,
+  deleteGrowthLog,
+  exportTreeLogs,
+} = require('../controllers/growthLogController');
 
-// Placeholder handlers (implemented in Phase 2)
-router.get('/', protect, (req, res) => {
-  res.json({ success: true, count: 0, data: [] });
-});
-
-router.post('/', protect, (req, res) => {
-  res.status(501).json({ success: false, message: 'Create growth log route scaffolded' });
-});
+router.get('/', protect, getGrowthLogs);
+router.post('/', protect, upload.single('photo'), createGrowthLog);
+router.get('/export/:treeId', protect, exportTreeLogs);
+router.get('/:id', protect, getGrowthLogById);
+router.put('/:id', protect, upload.single('photo'), updateGrowthLog);
+router.delete('/:id', protect, deleteGrowthLog);
 
 module.exports = router;

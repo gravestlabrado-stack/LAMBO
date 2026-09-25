@@ -357,25 +357,25 @@ fontFamily: {
 
 ## 8. Implementation Phases
 
-### Phase 0: Project Scaffolding (~30 min)
-- Initialize Vite React app in `client/`
-- Initialize Node.js project in `server/`
-- Install all dependencies
-- Configure TailwindCSS + Vite proxy
-- Create `.env.example` files + folder structure
+### Phase 0: Project Scaffolding [COMPLETED]
+- [x] Initialize Vite React app in `client/`
+- [x] Initialize Node.js project in `server/`
+- [x] Install all dependencies
+- [x] Configure TailwindCSS + Vite proxy
+- [x] Create `.env.example` files + folder structure
 
-### Phase 1: Backend — Database & Auth (~1-2 hrs)
-- MongoDB connection, Cloudinary config
-- User/Tree/GrowthLog models
-- Auth middleware (JWT), upload middleware
-- Auth controller + routes
-- Express server entry point
+### Phase 1: Backend — Database & Auth [COMPLETED]
+- [x] MongoDB connection, Cloudinary config
+- [x] User/Tree/GrowthLog models
+- [x] Auth middleware (JWT), upload middleware
+- [x] Auth controller + routes
+- [x] Express server entry point
 
-### Phase 2: Backend — Tree & Growth Log CRUD (~1-2 hrs)
-- Tree controller (CRUD + stats + auto ID generation)
-- GrowthLog controller (CRUD + photo upload + export)
-- Routes wiring
-- API testing
+### Phase 2: Backend — Tree & Growth Log CRUD [COMPLETED]
+- [x] Tree controller (CRUD + stats + auto ID generation)
+- [x] GrowthLog controller (CRUD + photo upload + export)
+- [x] Routes wiring
+- [x] API testing (100% verified)
 
 ### Phase 3: Frontend — Foundation & Auth (~1-2 hrs)
 - Global styles + Axios setup + AuthContext

@@ -3,9 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
 export default function LoginPage() {
-  // TODO: Remove default admin/admin bypass before production
-  const [rollNumber, setRollNumber] = useState('admin');
-  const [password, setPassword] = useState('admin');
+  const [rollNumber, setRollNumber] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -22,7 +21,7 @@ export default function LoginPage() {
       navigate('/');
     } catch (err) {
       setError(
-        err.response?.data?.message || 'Login failed. Please check your roll number and password.'
+        err.response?.data?.message || err.message || 'Login failed. Please check your roll number and password.'
       );
     } finally {
       setLoading(false);
@@ -60,22 +59,6 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Quick Demo Bypass Info Banner */}
-        {/* TODO: Remove default admin/admin bypass before production */}
-        <div className="mb-5 rounded-xl bg-[#30371A] border border-[#8B9B4C]/40 p-3 flex items-start gap-2.5 text-xs text-[#D8DFC8]">
-          <span className="material-symbols-outlined text-[18px] text-[#A4B566] shrink-0">
-            key
-          </span>
-          <div className="flex-1">
-            <span className="font-mono font-bold text-[#A4B566] block">
-              Default Demo Credentials:
-            </span>
-            <span className="font-mono text-[11px] text-[#F0F3E8]">
-              Username: <strong>admin</strong> • Password: <strong>admin</strong>
-            </span>
-          </div>
-        </div>
-
         {error && (
           <div className="rounded-xl bg-[#431B1B] border border-[#E57373] text-[#FFCDD2] p-3 text-xs mb-4 flex items-center gap-2">
             <span className="material-symbols-outlined text-[18px]">error</span>
@@ -94,7 +77,7 @@ export default function LoginPage() {
               </span>
               <input
                 type="text"
-                placeholder="e.g. admin or 2024-BSAB-001"
+                placeholder="e.g. 1234567"
                 value={rollNumber}
                 onChange={(e) => setRollNumber(e.target.value)}
                 className="w-full h-11 bg-[#1D230E] border border-[#525E31] rounded-xl pl-10 pr-3 text-sm font-mono text-[#F0F3E8] focus:outline-none focus:border-[#A4B566] focus:ring-1 focus:ring-[#A4B566] transition-colors"

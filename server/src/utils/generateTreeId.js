@@ -6,7 +6,8 @@ const Tree = require('../models/Tree');
  */
 async function generateTreeId() {
   const lastTree = await Tree.findOne({ treeId: /^LMB-\d+$/ })
-    .sort({ createdAt: -1 })
+    .collation({ locale: 'en_US', numericOrdering: true })
+    .sort({ treeId: -1 })
     .select('treeId');
 
   let nextNumber = 1;
