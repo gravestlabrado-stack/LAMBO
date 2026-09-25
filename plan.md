@@ -378,21 +378,22 @@ fontFamily: {
 - [x] API testing (100% verified)
 
 ### Phase 3: Frontend — Foundation & Auth (~1-2 hrs)
-- Global styles + Axios setup + AuthContext
-- Login + Register pages
-- React Router with protected routes
+- [x] Global styles + Axios setup + AuthContext
+- [x] Login + Register pages
+- [x] React Router with protected routes
 
 ### Phase 4: Frontend — Layout & UI Components (~2-3 hrs)
-- AppShell, Header, BottomNav (all 5 tabs active: Home, Scan, Trees, Logs, Register)
-- All ui/ components (Button, Card, Chip, Input, MetricCard, etc.)
+- [x] AppShell, Header, BottomNav (all 5 tabs active: Home, Scan, Trees, Logs, Register)
+- [x] All ui/ components (Button, Card, Chip, Input, MetricCard, etc.)
 
 ### Phase 5: Frontend — Dashboard (~1-2 hrs)
-- WelcomeBanner, StatsGrid, HealthOverview, RecentActivity
-- DashboardPage composition + API integration
+- [x] WelcomeBanner, StatsGrid, HealthOverview, RecentActivity
+- [x] DashboardPage composition + API integration
 
 ### Phase 6: Frontend — Tree Registration & QR (~1-2 hrs)
-- RegisterTreePage with species presets + form + optional map pin for location
-- QRCodeDisplay component + post-registration success
+- [x] RegisterTreePage with species presets + form + map pin for location
+- [x] QRCodeDisplay component + post-registration success
+- [x] forest Zone / Campus Sector can be added by students and saved to mongo db where it is fetched and showed as dropdown options
 
 ### Phase 7: Frontend — Tree List & Profile (~2-3 hrs)
 - TreeCard, TreeListPage, TreeProfilePage
@@ -414,7 +415,7 @@ fontFamily: {
 - CampusMap component with tree markers (color-coded by health)
 - CampusMapPage with marker popups (tree ID, species, link to profile)
 - Marker clustering for dense areas (react-leaflet-cluster)
-- Map pin placement on RegisterTreePage (optional GPS coordinates)
+- Map pin placement on RegisterTreePage (GPS coordinates for the plant on map)
 
 ### Phase 11: Push Notifications & Reminders (~2-3 hrs)
 - Backend: Reminder model (tree, reminderType, frequency, nextDue)

@@ -24,6 +24,14 @@ export const authService = {
     return response.data;
   },
 
+  async updateProfile(data) {
+    const isFormData = data instanceof FormData;
+    const response = await api.put('/auth/profile', data, {
+      headers: isFormData ? { 'Content-Type': 'multipart/form-data' } : {},
+    });
+    return response.data;
+  },
+
   logout() {
     localStorage.removeItem('lambo_token');
     localStorage.removeItem('lambo_user');

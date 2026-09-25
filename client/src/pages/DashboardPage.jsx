@@ -73,14 +73,22 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="mt-5 relative z-10">
+        <div className="mt-5 relative z-10 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           <button
             onClick={() => navigate('/register-tree')}
             className="w-full h-12 rounded-lg bg-[#8B9B4C] hover:bg-[#9EAF6D] active:scale-[0.98] transition-transform text-[#1F240F] font-label-lg text-label-lg font-bold flex items-center justify-center gap-2 shadow-md"
             type="button"
           >
             <span className="material-symbols-outlined text-[20px] font-bold">add_circle</span>
-            <span>Register New Tree</span>
+            <span>Register Plant / Tree</span>
+          </button>
+          <button
+            onClick={() => navigate('/map')}
+            className="w-full h-12 rounded-lg bg-[#30371A] hover:bg-[#3D4721] active:scale-[0.98] transition-transform text-[#F0F3E8] border border-[#525E31] font-label-lg text-label-lg font-bold flex items-center justify-center gap-2 shadow-sm"
+            type="button"
+          >
+            <span className="material-symbols-outlined text-[20px] text-[#A4B566]">map</span>
+            <span>Explore Campus Map</span>
           </button>
         </div>
 

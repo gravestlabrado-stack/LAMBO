@@ -34,9 +34,12 @@ export const SPECIES_PRESETS = [
   'Banaba (Lagerstroemia speciosa)',
   'Tindalo (Afzelia rhomboidea)',
   'Guyabano (Annona muricata)',
+  'Mango (Mangifera indica)',
+  'Calamansi (Citrofortunella microcarpa)',
+  'Jackfruit (Artocarpus heterophyllus)',
+  'Coconut (Cocos nucifera)',
   'Cacao (Theobroma cacao)',
   'Coffee (Coffea arabica)',
-  'Mango (Mangifera indica)',
 ];
 
 export const HEALTH_COLOR_MAP = {

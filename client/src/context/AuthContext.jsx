@@ -76,6 +76,22 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const updateProfile = async (formDataOrData) => {
+    setLoading(true);
+    try {
+      const data = await authService.updateProfile(formDataOrData);
+      if (data.success && data.user) {
+        setUser(data.user);
+        localStorage.setItem('lambo_user', JSON.stringify(data.user));
+        return data;
+      } else {
+        throw new Error(data.message || 'Failed to update profile');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const logout = useCallback(() => {
     localStorage.removeItem('lambo_token');
     localStorage.removeItem('lambo_user');
@@ -95,6 +111,7 @@ export const AuthProvider = ({ children }) => {
         loading,
         login,
         register,
+        updateProfile,
         logout,
       }}
     >

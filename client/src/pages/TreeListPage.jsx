@@ -33,13 +33,23 @@ export default function TreeListPage() {
             Monitored Specimen Registry
           </h2>
         </div>
-        <Link
-          to="/register-tree"
-          className="h-10 px-4 rounded-full bg-[#8B9B4C] hover:bg-[#9EAF6D] text-[#1F240F] font-mono text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-md active:scale-95 transition-all shrink-0"
-        >
-          <span className="material-symbols-outlined text-[18px]">add_circle</span>
-          Register Tree
-        </Link>
+        <div className="flex items-center gap-2 shrink-0">
+          <Link
+            to="/map"
+            className="h-10 px-3.5 rounded-full bg-[#30371A] hover:bg-[#3D4721] text-[#A4B566] border border-[#525E31] font-mono text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-sm active:scale-95 transition-all"
+            title="Switch to Campus Map"
+          >
+            <span className="material-symbols-outlined text-[18px]">map</span>
+            <span className="hidden xs:inline">Map View</span>
+          </Link>
+          <Link
+            to="/register-tree"
+            className="h-10 px-4 rounded-full bg-[#8B9B4C] hover:bg-[#9EAF6D] text-[#1F240F] font-mono text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-md active:scale-95 transition-all shrink-0"
+          >
+            <span className="material-symbols-outlined text-[18px]">add_circle</span>
+            <span>Register</span>
+          </Link>
+        </div>
       </div>
 
       {/* Search Input Bar */}
