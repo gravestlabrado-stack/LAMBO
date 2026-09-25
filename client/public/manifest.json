@@ -1,0 +1,50 @@
+{
+  "name": "LAMBO — Botanical Observation",
+  "short_name": "LAMBO",
+  "description": "Landscape Analytics for Monitoring Botanical Observation — Student seedling and tree monitoring platform",
+  "start_url": "/",
+  "id": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#1D230E",
+  "theme_color": "#282E16",
+  "categories": ["education", "utilities", "productivity"],
+  "icons": [
+    {
+      "src": "/lambo-logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/lambo-logo.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Quick QR Scan",
+      "short_name": "Scan",
+      "description": "Scan specimen QR tag with camera",
+      "url": "/scan",
+      "icons": [{ "src": "/lambo-logo.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Register New Wildling",
+      "short_name": "Register",
+      "description": "Enroll a new seedling",
+      "url": "/register-tree",
+      "icons": [{ "src": "/lambo-logo.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Campus Map",
+      "short_name": "Map",
+      "description": "View tree locations on campus",
+      "url": "/map",
+      "icons": [{ "src": "/lambo-logo.svg", "sizes": "any" }]
+    }
+  ]
+}

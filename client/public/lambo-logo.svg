@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <rect width="100" height="100" fill="#1D230E" rx="16"/>
+  <!-- Tactical Reticle Brackets -->
+  <path d="M15 30 V15 H30" stroke="#8B9B4C" stroke-width="3" fill="none"/>
+  <path d="M85 30 V15 H70" stroke="#8B9B4C" stroke-width="3" fill="none"/>
+  <path d="M15 70 V85 H30" stroke="#8B9B4C" stroke-width="3" fill="none"/>
+  <path d="M85 70 V85 H70" stroke="#8B9B4C" stroke-width="3" fill="none"/>
+  
+  <!-- Stylized Botanical Sprout / Tree -->
+  <path d="M50 80 V45" stroke="#A4B566" stroke-width="5" stroke-linecap="round"/>
+  <path d="M50 60 C40 55 32 40 40 30 C48 30 50 48 50 48" fill="#A4B566" opacity="0.9"/>
+  <path d="M50 50 C60 45 68 32 60 22 C52 22 50 40 50 40" fill="#8B9B4C"/>
+  <circle cx="50" cy="22" r="4" fill="#D2DCB4"/>
+</svg>

@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --surface-base: #282E16;
+    --surface-deep: #1D230E;
+    --surface-card: #30371A;
+    --surface-raised: #38411F;
+    --accent-primary: #A4B566;
+    --text-primary: #F0F3E8;
+    --text-muted: #AAB596;
+    --border-default: #525E31;
+  }
+
+  body {
+    background-color: #282E16;
+    color: #F0F3E8;
+    font-family: 'Chivo', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Custom scrollbar for tactical feel */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #1D230E;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #525E31;
+    border-radius: 0px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #A4B566;
+  }
+}
+
+@layer utilities {
+  /* Tactical HUD corner cuts & styling */
+  .tactical-border {
+    border: 1px solid #525E31;
+  }
+
+  .tactical-border-accent {
+    border: 1px solid #5D6A37;
+  }
+
+  .tactical-card {
+    background-color: #30371A;
+    border: 1px solid #525E31;
+  }
+
+  .tactical-card-raised {
+    background-color: #38411F;
+    border: 1px solid #5D6A37;
+  }
+
+  /* Monospace data numbers */
+  .font-mono-numbers {
+    font-family: 'JetBrains Mono', monospace;
+    font-variant-numeric: tabular-nums;
+  }
+}
