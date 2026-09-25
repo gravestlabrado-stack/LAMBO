@@ -1,18 +1,13 @@
 const express = require('express');
 const router = express.Router();
+const { register, login, getMe } = require('../controllers/authController');
 const { protect } = require('../middleware/auth');
 
-// Placeholder handlers (implemented in Phase 1)
-router.post('/register', (req, res) => {
-  res.status(501).json({ success: false, message: 'Auth register route scaffolded' });
-});
+// Public auth endpoints
+router.post('/register', register);
+router.post('/login', login);
 
-router.post('/login', (req, res) => {
-  res.status(501).json({ success: false, message: 'Auth login route scaffolded' });
-});
-
-router.get('/me', protect, (req, res) => {
-  res.json({ success: true, user: req.user });
-});
+// Private profile endpoint
+router.get('/me', protect, getMe);
 
 module.exports = router;

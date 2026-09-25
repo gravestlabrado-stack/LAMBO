@@ -6,7 +6,7 @@ export default function RegisterPage() {
   const [name, setName] = useState('');
   const [rollNumber, setRollNumber] = useState('');
   const [password, setPassword] = useState('');
-  const [section, setSection] = useState('');
+  const [course, setCourse] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -19,7 +19,7 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      await register({ name, rollNumber, password, section });
+      await register({ name, rollNumber, password, course });
       navigate('/');
     } catch (err) {
       setError(
@@ -87,13 +87,13 @@ export default function RegisterPage() {
 
           <div>
             <label className="block text-xs font-mono text-[#C2CE9F] uppercase tracking-wider mb-1 font-medium">
-              Academic Section / Group
+              Academic Course / Degree
             </label>
             <input
               type="text"
-              placeholder="e.g. BSAB-3A"
-              value={section}
-              onChange={(e) => setSection(e.target.value)}
+              placeholder="e.g. BS Forestry / BS Biology"
+              value={course}
+              onChange={(e) => setCourse(e.target.value)}
               className="w-full h-11 bg-[#1D230E] border border-[#525E31] rounded-xl px-3 text-sm font-mono text-[#F0F3E8] focus:outline-none focus:border-[#A4B566] focus:ring-1 focus:ring-[#A4B566] transition-colors"
             />
           </div>

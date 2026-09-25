@@ -180,7 +180,7 @@ const userSchema = new Schema({
   name:       { type: String, required: true, trim: true },
   rollNumber: { type: String, required: true, unique: true, trim: true },
   password:   { type: String, required: true }, // bcrypt hashed
-  section:    { type: String, trim: true },     // e.g., "BSAB-3A"
+  course:     { type: String, trim: true },     // e.g., "BS Forestry" or "BSAB-3A"
   avatar:     { type: String, default: '' },    // Cloudinary URL (optional)
   createdAt:  { type: Date, default: Date.now }
 });
@@ -262,7 +262,7 @@ const growthLogSchema = new Schema({
 - LAMBO logo + tagline
 
 ### 6.2 Register Page (`/register`)
-- Fields: Full Name, Roll Number, Password, Confirm Password, Section (optional)
+- Fields: Full Name, Roll Number, Password, Confirm Password, Course (optional)
 - "Create Account" button + link to login
 
 ### 6.3 Dashboard Page (`/` — Home tab)

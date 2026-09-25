@@ -7,7 +7,7 @@ export const AuthContext = createContext(null);
 const DEFAULT_DEMO_USER = {
   name: 'Elena Rostova',
   rollNumber: '2024-BSAB-001',
-  section: 'BSAB-3A',
+  course: 'BSAB-3A',
   role: 'Student Observer',
   avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
 };
@@ -50,7 +50,7 @@ export const AuthProvider = ({ children }) => {
       const fallbackUser = {
         name: credentials.rollNumber,
         rollNumber: credentials.rollNumber.toUpperCase(),
-        section: 'BSAB-3A',
+        course: 'BSAB-3A',
         role: 'Student Observer',
         avatar: '',
       };
@@ -68,7 +68,7 @@ export const AuthProvider = ({ children }) => {
     const newUser = {
       name: userData.name || 'Student Observer',
       rollNumber: (userData.rollNumber || '2024-BSAB-001').toUpperCase(),
-      section: userData.section || 'BSAB-3A',
+      course: userData.course || userData.section || 'BSAB-3A',
       role: 'Student Observer',
       avatar: '',
     };

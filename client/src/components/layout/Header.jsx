@@ -7,6 +7,7 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
   const { reminders, toggleReminder, addReminder } = useTrees();
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showReminders, setShowReminders] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNewReminderInput, setShowNewReminderInput] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newTreeId, setNewTreeId] = useState('LMB-0001');
@@ -82,83 +83,171 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
             </div>
           </div>
 
-          {/* Action Pills & User Profile */}
-          <div className="flex items-center gap-2.5 shrink-0">
-            {/* Install App Button */}
-            <button
-              type="button"
-              onClick={handleInstallClick}
-              title="Install LAMBO on this device"
-              className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#8B9B4C] hover:bg-[#9EAF6D] text-[#1F240F] font-mono text-xs font-bold transition-all active:scale-95 shadow-sm"
-            >
-              <span className="material-symbols-outlined text-[16px]">install_mobile</span>
-              <span className="hidden xs:inline">Install</span>
-            </button>
-
-            {/* Reminders Bell Trigger */}
-            <button
-              type="button"
-              onClick={() => setShowReminders(!showReminders)}
-              aria-label="Care Reminders"
-              className="relative p-1.5 rounded-full bg-[#30371A] border border-[#525E31] text-[#D8DFC8] hover:text-[#F0F3E8] hover:border-[#8B9B4C] transition-all"
-            >
-              <span className="material-symbols-outlined text-[20px]">notifications</span>
-              {pendingCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#D99B26] text-[#1D230E] font-mono text-[10px] font-bold flex items-center justify-center">
-                  {pendingCount}
-                </span>
-              )}
-            </button>
-
-            {/* Offline Ready Pill */}
-            <div
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-mono font-semibold transition-colors ${
-                isOnline
-                  ? 'bg-[#30371A] border-[#525E31] text-[#D2DCB4]'
-                  : 'bg-[#431B1B] border-[#E57373]/60 text-[#FFCDD2]'
-              }`}
-            >
-              <span
-                className={`material-symbols-outlined text-[16px] ${
-                  isOnline ? 'text-[#A4B566]' : 'text-[#E57373]'
-                }`}
+          {/* Unified Tactical Pill Toolbar */}
+          <div className="relative">
+            <div className="flex items-center bg-[#30371A]/90 border border-[#525E31] rounded-full p-1 pl-3 pr-1 gap-1.5 shadow-sm">
+              {/* Online / Offline Status Indicator */}
+              <div
+                title={isOnline ? 'Network: Online' : 'Network: Offline'}
+                className="flex items-center gap-1.5 pr-1 select-none"
               >
-                {isOnline ? 'cloud_done' : 'cloud_off'}
-              </span>
-              <span className="hidden sm:inline font-label-sm text-label-sm">
-                {isOnline ? 'Offline Ready' : 'Offline Mode'}
-              </span>
+                <span
+                  className={`w-2 h-2 rounded-full ${
+                    isOnline
+                      ? 'bg-[#A4B566] shadow-[0_0_6px_#A4B566]'
+                      : 'bg-[#E57373] shadow-[0_0_6px_#E57373] animate-pulse'
+                  }`}
+                />
+                <span className="font-mono text-[11px] font-semibold text-[#D8DFC8] hidden xs:inline">
+                  {isOnline ? 'Online' : 'Offline'}
+                </span>
+              </div>
+
+              {/* Divider */}
+              <div className="w-[1px] h-4 bg-[#525E31]/80" />
+
+              {/* Reminders Bell Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  setShowReminders(!showReminders);
+                  setShowProfileMenu(false);
+                }}
+                aria-label="Care Reminders"
+                title="Care Reminders"
+                className="relative w-8 h-8 rounded-full flex items-center justify-center text-[#D8DFC8] hover:text-[#F0F3E8] hover:bg-[#38411F] transition-all"
+              >
+                <span className="material-symbols-outlined text-[19px]">notifications</span>
+                {pendingCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-[#D99B26] text-[#1D230E] font-mono text-[10px] font-bold flex items-center justify-center shadow-sm">
+                    {pendingCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Install App Quick Button */}
+              <button
+                type="button"
+                onClick={handleInstallClick}
+                title="Install LAMBO App on this device"
+                aria-label="Install App"
+                className="w-8 h-8 rounded-full flex items-center justify-center text-[#D8DFC8] hover:text-[#A4B566] hover:bg-[#38411F] transition-all"
+              >
+                <span className="material-symbols-outlined text-[18px]">install_mobile</span>
+              </button>
+
+              {/* Divider */}
+              <div className="w-[1px] h-4 bg-[#525E31]/80" />
+
+              {/* Profile Avatar Button (Toggles Dropdown) */}
+              <button
+                type="button"
+                onClick={() => {
+                  setShowProfileMenu(!showProfileMenu);
+                  setShowReminders(false);
+                }}
+                className="w-8 h-8 rounded-full overflow-hidden ring-2 ring-[#8B9B4C] hover:ring-[#A4B566] transition-all focus:outline-none flex items-center justify-center bg-[#1D230E] cursor-pointer shrink-0"
+                title="Account Menu"
+                aria-label="Account Profile Menu"
+              >
+                {user?.avatar ? (
+                  <img
+                    alt={user.name}
+                    className="w-full h-full object-cover"
+                    src={user.avatar}
+                  />
+                ) : (
+                  <span className="font-mono text-xs font-bold text-[#A4B566]">
+                    {user?.name?.charAt(0)?.toUpperCase() || 'S'}
+                  </span>
+                )}
+              </button>
             </div>
 
-            {/* User Profile Avatar with Ring */}
-            {user ? (
-              <div className="flex items-center gap-2">
+            {/* Profile Dropdown Menu */}
+            {showProfileMenu && (
+              <>
+                {/* Click-away backdrop */}
                 <div
-                  title={`${user.name} (${user.rollNumber})`}
-                  className="w-8 h-8 rounded-full overflow-hidden shrink-0 flex items-center justify-center ring-2 ring-[#8B9B4C]/70 shadow-sm bg-[#30371A]"
-                >
-                  {user.avatar ? (
-                    <img
-                      alt={user.name}
-                      className="w-full h-full object-cover"
-                      src={user.avatar}
-                    />
-                  ) : (
-                    <span className="font-mono text-xs font-bold text-[#A4B566]">
-                      {user.name?.charAt(0)?.toUpperCase() || 'S'}
-                    </span>
-                  )}
+                  className="fixed inset-0 z-40"
+                  onClick={() => setShowProfileMenu(false)}
+                />
+
+                {/* Dropdown Card */}
+                <div className="absolute right-0 top-12 z-50 w-64 rounded-2xl bg-[#262C14] border border-[#5D6A37] shadow-2xl p-4 space-y-3 animate-in fade-in zoom-in-95">
+                  {/* User Details */}
+                  <div className="flex items-center gap-3 pb-3 border-b border-[#4F5A2D]">
+                    <div className="w-10 h-10 rounded-full overflow-hidden ring-2 ring-[#8B9B4C] flex items-center justify-center bg-[#30371A] shrink-0">
+                      {user?.avatar ? (
+                        <img
+                          alt={user.name}
+                          className="w-full h-full object-cover"
+                          src={user.avatar}
+                        />
+                      ) : (
+                        <span className="font-mono text-sm font-bold text-[#A4B566]">
+                          {user?.name?.charAt(0)?.toUpperCase() || 'S'}
+                        </span>
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="font-display font-bold text-sm text-[#F0F3E8] truncate">
+                        {user?.name || 'Student Observer'}
+                      </h4>
+                      <span className="font-mono text-[11px] text-[#AAB596] block truncate">
+                        {user?.rollNumber || '2024-BSAB-001'} {(user?.course || user?.section) ? `• ${user?.course || user?.section}` : ''}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Network Status Badge */}
+                  <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-[#1D230E] border border-[#525E31]/60 text-xs font-mono">
+                    <span className="text-[#AAB596]">Network Status:</span>
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className={`w-2 h-2 rounded-full ${
+                          isOnline
+                            ? 'bg-[#A4B566] shadow-[0_0_6px_#A4B566]'
+                            : 'bg-[#E57373] animate-pulse'
+                        }`}
+                      />
+                      <span className={isOnline ? 'text-[#A4B566] font-semibold' : 'text-[#E57373] font-semibold'}>
+                        {isOnline ? 'Online' : 'Offline'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Dropdown Actions */}
+                  <div className="space-y-1 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowProfileMenu(false);
+                        handleInstallClick();
+                      }}
+                      className="w-full px-3 py-2 rounded-xl text-left text-xs font-mono font-medium text-[#D8DFC8] hover:bg-[#30371A] hover:text-[#F0F3E8] transition-colors flex items-center gap-2.5"
+                    >
+                      <span className="material-symbols-outlined text-[18px] text-[#A4B566]">
+                        install_mobile
+                      </span>
+                      Install PWA App
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowProfileMenu(false);
+                        logout();
+                      }}
+                      className="w-full px-3 py-2 rounded-xl text-left text-xs font-mono font-bold text-[#E57373] hover:bg-[#431B1B]/80 hover:text-[#FFCDD2] transition-colors flex items-center gap-2.5"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">logout</span>
+                      Sign Out / Logout
+                    </button>
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={logout}
-                  title="Sign Out"
-                  className="text-[#AAB596] hover:text-[#E57373] p-1 transition-colors"
-                >
-                  <span className="material-symbols-outlined text-[20px]">logout</span>
-                </button>
-              </div>
-            ) : null}
+              </>
+            )}
           </div>
         </div>
       </header>
