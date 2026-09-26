@@ -2,18 +2,40 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useTrees } from '../../context/TreeContext';
+import {
+  isPushSupported,
+  getNotificationPermission,
+  subscribeUserToPush,
+  sendTestAlert,
+} from '../../utils/pushManager';
+import { formatDate } from '../../utils/formatters';
 
 export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' }) {
   const navigate = useNavigate();
   const { user, logout, updateProfile } = useAuth();
-  const { reminders, toggleReminder, addReminder } = useTrees();
+  const {
+    reminders,
+    toggleReminder,
+    addReminder,
+    deleteReminder,
+    offlineCount,
+    syncOffline,
+  } = useTrees();
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showReminders, setShowReminders] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNewReminderInput, setShowNewReminderInput] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newTreeId, setNewTreeId] = useState('LMB-0001');
+  const [newType, setNewType] = useState('watering');
+  const [newInterval, setNewInterval] = useState('none');
   const [deferredPrompt, setDeferredPrompt] = useState(null);
+
+  // Push Notifications state
+  const [pushPermission, setPushPermission] = useState(() => getNotificationPermission());
+  const [isSubscribingPush, setIsSubscribingPush] = useState(false);
+  const [pushMessage, setPushMessage] = useState('');
+  const [isSyncingOffline, setIsSyncingOffline] = useState(false);
 
   // Detect whether the PWA is installed / running standalone
   const [isInstalled, setIsInstalled] = useState(() => {
@@ -184,15 +206,53 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
 
   const pendingCount = reminders.filter((r) => !r.completed).length;
 
-  const handleCreateReminder = (e) => {
+  const handleEnablePush = async () => {
+    setIsSubscribingPush(true);
+    setPushMessage('');
+    try {
+      await subscribeUserToPush();
+      setPushPermission(getNotificationPermission());
+      setPushMessage('Push alerts active! Tap "Test Alert" to test.');
+    } catch (err) {
+      setPushMessage(err.message || 'Failed to enable push notifications');
+    } finally {
+      setIsSubscribingPush(false);
+    }
+  };
+
+  const handleTestPush = async () => {
+    setPushMessage('Sending test alert...');
+    try {
+      await sendTestAlert();
+      setPushMessage('Test alert sent! Check your notification tray.');
+    } catch (err) {
+      setPushMessage(err.message || 'Failed to dispatch test notification');
+    }
+  };
+
+  const handleManualSync = async () => {
+    setIsSyncingOffline(true);
+    try {
+      const res = await syncOffline();
+      if (res && res.synced > 0) {
+        alert(`Successfully synchronized ${res.synced} offline observation log(s)!`);
+      }
+    } finally {
+      setIsSyncingOffline(false);
+    }
+  };
+
+  const handleCreateReminder = async (e) => {
     e.preventDefault();
     if (newTitle.trim()) {
-      addReminder({
+      await addReminder({
         title: newTitle.trim(),
-        treeId: newTreeId,
+        treeId: newTreeId.trim().toUpperCase(),
         species: 'Monitored Specimen',
+        scheduledDate: new Date().toISOString(),
         dueDate: 'Today',
-        type: 'watering',
+        type: newType,
+        repeatInterval: newInterval,
       });
       setNewTitle('');
       setShowNewReminderInput(false);
@@ -239,6 +299,25 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
                   {isOnline ? 'Online' : 'Offline'}
                 </span>
               </div>
+
+              {/* Offline Pending Queue Badge */}
+              {offlineCount > 0 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleManualSync}
+                    disabled={!isOnline || isSyncingOffline}
+                    title={`${offlineCount} offline log(s) stored locally. Click to sync with server.`}
+                    className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#D99B26]/30 border border-[#D99B26] text-[#F5C26B] font-mono text-[10px] font-bold animate-pulse hover:bg-[#D99B26]/40 transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-[13px]">
+                      {isSyncingOffline ? 'sync' : 'cloud_upload'}
+                    </span>
+                    <span>{isSyncingOffline ? 'Syncing...' : `${offlineCount} Offline`}</span>
+                  </button>
+                  <div className="w-[1px] h-4 bg-[#525E31]/80" />
+                </>
+              )}
 
               {/* Divider */}
               <div className="w-[1px] h-4 bg-[#525E31]/80" />
@@ -706,44 +785,131 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
               </button>
             </div>
 
-            {/* Reminders List */}
-            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-              {reminders.map((rem) => (
-                <div
-                  key={rem.id}
-                  onClick={() => toggleReminder(rem.id)}
-                  className={`p-3 rounded-xl border flex items-center justify-between gap-2.5 cursor-pointer transition-all ${
-                    rem.completed
-                      ? 'bg-[#1D230E]/70 border-[#525E31]/40 opacity-60'
-                      : 'bg-[#30371A] border-[#525E31] hover:border-[#8B9B4C]'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <span
-                      className={`material-symbols-outlined text-[20px] ${
-                        rem.completed ? 'text-[#A4B566]' : 'text-[#AAB596]'
-                      }`}
-                    >
-                      {rem.completed ? 'check_circle' : 'radio_button_unchecked'}
+            {/* Web Push Notification Control Card */}
+            {isPushSupported() && (
+              <div className="p-3 rounded-xl bg-[#1D230E] border border-[#525E31] space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[#A4B566] text-[18px]">
+                      {pushPermission === 'granted' ? 'notifications_active' : 'notifications_paused'}
                     </span>
-                    <div className="min-w-0">
-                      <span
-                        className={`font-body-md text-body-md font-semibold truncate block ${
-                          rem.completed ? 'line-through text-[#AAB596]' : 'text-[#F0F3E8]'
-                        }`}
-                      >
-                        {rem.title}
-                      </span>
-                      <span className="font-label-sm text-label-sm text-[#C2CE9F]">
-                        {rem.treeId} • {rem.dueDate}
-                      </span>
-                    </div>
+                    <span className="font-mono text-xs font-bold text-[#F0F3E8]">
+                      Device Push Alerts
+                    </span>
                   </div>
-                  <span className="shrink-0 px-2 py-0.5 rounded-full bg-[#1D230E] border border-[#525E31] font-label-sm text-label-sm text-[#D8DFC8]">
-                    {rem.type}
+                  <span
+                    className={`font-mono text-[10px] px-2 py-0.5 rounded-full border font-bold ${
+                      pushPermission === 'granted'
+                        ? 'bg-[#2E3C1B] text-[#A4B566] border-[#5D6F28]'
+                        : 'bg-[#3A331A] text-[#F5C26B] border-[#8D6B19]'
+                    }`}
+                  >
+                    {pushPermission === 'granted' ? 'ACTIVE' : 'INACTIVE'}
                   </span>
                 </div>
-              ))}
+
+                <div className="flex gap-2 pt-0.5">
+                  {pushPermission !== 'granted' ? (
+                    <button
+                      type="button"
+                      onClick={handleEnablePush}
+                      disabled={isSubscribingPush}
+                      className="flex-1 h-8 rounded-lg bg-[#8B9B4C] hover:bg-[#9EAF6D] text-[#1F240F] font-mono text-xs font-bold flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
+                    >
+                      <span className="material-symbols-outlined text-[14px]">add_alert</span>
+                      <span>{isSubscribingPush ? 'Enabling...' : 'Enable Push Alerts'}</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleTestPush}
+                      className="flex-1 h-8 rounded-lg bg-[#30371A] hover:bg-[#3D4721] border border-[#525E31] text-[#A4B566] font-mono text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-[14px]">send</span>
+                      <span>Send Test Alert</span>
+                    </button>
+                  )}
+                </div>
+
+                {pushMessage && (
+                  <p className="font-mono text-[10px] text-[#AAB596] pt-0.5 leading-tight">
+                    {pushMessage}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Reminders List */}
+            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+              {reminders.length === 0 ? (
+                <div className="p-4 rounded-xl bg-[#1D230E] border border-[#525E31]/40 text-center text-xs font-mono text-[#AAB596]">
+                  No active care tasks scheduled.
+                </div>
+              ) : (
+                reminders.map((rem) => {
+                  const remId = rem._id || rem.id;
+                  const displayDate = rem.scheduledDate
+                    ? formatDate(rem.scheduledDate)
+                    : rem.dueDate || 'Today';
+                  return (
+                    <div
+                      key={remId}
+                      className={`p-3 rounded-xl border flex items-center justify-between gap-2.5 transition-all ${
+                        rem.completed
+                          ? 'bg-[#1D230E]/70 border-[#525E31]/40 opacity-60'
+                          : 'bg-[#30371A] border-[#525E31] hover:border-[#8B9B4C]'
+                      }`}
+                    >
+                      <div
+                        onClick={() => toggleReminder(remId)}
+                        className="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer"
+                      >
+                        <span
+                          className={`material-symbols-outlined text-[20px] ${
+                            rem.completed ? 'text-[#A4B566]' : 'text-[#AAB596]'
+                          }`}
+                        >
+                          {rem.completed ? 'check_circle' : 'radio_button_unchecked'}
+                        </span>
+                        <div className="min-w-0">
+                          <span
+                            className={`font-body-md text-body-md font-semibold truncate block ${
+                              rem.completed ? 'line-through text-[#AAB596]' : 'text-[#F0F3E8]'
+                            }`}
+                          >
+                            {rem.title}
+                          </span>
+                          <span className="font-label-sm text-label-sm text-[#C2CE9F] block truncate">
+                            {rem.treeId || rem.tree?.treeId || 'Specimen'} • {displayDate}
+                            {rem.repeatInterval && rem.repeatInterval !== 'none' && (
+                              <span className="ml-1 text-[#F5C26B]">({rem.repeatInterval})</span>
+                            )}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="px-2 py-0.5 rounded-full bg-[#1D230E] border border-[#525E31] font-label-sm text-label-sm text-[#D8DFC8]">
+                          {rem.type}
+                        </span>
+                        {deleteReminder && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteReminder(remId);
+                            }}
+                            className="text-[#AAB596] hover:text-[#E57373] p-1 transition-colors"
+                            title="Delete task"
+                          >
+                            <span className="material-symbols-outlined text-[16px]">delete</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
 
             {/* Quick Add Reminder Form */}
@@ -756,20 +922,44 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
                   onChange={(e) => setNewTitle(e.target.value)}
                   className="w-full h-9 bg-[#1D230E] border border-[#525E31] rounded-lg px-2.5 text-xs text-[#F0F3E8] focus:outline-none focus:border-[#A4B566]"
                   autoFocus
+                  required
                 />
-                <div className="flex gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   <input
                     type="text"
-                    placeholder="Plant/Tree ID"
+                    placeholder="Tree ID"
                     value={newTreeId}
                     onChange={(e) => setNewTreeId(e.target.value)}
-                    className="w-28 h-8 bg-[#1D230E] border border-[#525E31] rounded-lg px-2 text-xs font-mono text-[#F0F3E8] uppercase"
+                    className="h-8 bg-[#1D230E] border border-[#525E31] rounded-lg px-2 text-xs font-mono text-[#F0F3E8] uppercase"
                   />
+                  <select
+                    value={newType}
+                    onChange={(e) => setNewType(e.target.value)}
+                    className="h-8 bg-[#1D230E] border border-[#525E31] rounded-lg px-1.5 text-xs font-mono text-[#F0F3E8]"
+                  >
+                    <option value="watering">Watering</option>
+                    <option value="fertilizer">Fertilizer</option>
+                    <option value="inspection">Inspection</option>
+                    <option value="custom">Custom</option>
+                  </select>
+                  <select
+                    value={newInterval}
+                    onChange={(e) => setNewInterval(e.target.value)}
+                    className="h-8 bg-[#1D230E] border border-[#525E31] rounded-lg px-1 text-xs font-mono text-[#F0F3E8]"
+                  >
+                    <option value="none">One-time</option>
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="biweekly">Biweekly</option>
+                    <option value="monthly">Monthly</option>
+                  </select>
+                </div>
+                <div className="flex gap-2 pt-1">
                   <button
                     type="submit"
                     className="flex-1 h-8 rounded-lg bg-[#8B9B4C] text-[#1F240F] font-mono text-xs font-bold uppercase hover:bg-[#9EAF6D]"
                   >
-                    Save
+                    Save Reminder
                   </button>
                   <button
                     type="button"

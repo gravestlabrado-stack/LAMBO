@@ -13,6 +13,10 @@ const reminderSchema = new mongoose.Schema(
       ref: 'Tree',
       default: null,
     },
+    treeId: {
+      type: String,
+      default: '',
+    },
     title: {
       type: String,
       required: true,
@@ -29,8 +33,12 @@ const reminderSchema = new mongoose.Schema(
     },
     repeatInterval: {
       type: String,
-      enum: ['none', 'daily', 'weekly', 'biweekly'],
+      enum: ['none', 'daily', 'weekly', 'biweekly', 'monthly'],
       default: 'none',
+    },
+    completed: {
+      type: Boolean,
+      default: false,
     },
     subscription: {
       endpoint: { type: String, default: null },
