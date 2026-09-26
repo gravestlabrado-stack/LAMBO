@@ -364,11 +364,14 @@ export default function CampusMapPage() {
         <MapContainer
           center={defaultCenter}
           zoom={16}
+          maxZoom={22}
           scrollWheelZoom={true}
           style={{ height: '100%', width: '100%' }}
         >
-          {/* Map Tile Layer: OpenStreetMap by default (no watermark), or CARTO if API key is provided */}
+          {/* Map Tile Layer: OpenStreetMap with maxZoom 22 (scaled beyond zoom 19) */}
           <TileLayer
+            maxZoom={22}
+            maxNativeZoom={19}
             attribution={
               import.meta.env.VITE_CARTO_API_KEY
                 ? '&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'

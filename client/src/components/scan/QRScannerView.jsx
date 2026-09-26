@@ -18,9 +18,13 @@ export default function QRScannerView({
   const [cameraError, setCameraError] = useState(null);
   const [torchSupported, setTorchSupported] = useState(false);
   const [torchOn, setTorchOn] = useState(false);
-  const [gridOn, setGridOn] = useState(true);
   const [cameras, setCameras] = useState([]);
   const [activeCameraIndex, setActiveCameraIndex] = useState(0);
+
+  // Throttling refs to prevent rapid-fire vibrations and duplicate processing
+  const lastScanTimeRef = useRef(0);
+  const lastHapticTimeRef = useRef(0);
+  const lastScannedCodeRef = useRef('');
 
   // Acoustic lock-on chirp using Web Audio API
   const playTacticalChirp = () => {
@@ -48,18 +52,31 @@ export default function QRScannerView({
     }
   };
 
-  // Mobile haptic vibration
+  // Mobile haptic vibration - gentle single pulse
   const triggerHaptic = () => {
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
-      navigator.vibrate([40, 30, 40]);
+      navigator.vibrate(35);
     }
   };
 
-  // Handle successful scan decode
+  // Handle successful scan decode (Throttled to 2-3 times per second max)
   const handleDecodedText = useCallback(
     (decodedText) => {
-      playTacticalChirp();
-      triggerHaptic();
+      const now = Date.now();
+      // Minimum 400ms cooldown between detections (~2.5 times per second max)
+      if (now - lastScanTimeRef.current < 400) {
+        return;
+      }
+      lastScanTimeRef.current = now;
+
+      // Trigger haptic and sound only for new codes, or at most once every 1200ms if held steady on same tag
+      if (decodedText !== lastScannedCodeRef.current || now - lastHapticTimeRef.current > 1200) {
+        lastHapticTimeRef.current = now;
+        triggerHaptic();
+        playTacticalChirp();
+      }
+      lastScannedCodeRef.current = decodedText;
+
       if (onScan) {
         onScan(decodedText);
       }
@@ -440,34 +457,9 @@ export default function QRScannerView({
       {/* Ambient Lighting Gradient Overlay */}
       <div className="absolute inset-0 bg-gradient-to-b from-[#14180A]/60 via-transparent to-[#14180A]/80 pointer-events-none z-15" />
 
-      {/* Optional Coordinate Reticle Grid Overlay */}
-      {gridOn && (
-        <div className="absolute inset-0 pointer-events-none opacity-25 z-20">
-          <svg className="w-full h-full">
-            <defs>
-              <pattern
-                id="hudReticleGridPattern"
-                width="44"
-                height="44"
-                patternUnits="userSpaceOnUse"
-              >
-                <path
-                  d="M 44 0 L 0 0 0 44"
-                  fill="none"
-                  stroke="#BDCE8A"
-                  strokeWidth="0.75"
-                  strokeDasharray="2 3"
-                />
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#hudReticleGridPattern)" />
-          </svg>
-        </div>
-      )}
-
       {/* Top Controls Bar */}
       <div className="absolute top-3 inset-x-3 flex items-center justify-end z-30 pointer-events-auto">
-        {/* Action Controls: Flip Camera, Torch, Grid, Upload QR */}
+        {/* Action Controls: Flip Camera, Torch, Upload QR */}
         <div className="flex items-center gap-2">
           {cameras.length > 1 && (
             <button
@@ -499,19 +491,6 @@ export default function QRScannerView({
 
           <button
             type="button"
-            onClick={() => setGridOn(!gridOn)}
-            className={`w-9 h-9 rounded-full flex items-center justify-center border backdrop-blur-md active:scale-95 transition-all ${
-              gridOn
-                ? 'bg-[#A4B566] text-[#1D230E] border-[#A4B566]'
-                : 'bg-[#191E0D]/90 border-[#4E5B2E] text-[#D8DFC8]'
-            }`}
-            title="Toggle Tactical Coordinate Grid"
-          >
-            <span className="material-symbols-outlined text-[18px]">grid_4x4</span>
-          </button>
-
-          <button
-            type="button"
             onClick={() => fileInputRef.current?.click()}
             className="w-9 h-9 rounded-full bg-[#191E0D]/90 border border-[#4E5B2E] text-[#D8DFC8] flex items-center justify-center backdrop-blur-md active:scale-95 transition-all hover:border-[#8B9B4C]"
             title="Scan QR from Gallery Image"
@@ -521,67 +500,19 @@ export default function QRScannerView({
         </div>
       </div>
 
-      {/* Tactical Reticle Bounding Box Calipers (NO moving laser animation) */}
-      <div className="absolute inset-x-8 top-16 bottom-20 pointer-events-none flex flex-col justify-between z-25">
-        {/* Top Reticle Brackets */}
-        <div className="flex justify-between items-start">
-          <div
-            className={`w-9 h-9 border-t-[3px] border-l-[3px] rounded-tl transition-all duration-300 ${
-              isLocked
-                ? 'border-[#BDCE8A] shadow-[0_0_14px_rgba(189,206,138,1)]'
-                : 'border-[#A4B566] shadow-[0_0_8px_rgba(164,181,102,0.8)]'
+      {/* Clean Scanner Status Indicator (Clean, uncluttered, no bulky corners) */}
+      <div className="absolute top-16 inset-x-0 flex justify-center pointer-events-none z-25">
+        <div className="flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#191E0D]/90 border border-[#525E31] backdrop-blur-md text-[#F0F3E8] shadow-lg">
+          <span
+            className={`material-symbols-outlined text-[15px] ${
+              isLocked ? 'text-[#BDCE8A]' : 'text-[#A4B566]'
             }`}
-          />
-
-          <div className="flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-[#191E0D]/95 border border-[#A4B566]/60 backdrop-blur-md text-[#F0F3E8] shadow-md -translate-y-2">
-            <span
-              className={`material-symbols-outlined text-[14px] ${
-                isLocked ? 'text-[#BDCE8A]' : 'text-[#A4B566]'
-              }`}
-            >
-              {isLocked ? 'verified' : 'filter_center_focus'}
-            </span>
-            <span className="font-mono text-xs font-semibold text-[#A4B566]">
-              {isLocked && scannedId ? `#${scannedId} LOCKED` : 'Align Specimen QR Tag'}
-            </span>
-          </div>
-
-          <div
-            className={`w-9 h-9 border-t-[3px] border-r-[3px] rounded-tr transition-all duration-300 ${
-              isLocked
-                ? 'border-[#BDCE8A] shadow-[0_0_14px_rgba(189,206,138,1)]'
-                : 'border-[#A4B566] shadow-[0_0_8px_rgba(164,181,102,0.8)]'
-            }`}
-          />
-        </div>
-
-        {/* Center Target Indicator (Static crosshair dots without moving scan line) */}
-        <div className="relative w-full flex items-center justify-center my-auto">
-          <div className="w-16 h-16 rounded-full border border-[#A4B566]/30 flex items-center justify-center">
-            <div
-              className={`w-2.5 h-2.5 rounded-full transition-transform duration-300 ${
-                isLocked ? 'bg-[#BDCE8A] scale-150' : 'bg-[#A4B566]/80'
-              }`}
-            />
-          </div>
-        </div>
-
-        {/* Bottom Reticle Brackets */}
-        <div className="flex justify-between items-end">
-          <div
-            className={`w-9 h-9 border-b-[3px] border-l-[3px] rounded-bl transition-all duration-300 ${
-              isLocked
-                ? 'border-[#BDCE8A] shadow-[0_0_14px_rgba(189,206,138,1)]'
-                : 'border-[#A4B566] shadow-[0_0_8px_rgba(164,181,102,0.8)]'
-            }`}
-          />
-          <div
-            className={`w-9 h-9 border-b-[3px] border-r-[3px] rounded-br transition-all duration-300 ${
-              isLocked
-                ? 'border-[#BDCE8A] shadow-[0_0_14px_rgba(189,206,138,1)]'
-                : 'border-[#A4B566] shadow-[0_0_8px_rgba(164,181,102,0.8)]'
-            }`}
-          />
+          >
+            {isLocked ? 'verified' : 'qr_code_scanner'}
+          </span>
+          <span className="font-mono text-xs font-semibold text-[#A4B566]">
+            {isLocked && scannedId ? `#${scannedId} LOCKED` : 'Align Specimen QR Tag'}
+          </span>
         </div>
       </div>
 
