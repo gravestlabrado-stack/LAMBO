@@ -151,6 +151,19 @@ const createGrowthLog = async (req, res, next) => {
       });
     }
 
+    // Authorization: only tree owner or authorized supervisor (Roll #9260572) can log growth
+    const targetTreeOwnerId = targetTree.owner ? String(targetTree.owner._id || targetTree.owner) : '';
+    const userId = String(req.user._id || '');
+    const isOwner = Boolean(targetTreeOwnerId && userId && targetTreeOwnerId === userId);
+    const isSupervisor = req.user.rollNumber && String(req.user.rollNumber).trim() === '9260572';
+
+    if (!isOwner && !isSupervisor) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only the specimen owner or authorized field supervisor can record growth for this tree.',
+      });
+    }
+
     // Handle photo upload if present
     let photoUrl = req.body.photo || null;
     if (req.file) {
@@ -227,11 +240,19 @@ const updateGrowthLog = async (req, res, next) => {
       });
     }
 
-    // Verify ownership
-    if (log.loggedBy.toString() !== req.user._id.toString()) {
+    // Verify ownership: loggedBy OR tree owner OR field supervisor (Roll #9260572)
+    const targetTree = await Tree.findById(log.tree);
+    const loggedById = String(log.loggedBy?._id || log.loggedBy || '');
+    const userId = String(req.user._id || '');
+    const treeOwnerId = targetTree && targetTree.owner ? String(targetTree.owner._id || targetTree.owner) : '';
+    const isCreator = Boolean(loggedById && userId && loggedById === userId);
+    const isTreeOwner = Boolean(treeOwnerId && userId && treeOwnerId === userId);
+    const isSupervisor = req.user.rollNumber && String(req.user.rollNumber).trim() === '9260572';
+
+    if (!isCreator && !isTreeOwner && !isSupervisor) {
       return res.status(403).json({
         success: false,
-        message: 'Not authorized to modify this log entry',
+        message: 'Not authorized to modify this log entry. Only the specimen owner or supervisor can edit.',
       });
     }
 
@@ -293,10 +314,18 @@ const deleteGrowthLog = async (req, res, next) => {
       });
     }
 
-    if (log.loggedBy.toString() !== req.user._id.toString()) {
+    const targetTree = await Tree.findById(log.tree);
+    const loggedById = String(log.loggedBy?._id || log.loggedBy || '');
+    const userId = String(req.user._id || '');
+    const treeOwnerId = targetTree && targetTree.owner ? String(targetTree.owner._id || targetTree.owner) : '';
+    const isCreator = Boolean(loggedById && userId && loggedById === userId);
+    const isTreeOwner = Boolean(treeOwnerId && userId && treeOwnerId === userId);
+    const isSupervisor = req.user.rollNumber && String(req.user.rollNumber).trim() === '9260572';
+
+    if (!isCreator && !isTreeOwner && !isSupervisor) {
       return res.status(403).json({
         success: false,
-        message: 'Not authorized to delete this log entry',
+        message: 'Not authorized to delete this log entry. Only the specimen owner or supervisor can delete.',
       });
     }
 

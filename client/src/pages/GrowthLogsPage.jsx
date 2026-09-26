@@ -8,6 +8,7 @@ import GrowthChart from '../components/growth/GrowthChart';
 import GrowthTimeline from '../components/growth/GrowthTimeline';
 import GrowthEntryForm from '../components/growth/GrowthEntryForm';
 import { formatDate } from '../utils/formatters';
+import { canUserLogTree } from '../utils/permissions';
 
 export default function GrowthLogsPage() {
   const { id: paramTreeId } = useParams();
@@ -24,6 +25,7 @@ export default function GrowthLogsPage() {
 
   // Modals
   const [showLogModal, setShowLogModal] = useState(false);
+  const [editingLog, setEditingLog] = useState(null);
   const [exporting, setExporting] = useState(false);
 
   // 1. Fetch available trees
@@ -408,29 +410,51 @@ export default function GrowthLogsPage() {
         <GrowthTimeline
           logs={logs}
           onDeleteLog={handleDeleteLog}
+          onEditLog={(log) => {
+            setEditingLog(log);
+            setShowLogModal(true);
+          }}
+          currentUser={user}
           currentUserId={currentUserId}
+          tree={activeTree}
         />
       )}
 
       {/* Sticky Bottom Ergonomic Field Action CTA */}
       <div className="sticky bottom-20 z-30 pt-2 pb-1">
-        <button
-          type="button"
-          onClick={() => setShowLogModal(true)}
-          className="w-full h-12 bg-[#8B9B4C] hover:bg-[#9EAF6D] text-[#1F240F] rounded-xl shadow-[0_8px_20px_rgba(0,0,0,0.5)] flex items-center justify-center gap-2 active:scale-[0.98] transition-transform font-mono text-xs font-bold uppercase tracking-wider border border-[#A4B566]"
-        >
-          <span className="material-symbols-outlined text-[20px]">straighten</span>
-          <span>+ Record Measurement Entry</span>
-        </button>
+        {canUserLogTree(user, activeTree) ? (
+          <button
+            type="button"
+            onClick={() => {
+              setEditingLog(null);
+              setShowLogModal(true);
+            }}
+            className="w-full h-12 bg-[#8B9B4C] hover:bg-[#9EAF6D] text-[#1F240F] rounded-xl shadow-[0_8px_20px_rgba(0,0,0,0.5)] flex items-center justify-center gap-2 active:scale-[0.98] transition-transform font-mono text-xs font-bold uppercase tracking-wider border border-[#A4B566]"
+          >
+            <span className="material-symbols-outlined text-[20px]">straighten</span>
+            <span>+ Record Measurement Entry</span>
+          </button>
+        ) : (
+          <div className="w-full py-3 px-4 rounded-xl bg-[#1D230E] border border-[#525E31]/50 text-center font-mono text-xs text-[#AAB596] flex items-center justify-center gap-2 shadow-md">
+            <span className="material-symbols-outlined text-[16px] text-[#8B9B4C]">lock</span>
+            <span>Growth telemetry entries restricted to specimen caretaker</span>
+          </div>
+        )}
       </div>
 
-      {/* Modal: New Observation Entry */}
+      {/* Modal: New / Edit Observation Entry */}
       {showLogModal && (
         <GrowthEntryForm
           tree={activeTree}
           trees={trees}
-          onClose={() => setShowLogModal(false)}
+          editingLog={editingLog}
+          onClose={() => {
+            setShowLogModal(false);
+            setEditingLog(null);
+          }}
           onSuccess={() => {
+            setShowLogModal(false);
+            setEditingLog(null);
             loadLogs(selectedTreeId);
           }}
         />

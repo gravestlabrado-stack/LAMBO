@@ -4,6 +4,8 @@ import QRScannerView from '../components/scan/QRScannerView';
 import GrowthEntryForm from '../components/growth/GrowthEntryForm';
 import ErrorBoundary from '../components/common/ErrorBoundary';
 import treeService from '../services/treeService';
+import { useAuth } from '../hooks/useAuth';
+import { canUserLogTree } from '../utils/permissions';
 
 /**
  * Extract clean Tree ID from decoded QR string, URL, or JSON payload
@@ -46,6 +48,7 @@ const extractTreeId = (raw) => {
 
 export default function ScanPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const [activeTab, setActiveTab] = useState('camera'); // 'camera' | 'manual'
   const [manualId, setManualId] = useState('');
@@ -86,6 +89,8 @@ export default function ScanPage() {
     if (!manualId.trim()) return;
     handleScan(manualId);
   };
+
+  const canLogSpecimen = canUserLogTree(user, detectedSpecimen);
 
   return (
     <div className="space-y-4 pb-12">
@@ -149,6 +154,7 @@ export default function ScanPage() {
         </div>
       )}
 
+      {/* Active Tab Viewport */}
       {activeTab === 'camera' ? (
         <div className="space-y-4">
           {/* Tactical Camera Viewfinder */}
@@ -192,104 +198,6 @@ export default function ScanPage() {
               scannedId={detectedSpecimen?.treeId}
             />
           </ErrorBoundary>
-
-          {/* Detected Specimen Action Dock */}
-          {detectedSpecimen && (
-            <div className="p-5 rounded-2xl bg-[#262C14] border border-[#8B9B4C] shadow-2xl space-y-3.5 animate-in slide-in-from-bottom-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-[#1D230E] border border-[#525E31] flex items-center justify-center text-[#8B9B4C] shrink-0 shadow-inner">
-                    <span className="material-symbols-outlined text-[28px]">park</span>
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="px-2 py-0.5 rounded-full bg-[#1D230E] text-[#A4B566] border border-[#525E31] font-mono text-xs font-bold">
-                        #{detectedSpecimen.treeId}
-                      </span>
-                      <span className="font-mono text-[11px] text-[#A4B566] uppercase font-bold tracking-wide">
-                        IDENTIFIED
-                      </span>
-                    </div>
-                    <h3 className="font-headline-sm text-base font-bold text-[#F0F3E8] mt-0.5 truncate">
-                      {detectedSpecimen.nickname || detectedSpecimen.species}
-                    </h3>
-                    <span className="font-body-sm text-xs text-[#CCD6B8] italic block truncate">
-                      {detectedSpecimen.species}
-                    </span>
-                  </div>
-                </div>
-
-                <span
-                  className={`px-2.5 py-1 rounded-full font-mono text-xs font-semibold shrink-0 border ${
-                    detectedSpecimen.healthStatus === 'Healthy'
-                      ? 'bg-[#3A4320] border-[#5D6A37] text-[#D2DCB4]'
-                      : detectedSpecimen.healthStatus === 'Monitoring'
-                      ? 'bg-[#3A331A] border-[#D99B26]/60 text-[#F5C26B]'
-                      : 'bg-[#431B1B] border-[#E57373]/60 text-[#FFCDD2]'
-                  }`}
-                >
-                  {detectedSpecimen.healthStatus || 'Healthy'}
-                </span>
-              </div>
-
-              {/* Specimen Telemetry Row */}
-              <div className="grid grid-cols-2 gap-2 text-xs font-mono bg-[#1D230E] p-3 rounded-xl border border-[#404A24]">
-                <div>
-                  <span className="text-[#AAB596] block text-[10px] uppercase">Campus Sector</span>
-                  <span className="text-[#F0F3E8] font-bold truncate block">
-                    {detectedSpecimen.location || 'CTU Barili Campus'}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-[#AAB596] block text-[10px] uppercase">Growth Stage</span>
-                  <span className="text-[#A4B566] font-bold block">
-                    {detectedSpecimen.currentStage || 'Seedling'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Quick Actions Grid */}
-              <div className="grid grid-cols-2 gap-2.5 pt-1">
-                <button
-                  type="button"
-                  onClick={() => navigate(`/trees/${detectedSpecimen.treeId}`)}
-                  className="h-11 rounded-xl bg-[#8B9B4C] hover:bg-[#9EAF6D] text-[#1F240F] font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all"
-                >
-                  <span className="material-symbols-outlined text-[16px]">assignment_turned_in</span>
-                  <span>Open Profile</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setShowLogModal(true)}
-                  className="h-11 rounded-xl bg-[#30371A] hover:bg-[#3D4721] text-[#A4B566] border border-[#525E31] font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 active:scale-95 transition-all"
-                >
-                  <span className="material-symbols-outlined text-[16px]">straighten</span>
-                  <span>Log Growth</span>
-                </button>
-              </div>
-
-              <div className="flex items-center justify-between pt-1">
-                <button
-                  type="button"
-                  onClick={() => navigate(`/map?focus=${detectedSpecimen.treeId}`)}
-                  className="font-mono text-xs text-[#CCD6B8] hover:text-[#F0F3E8] flex items-center gap-1"
-                >
-                  <span className="material-symbols-outlined text-[16px] text-[#A4B566]">pin_drop</span>
-                  <span>View on Campus Map</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setDetectedSpecimen(null)}
-                  className="font-mono text-xs text-[#AAB596] hover:text-[#FFCDD2] flex items-center gap-1"
-                >
-                  <span className="material-symbols-outlined text-[16px]">close</span>
-                  <span>Scan Next Tag</span>
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       ) : (
         /* Manual ID Search Mode */
@@ -325,7 +233,127 @@ export default function ScanPage() {
         </div>
       )}
 
-      {/* Growth Entry Modal (Can be triggered directly from the scan screen) */}
+      {/* Detected Specimen Action Dock (Available in both Camera & Manual Search) */}
+      {detectedSpecimen && (
+        <div className="p-5 rounded-2xl bg-[#262C14] border border-[#8B9B4C] shadow-2xl space-y-3.5 animate-in slide-in-from-bottom-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-12 h-12 rounded-xl bg-[#1D230E] border border-[#525E31] flex items-center justify-center text-[#8B9B4C] shrink-0 shadow-inner">
+                <span className="material-symbols-outlined text-[28px]">park</span>
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded-full bg-[#1D230E] text-[#A4B566] border border-[#525E31] font-mono text-xs font-bold">
+                    #{detectedSpecimen.treeId}
+                  </span>
+                  <span className="font-mono text-[11px] text-[#A4B566] uppercase font-bold tracking-wide">
+                    IDENTIFIED
+                  </span>
+                </div>
+                <h3 className="font-headline-sm text-base font-bold text-[#F0F3E8] mt-0.5 truncate">
+                  {detectedSpecimen.nickname || detectedSpecimen.species}
+                </h3>
+                <span className="font-body-sm text-xs text-[#CCD6B8] italic block truncate">
+                  {detectedSpecimen.species}
+                </span>
+              </div>
+            </div>
+
+            <span
+              className={`px-2.5 py-1 rounded-full font-mono text-xs font-semibold shrink-0 border ${
+                detectedSpecimen.healthStatus === 'Healthy'
+                  ? 'bg-[#3A4320] border-[#5D6A37] text-[#D2DCB4]'
+                  : detectedSpecimen.healthStatus === 'Monitoring'
+                  ? 'bg-[#3A331A] border-[#D99B26]/60 text-[#F5C26B]'
+                  : 'bg-[#431B1B] border-[#E57373]/60 text-[#FFCDD2]'
+              }`}
+            >
+              {detectedSpecimen.healthStatus || 'Healthy'}
+            </span>
+          </div>
+
+          {/* Specimen Telemetry Row */}
+          <div className="grid grid-cols-2 gap-2 text-xs font-mono bg-[#1D230E] p-3 rounded-xl border border-[#404A24]">
+            <div>
+              <span className="text-[#AAB596] block text-[10px] uppercase">Campus Sector</span>
+              <span className="text-[#F0F3E8] font-bold truncate block">
+                {detectedSpecimen.location || 'CTU Barili Campus'}
+              </span>
+            </div>
+            <div>
+              <span className="text-[#AAB596] block text-[10px] uppercase">Growth Stage</span>
+              <span className="text-[#A4B566] font-bold block">
+                {detectedSpecimen.currentStage || 'Seedling'}
+              </span>
+            </div>
+          </div>
+
+          {/* Owner Info & Permission Notice */}
+          {!canLogSpecimen && (
+            <div className="px-3 py-2 rounded-xl bg-[#1D230E]/70 border border-[#525E31]/40 flex items-center justify-between text-xs font-mono">
+              <span className="text-[#AAB596]">Specimen Caretaker:</span>
+              <span className="text-[#CCD6B8] font-semibold">
+                {detectedSpecimen.owner?.name || 'Registered Student'}
+              </span>
+            </div>
+          )}
+
+          {/* Quick Actions Grid */}
+          <div className="grid grid-cols-2 gap-2.5 pt-1">
+            <button
+              type="button"
+              onClick={() => navigate(`/trees/${detectedSpecimen.treeId}`)}
+              className="h-11 rounded-xl bg-[#8B9B4C] hover:bg-[#9EAF6D] text-[#1F240F] font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all"
+            >
+              <span className="material-symbols-outlined text-[16px]">assignment_turned_in</span>
+              <span>Open Profile</span>
+            </button>
+
+            {canLogSpecimen ? (
+              <button
+                type="button"
+                onClick={() => setShowLogModal(true)}
+                className="h-11 rounded-xl bg-[#30371A] hover:bg-[#3D4721] text-[#A4B566] border border-[#525E31] font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 active:scale-95 transition-all"
+              >
+                <span className="material-symbols-outlined text-[16px]">straighten</span>
+                <span>Log Growth</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled
+                title="Growth logging is restricted to the specimen caretaker or field supervisor"
+                className="h-11 rounded-xl bg-[#1D230E] text-[#697549] border border-[#3A431F] font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-not-allowed opacity-75"
+              >
+                <span className="material-symbols-outlined text-[16px]">lock</span>
+                <span>Owner Only</span>
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between pt-1">
+            <button
+              type="button"
+              onClick={() => navigate(`/map?focus=${detectedSpecimen.treeId}`)}
+              className="font-mono text-xs text-[#CCD6B8] hover:text-[#F0F3E8] flex items-center gap-1"
+            >
+              <span className="material-symbols-outlined text-[16px] text-[#A4B566]">pin_drop</span>
+              <span>View on Campus Map</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setDetectedSpecimen(null)}
+              className="font-mono text-xs text-[#AAB596] hover:text-[#FFCDD2] flex items-center gap-1"
+            >
+              <span className="material-symbols-outlined text-[16px]">close</span>
+              <span>Scan Next Tag</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Growth Entry Modal */}
       {showLogModal && detectedSpecimen && (
         <GrowthEntryForm
           tree={detectedSpecimen}

@@ -6,10 +6,13 @@ import growthLogService from '../services/growthLogService';
 import StageProgressBar from '../components/tree/StageProgressBar';
 import GrowthEntryForm from '../components/growth/GrowthEntryForm';
 import { formatDate, formatRelativeTime } from '../utils/formatters';
+import { useAuth } from '../hooks/useAuth';
+import { canUserLogTree } from '../utils/permissions';
 
 export default function TreeProfilePage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const [tree, setTree] = useState(null);
   const [logs, setLogs] = useState([]);
@@ -585,14 +588,21 @@ export default function TreeProfilePage() {
 
       {/* Field Action Buttons */}
       <div className="space-y-2.5 pt-2">
-        <button
-          type="button"
-          onClick={() => setShowLogModal(true)}
-          className="w-full h-12 rounded-xl bg-[#8B9B4C] hover:bg-[#9EAF6D] text-[#1F240F] font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] transition-all"
-        >
-          <span className="material-symbols-outlined text-[18px]">add_circle</span>
-          <span>Add New Growth Entry</span>
-        </button>
+        {canUserLogTree(user, tree) ? (
+          <button
+            type="button"
+            onClick={() => setShowLogModal(true)}
+            className="w-full h-12 rounded-xl bg-[#8B9B4C] hover:bg-[#9EAF6D] text-[#1F240F] font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] transition-all"
+          >
+            <span className="material-symbols-outlined text-[18px]">add_circle</span>
+            <span>Add New Growth Entry</span>
+          </button>
+        ) : (
+          <div className="w-full py-3 px-4 rounded-xl bg-[#1D230E] border border-[#525E31]/50 text-center font-mono text-xs text-[#AAB596] flex items-center justify-center gap-2 shadow-md">
+            <span className="material-symbols-outlined text-[16px] text-[#8B9B4C]">lock</span>
+            <span>Growth audit logs restricted to specimen caretaker</span>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-2.5">
           <Link

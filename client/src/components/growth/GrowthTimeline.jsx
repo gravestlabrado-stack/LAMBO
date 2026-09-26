@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
 import { formatDate } from '../../utils/formatters';
+import { canUserEditOrDeleteLog } from '../../utils/permissions';
 
 export default function GrowthTimeline({
   logs = [],
   onDeleteLog = null,
+  onEditLog = null,
+  currentUser = null,
   currentUserId = null,
+  tree = null,
 }) {
   const [selectedPhoto, setSelectedPhoto] = useState(null);
 
@@ -53,9 +57,9 @@ export default function GrowthTimeline({
         {sortedLogs.map((log, index) => {
           const isLatest = index === 0;
           const auditor = log.loggedBy;
-          const auditorId = typeof auditor === 'object' ? auditor?._id : auditor;
-          const canDelete =
-            onDeleteLog && currentUserId && String(auditorId) === String(currentUserId);
+          const targetTree = tree || log.tree;
+          const activeUser = currentUser || currentUserId;
+          const canModify = canUserEditOrDeleteLog(activeUser, log, targetTree);
 
           // Calculate delta if previous chronological log exists
           const prevChronologicalLog = sortedLogs[index + 1];
@@ -99,14 +103,24 @@ export default function GrowthTimeline({
                   )}
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-[11px] text-[#AAB596]">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-mono text-[11px] text-[#AAB596] mr-1">
                     {new Date(log.loggedAt).toLocaleTimeString([], {
                       hour: '2-digit',
                       minute: '2-digit',
                     })}
                   </span>
-                  {canDelete && (
+                  {onEditLog && canModify && (
+                    <button
+                      type="button"
+                      onClick={() => onEditLog(log)}
+                      className="text-[#AAB596] hover:text-[#A4B566] p-1 transition-colors rounded-lg hover:bg-[#30371A]"
+                      title="Edit this observation log"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">edit</span>
+                    </button>
+                  )}
+                  {onDeleteLog && canModify && (
                     <button
                       type="button"
                       onClick={() => {
@@ -114,7 +128,7 @@ export default function GrowthTimeline({
                           onDeleteLog(log._id);
                         }
                       }}
-                      className="text-[#AAB596] hover:text-[#FFCDD2] p-1 transition-colors"
+                      className="text-[#AAB596] hover:text-[#FFCDD2] p-1 transition-colors rounded-lg hover:bg-[#30371A]"
                       title="Delete this observation"
                     >
                       <span className="material-symbols-outlined text-[16px]">delete</span>

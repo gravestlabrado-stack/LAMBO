@@ -296,7 +296,11 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
                   setShowProfileMenu(!showProfileMenu);
                   setShowReminders(false);
                 }}
-                className="w-8 h-8 rounded-full overflow-hidden ring-2 ring-[#8B9B4C] hover:ring-[#A4B566] transition-all focus:outline-none flex items-center justify-center bg-[#1D230E] cursor-pointer shrink-0"
+                className={`relative w-8 h-8 rounded-full overflow-hidden ring-2 ${
+                  String(user?.rollNumber).trim() === '9260572'
+                    ? 'ring-[#F5C26B] shadow-[0_0_8px_rgba(245,194,107,0.4)]'
+                    : 'ring-[#8B9B4C] hover:ring-[#A4B566]'
+                } transition-all focus:outline-none flex items-center justify-center bg-[#1D230E] cursor-pointer shrink-0`}
                 title="Account Menu"
                 aria-label="Account Profile Menu"
               >
@@ -307,7 +311,9 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
                     src={user.avatar}
                   />
                 ) : (
-                  <span className="font-mono text-xs font-bold text-[#A4B566]">
+                  <span className={`font-mono text-xs font-bold ${
+                    String(user?.rollNumber).trim() === '9260572' ? 'text-[#F5C26B]' : 'text-[#A4B566]'
+                  }`}>
                     {user?.name?.charAt(0)?.toUpperCase() || 'S'}
                   </span>
                 )}
@@ -327,25 +333,38 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
                 <div className="absolute right-0 top-12 z-50 w-72 rounded-2xl bg-[#262C14] border border-[#5D6A37] shadow-2xl p-4 space-y-3 animate-in fade-in zoom-in-95">
                   {/* User Details Header with quick edit indicator */}
                   <div className="flex items-center gap-3 pb-3 border-b border-[#4F5A2D]">
-                    <div
-                      onClick={handleOpenEditProfile}
-                      title="Click to edit profile & photo"
-                      className="relative group w-11 h-11 rounded-full overflow-hidden ring-2 ring-[#8B9B4C] hover:ring-[#A4B566] flex items-center justify-center bg-[#30371A] shrink-0 cursor-pointer transition-all"
-                    >
-                      {user?.avatar ? (
-                        <img
-                          alt={user.name}
-                          className="w-full h-full object-cover group-hover:opacity-75 transition-opacity"
-                          src={user.avatar}
-                        />
-                      ) : (
-                        <span className="font-mono text-sm font-bold text-[#A4B566]">
-                          {user?.name?.charAt(0)?.toUpperCase() || 'S'}
+                    <div className="relative shrink-0">
+                      <div
+                        onClick={handleOpenEditProfile}
+                        title="Click to edit profile & photo"
+                        className={`relative group w-12 h-12 rounded-full overflow-hidden ring-2 ${
+                          String(user?.rollNumber).trim() === '9260572'
+                            ? 'ring-[#F5C26B] shadow-[0_0_12px_rgba(245,194,107,0.45)]'
+                            : 'ring-[#8B9B4C] hover:ring-[#A4B566]'
+                        } flex items-center justify-center bg-[#30371A] cursor-pointer transition-all`}
+                      >
+                        {user?.avatar ? (
+                          <img
+                            alt={user.name}
+                            className="w-full h-full object-cover group-hover:opacity-75 transition-opacity"
+                            src={user.avatar}
+                          />
+                        ) : (
+                          <span className={`font-mono text-sm font-bold ${
+                            String(user?.rollNumber).trim() === '9260572' ? 'text-[#F5C26B]' : 'text-[#A4B566]'
+                          }`}>
+                            {user?.name?.charAt(0)?.toUpperCase() || 'S'}
+                          </span>
+                        )}
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                          <span className="material-symbols-outlined text-white text-[16px]">edit</span>
+                        </div>
+                      </div>
+                      {String(user?.rollNumber).trim() === '9260572' && (
+                        <span className="absolute -top-1 -right-1 text-[13px] drop-shadow-md select-none" title="Special">
+                          👑
                         </span>
                       )}
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                        <span className="material-symbols-outlined text-white text-[16px]">edit</span>
-                      </div>
                     </div>
                     <div className="min-w-0 flex-1">
                       <h4 className="font-display font-bold text-sm text-[#F0F3E8] truncate">
@@ -358,6 +377,13 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
                         <span className="font-mono text-[10px] text-[#8B9B4C] block truncate">
                           {user.course}
                         </span>
+                      )}
+                      {String(user?.rollNumber).trim() === '9260572' && (
+                        <div className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-[#D99B26]/30 via-[#E57373]/25 to-[#F5C26B]/30 border border-[#F5C26B]/80 shadow-[0_0_10px_rgba(245,194,107,0.35)] select-none">
+                          <span className="text-[10px] font-bold text-[#F5C26B] tracking-tight whitespace-nowrap">
+                            my baby the goat🗣️🗣️❤️🔥
+                          </span>
+                        </div>
                       )}
                     </div>
                   </div>
