@@ -1,6 +1,8 @@
 import React, { useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
+import Icon from '../common/Icon';
 
 export default function QRCodeDisplay({
   tree,
@@ -68,12 +70,12 @@ export default function QRCodeDisplay({
     window.print();
   };
 
-  return (
-    <div className="fixed inset-0 !m-0 z-[100] flex items-center justify-center p-4 bg-[#14180A]/60 backdrop-blur-xl animate-in fade-in duration-200">
+  const modalContent = (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
       <div className="w-full max-w-sm rounded-2xl bg-[#262C14] border border-[#5D6A37] p-6 shadow-2xl space-y-4 text-center animate-in zoom-in-95 duration-200">
         {/* Success Icon */}
         <div className="w-14 h-14 mx-auto rounded-full bg-[#38411F] text-[#A4B566] border border-[#5D6A37] flex items-center justify-center shadow-md">
-          <span className="material-symbols-outlined text-[32px]">check_circle</span>
+          <Icon name="check_circle" className="w-8 h-8 text-[#A4B566]" />
         </div>
 
         {/* Specimen Header */}
@@ -125,14 +127,12 @@ export default function QRCodeDisplay({
           >
             {isDownloading ? (
               <>
-                <span className="material-symbols-outlined text-[16px] text-[#A4B566] animate-spin">
-                  progress_activity
-                </span>
+                <Icon name="progress_activity" className="w-4 h-4 text-[#A4B566] animate-spin" />
                 <span>Saving...</span>
               </>
             ) : (
               <>
-                <span className="material-symbols-outlined text-[16px] text-[#A4B566]">download</span>
+                <Icon name="download" className="w-4 h-4 text-[#A4B566]" />
                 <span>Download PNG</span>
               </>
             )}
@@ -142,7 +142,7 @@ export default function QRCodeDisplay({
             onClick={handlePrint}
             className="h-10 px-3 rounded-xl bg-[#30371A] hover:bg-[#3D4721] border border-[#525E31] text-[#D8DFC8] hover:text-[#F0F3E8] font-mono text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors shadow-sm active:scale-95"
           >
-            <span className="material-symbols-outlined text-[16px] text-[#A4B566]">print</span>
+            <Icon name="print" className="w-4 h-4 text-[#A4B566]" />
             Print Tag
           </button>
         </div>
@@ -150,13 +150,13 @@ export default function QRCodeDisplay({
         {/* Real-time Download Feedback Banner */}
         {downloadNotice === 'downloading' && (
           <div className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-[#38411F] border border-[#5D6A37] text-xs font-mono text-[#D8DFC8] animate-in fade-in zoom-in-95">
-            <span className="material-symbols-outlined text-[16px] text-[#A4B566] animate-spin">progress_activity</span>
+            <Icon name="progress_activity" className="w-4 h-4 text-[#A4B566] animate-spin" />
             <span>Generating high-res PNG tag... download starting</span>
           </div>
         )}
         {downloadNotice === 'success' && (
           <div className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-[#2D3F1E] border border-[#7A9330] text-xs font-mono text-[#E4F5A6] animate-in fade-in zoom-in-95">
-            <span className="material-symbols-outlined text-[16px] text-[#A4B566]">check_circle</span>
+            <Icon name="check_circle" className="w-4 h-4 text-[#A4B566]" />
             <span>Tag downloaded! Check your downloads.</span>
           </div>
         )}
@@ -168,7 +168,7 @@ export default function QRCodeDisplay({
             onClick={() => navigate(`/trees/${tree.treeId}`)}
             className="flex-1 h-11 rounded-xl bg-[#8B9B4C] hover:bg-[#9EAF6D] text-[#1F240F] font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-md transition-colors"
           >
-            <span className="material-symbols-outlined text-[16px]">visibility</span>
+            <Icon name="visibility" className="w-4 h-4" />
             Open Profile
           </button>
           <button
@@ -188,4 +188,6 @@ export default function QRCodeDisplay({
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent;
 }

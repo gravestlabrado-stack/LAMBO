@@ -1,5 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
+import Icon from '../common/Icon';
 
 const navItems = [
   { name: 'Home', path: '/', icon: 'grid_view' },
@@ -33,12 +34,11 @@ export default function BottomNav() {
                     isActive ? 'bg-[#38411F] text-[#A4B566] shadow-sm' : ''
                   }`}
                 >
-                  <span
-                    className="material-symbols-outlined text-[22px]"
-                    style={isActive ? { fontVariationSettings: "'FILL' 1" } : {}}
-                  >
-                    {item.icon}
-                  </span>
+                  <Icon
+                    name={item.icon}
+                    className="w-5 h-5"
+                    strokeWidth={isActive ? 2.5 : 1.75}
+                  />
                 </div>
                 <span className="font-label-sm text-label-sm tracking-wider uppercase">
                   {item.name}

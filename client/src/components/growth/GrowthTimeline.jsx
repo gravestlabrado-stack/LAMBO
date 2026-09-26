@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { formatDate } from '../../utils/formatters';
 import { canUserEditOrDeleteLog } from '../../utils/permissions';
 
@@ -263,10 +264,10 @@ export default function GrowthTimeline({
       </div>
 
       {/* Lightbox Modal for enlarged photo */}
-      {selectedPhoto && (
+      {selectedPhoto && typeof document !== 'undefined' && createPortal(
         <div
           onClick={() => setSelectedPhoto(null)}
-          className="fixed inset-0 !m-0 z-[100] flex items-center justify-center p-4 bg-[#14180A]/60 backdrop-blur-xl animate-in fade-in duration-200"
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -279,12 +280,14 @@ export default function GrowthTimeline({
             />
             <button
               onClick={() => setSelectedPhoto(null)}
-              className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/70 text-white flex items-center justify-center border border-white/30"
+              className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/70 text-white flex items-center justify-center border border-white/30 hover:bg-black/90 active:scale-95 transition-all"
+              title="Close photo"
             >
               <span className="material-symbols-outlined text-[18px]">close</span>
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

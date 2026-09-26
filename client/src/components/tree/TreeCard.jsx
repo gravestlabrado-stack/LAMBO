@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatRelativeTime } from '../../utils/formatters';
+import Icon from '../common/Icon';
 
 export default function TreeCard({ tree, isOwner = false }) {
   const navigate = useNavigate();
@@ -27,7 +28,7 @@ export default function TreeCard({ tree, isOwner = false }) {
   return (
     <div
       onClick={() => navigate(`/trees/${tree.treeId}`)}
-      className="group rounded-2xl bg-[#262C14] border border-[#4F5A2D] p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 cursor-pointer hover:border-[#8B9B4C] hover:bg-[#2B3117] active:scale-[0.99] transition-all"
+      className="group rounded-2xl bg-[#262C14] border border-[#4F5A2D] p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 cursor-pointer card-interactive"
     >
       <div className="flex items-center gap-3.5 min-w-0">
         {/* Specimen Photo Thumbnail */}
@@ -40,7 +41,7 @@ export default function TreeCard({ tree, isOwner = false }) {
             />
           ) : (
             <div className="flex flex-col items-center justify-center text-[#525E31] group-hover:text-[#8B9B4C] transition-colors">
-              <span className="material-symbols-outlined text-[28px]">park</span>
+              <Icon name="park" className="w-7 h-7" />
             </div>
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
@@ -62,7 +63,7 @@ export default function TreeCard({ tree, isOwner = false }) {
           </span>
 
           <div className="flex items-center gap-1.5 text-[11px] font-mono text-[#AAB596] truncate mt-1">
-            <span className="material-symbols-outlined text-[13px] text-[#8B9B4C] shrink-0">location_on</span>
+            <Icon name="location_on" className="w-3.5 h-3.5 text-[#8B9B4C] shrink-0" />
             <span className="truncate">{tree.location || 'CTU Barili Campus'}</span>
             <span className="text-[#525E31]">•</span>
             <span className="shrink-0">{formatRelativeTime(tree.datePlanted || tree.createdAt)}</span>

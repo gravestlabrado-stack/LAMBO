@@ -1,4 +1,5 @@
 import React, { forwardRef } from 'react';
+import Icon from '../common/Icon';
 
 const Input = forwardRef(function Input(
   {
@@ -15,6 +16,18 @@ const Input = forwardRef(function Input(
   },
   ref
 ) {
+  const renderIcon = () => {
+    if (!icon) return null;
+    if (typeof icon === 'string') {
+      return (
+        <span className="absolute left-3 text-[#8B9B4C] pointer-events-none flex items-center justify-center">
+          <Icon name={icon} className="w-4.5 h-4.5" />
+        </span>
+      );
+    }
+    return <span className="absolute left-3 text-[#8B9B4C] pointer-events-none">{icon}</span>;
+  };
+
   return (
     <div className="w-full space-y-1">
       {label && (
@@ -24,11 +37,7 @@ const Input = forwardRef(function Input(
       )}
 
       <div className="relative flex items-center">
-        {icon && (
-          <span className="absolute left-3 text-[#8B9B4C] pointer-events-none material-symbols-outlined text-[18px]">
-            {icon}
-          </span>
-        )}
+        {renderIcon()}
 
         <input
           ref={ref}
@@ -52,7 +61,7 @@ const Input = forwardRef(function Input(
 
       {error && (
         <p className="text-[11px] font-mono text-[#E57373] flex items-center gap-1">
-          <span className="material-symbols-outlined text-[13px]">error</span>
+          <Icon name="error" className="w-3.5 h-3.5" />
           <span>{error}</span>
         </p>
       )}

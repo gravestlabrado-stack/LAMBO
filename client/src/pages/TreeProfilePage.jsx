@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { createPortal } from 'react-dom';
+import { useParams, Link } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import treeService from '../services/treeService';
 import growthLogService from '../services/growthLogService';
@@ -12,7 +13,6 @@ import { canUserLogTree } from '../utils/permissions';
 
 export default function TreeProfilePage() {
   const { id } = useParams();
-  const navigate = useNavigate();
   const { user } = useAuth();
   const { addReminder } = useTrees();
 
@@ -716,9 +716,9 @@ export default function TreeProfilePage() {
       )}
 
       {/* Modal: Schedule Care Reminder */}
-      {showReminderModal && (
-        <div className="fixed inset-0 !m-0 z-[100] flex items-center justify-center p-4 bg-[#14180A]/60 backdrop-blur-xl animate-in fade-in duration-200">
-          <div className="w-full max-w-sm rounded-2xl bg-[#262C14] border border-[#5D6A37] p-5 shadow-2xl space-y-4 animate-in zoom-in-95">
+      {showReminderModal && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="w-full max-w-sm rounded-2xl bg-[#262C14] border border-[#5D6A37] p-5 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between border-b border-[#4F5A2D] pb-3">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-[#A4B566]">alarm_add</span>
@@ -828,13 +828,14 @@ export default function TreeProfilePage() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Modal: Physical QR Tag Generator */}
-      {showQRModal && (
-        <div className="fixed inset-0 !m-0 z-[100] flex items-center justify-center p-4 bg-[#14180A]/60 backdrop-blur-xl animate-in fade-in duration-200">
-          <div className="w-full max-w-sm rounded-2xl bg-[#262C14] border border-[#5D6A37] p-6 shadow-2xl text-center space-y-4 animate-in fade-in zoom-in-95">
+      {showQRModal && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="w-full max-w-sm rounded-2xl bg-[#262C14] border border-[#5D6A37] p-6 shadow-2xl text-center space-y-4 animate-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center border-b border-[#4F5A2D] pb-3">
               <span className="font-mono text-xs text-[#A4B566] font-bold uppercase tracking-wider">
                 PHYSICAL QR TAG GENERATOR
@@ -915,14 +916,15 @@ export default function TreeProfilePage() {
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Lightbox Modal for Photo */}
-      {selectedPhoto && (
+      {selectedPhoto && typeof document !== 'undefined' && createPortal(
         <div
           onClick={() => setSelectedPhoto(null)}
-          className="fixed inset-0 !m-0 z-[100] flex items-center justify-center p-4 bg-[#14180A]/60 backdrop-blur-xl animate-in fade-in duration-200"
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -935,12 +937,14 @@ export default function TreeProfilePage() {
             />
             <button
               onClick={() => setSelectedPhoto(null)}
-              className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/70 text-white flex items-center justify-center border border-white/30"
+              className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/70 text-white flex items-center justify-center border border-white/30 hover:bg-black/90 active:scale-95 transition-all"
+              title="Close photo"
             >
               <span className="material-symbols-outlined text-[18px]">close</span>
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

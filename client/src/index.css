@@ -40,6 +40,23 @@
   ::-webkit-scrollbar-thumb:hover {
     background: #A4B566;
   }
+
+  /* Prevent text flashing (FOUT) for font ligatures before webfonts finish loading */
+  .material-symbols-outlined {
+    font-family: 'Material Symbols Outlined', sans-serif;
+    font-weight: normal;
+    font-style: normal;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+    -webkit-font-feature-settings: 'liga';
+    font-feature-settings: 'liga';
+    -webkit-font-smoothing: antialiased;
+  }
 }
 
 @layer utilities {
@@ -100,19 +117,38 @@
 
   /* Micro-animations & Interactive Enhancements */
   .card-interactive {
-    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), 
+                box-shadow 0.25s ease, 
+                border-color 0.25s ease,
+                background-color 0.25s ease;
   }
   .card-interactive:hover {
     transform: translateY(-2px);
-    box-shadow: 0 10px 28px -6px rgba(0, 0, 0, 0.5), 0 0 12px rgba(164, 181, 102, 0.15);
+    box-shadow: 0 12px 28px -6px rgba(0, 0, 0, 0.5), 0 0 14px rgba(164, 181, 102, 0.15);
     border-color: #8B9B4C;
+  }
+  .card-interactive:active {
+    transform: translateY(0) scale(0.985);
+    transition-duration: 0.1s;
   }
 
   .interactive-tap {
-    transition: transform 0.15s ease, opacity 0.15s ease;
+    transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.15s ease;
   }
   .interactive-tap:active {
-    transform: scale(0.96);
+    transform: scale(0.95);
+  }
+
+  /* Header Profile Menu Pop-out */
+  .animate-pop-out {
+    transform-origin: top right;
+    animation: profilePopOut 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  /* Drawer / Sheet Slide from Right */
+  .animate-drawer-enter {
+    animation: drawerSlideEnter 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+    will-change: transform, opacity;
   }
 
   /* Mobile Notch & Gesture Navigation Safe Area Insets */
@@ -121,6 +157,29 @@
   }
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}
+
+/* Keyframe Definitions */
+@keyframes profilePopOut {
+  0% {
+    opacity: 0;
+    transform: scale(0.9) translateY(-6px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes drawerSlideEnter {
+  0% {
+    opacity: 0;
+    transform: translateX(20px) scale(0.97);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
   }
 }
 

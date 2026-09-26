@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import growthLogService from '../../services/growthLogService';
 import { useAuth } from '../../hooks/useAuth';
 import { canUserLogTree, canUserEditOrDeleteLog } from '../../utils/permissions';
@@ -149,11 +150,11 @@ export default function GrowthEntryForm({
     }
   };
 
-  return (
-    <div className="fixed inset-0 !m-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-[#14180A]/60 backdrop-blur-xl overflow-hidden animate-in fade-in duration-200">
-      <div className="w-full max-w-lg rounded-2xl bg-[#262C14] border border-[#5D6A37] shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200">
-        {/* Header - Fixed at Top */}
-        <div className="p-4 sm:p-5 border-b border-[#4F5A2D] flex items-center justify-between shrink-0 bg-[#262C14]">
+  const modalContent = (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
+      <div className="w-full max-w-lg my-auto rounded-2xl bg-[#262C14] border border-[#5D6A37] p-5 sm:p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-[#4F5A2D] pb-3">
           <div>
             <div className="flex items-center gap-1.5 font-mono text-[11px] text-[#A4B566] uppercase font-bold tracking-wider">
               <span className="w-2 h-2 rounded-full bg-[#8B9B4C] animate-pulse" />
@@ -174,7 +175,7 @@ export default function GrowthEntryForm({
         </div>
 
         {/* Scrollable Form Body */}
-        <form onSubmit={handleSubmit} className="overflow-y-auto p-4 sm:p-5 space-y-4 flex-1 overscroll-contain">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {/* Permission Alert if not authorized */}
           {!isAuthorized && (
             <div className="rounded-xl bg-[#431B1B] border border-[#E57373]/60 p-3.5 text-xs text-[#FFCDD2] flex items-start gap-2.5">
@@ -400,37 +401,37 @@ export default function GrowthEntryForm({
               className="w-full bg-[#1D230E] border border-[#525E31] rounded-xl p-3 text-xs text-[#F0F3E8] placeholder:text-[#CCD6B8]/50 focus:outline-none focus:border-[#A4B566]"
             />
           </div>
+          {/* Action Buttons */}
+          <div className="pt-2 flex items-center gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 h-11 rounded-xl bg-[#30371A] hover:bg-[#3D4721] text-[#CCD6B8] border border-[#525E31] font-mono text-xs font-bold uppercase tracking-wider active:scale-95 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={submitting || !isAuthorized}
+              className="flex-1 h-11 rounded-xl bg-[#8B9B4C] hover:bg-[#9EAF6D] disabled:opacity-40 disabled:cursor-not-allowed text-[#1F240F] font-mono text-xs font-bold uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all"
+            >
+              {submitting ? (
+                <>
+                  <span className="material-symbols-outlined text-[18px] animate-spin">refresh</span>
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <>
+                  <span className="material-symbols-outlined text-[18px]">verified</span>
+                  <span>{editingLog ? 'Update Audit' : 'Commit Audit Log'}</span>
+                </>
+              )}
+            </button>
+          </div>
         </form>
-
-        {/* Action Buttons - Fixed at Bottom of Modal Card */}
-        <div className="p-4 border-t border-[#4F5A2D] bg-[#212611] shrink-0 flex items-center gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 h-11 rounded-xl bg-[#30371A] hover:bg-[#3D4721] text-[#CCD6B8] border border-[#525E31] font-mono text-xs font-bold uppercase tracking-wider active:scale-95 transition-all"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={submitting || !isAuthorized}
-            className="flex-1 h-11 rounded-xl bg-[#8B9B4C] hover:bg-[#9EAF6D] disabled:opacity-40 disabled:cursor-not-allowed text-[#1F240F] font-mono text-xs font-bold uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all"
-          >
-            {submitting ? (
-              <>
-                <span className="material-symbols-outlined text-[18px] animate-spin">refresh</span>
-                <span>Saving...</span>
-              </>
-            ) : (
-              <>
-                <span className="material-symbols-outlined text-[18px]">verified</span>
-                <span>{editingLog ? 'Update Audit' : 'Commit Audit Log'}</span>
-              </>
-            )}
-          </button>
-        </div>
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent;
 }

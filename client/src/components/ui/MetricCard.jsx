@@ -1,4 +1,5 @@
 import React from 'react';
+import Icon from '../common/Icon';
 
 export default function MetricCard({
   title,
@@ -33,9 +34,9 @@ export default function MetricCard({
           {title}
         </span>
         {icon && (
-          <span className="material-symbols-outlined text-[18px] text-[#A4B566]">
-            {icon}
-          </span>
+          typeof icon === 'string' ? (
+            <Icon name={icon} className="w-4.5 h-4.5 text-[#A4B566]" />
+          ) : icon
         )}
       </div>
 

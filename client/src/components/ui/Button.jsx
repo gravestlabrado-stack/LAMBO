@@ -1,4 +1,5 @@
 import React from 'react';
+import Icon from '../common/Icon';
 
 export default function Button({
   children,
@@ -35,6 +36,14 @@ export default function Button({
     lg: 'h-12 px-6 text-sm gap-2.5',
   };
 
+  const renderIcon = () => {
+    if (!icon) return null;
+    if (typeof icon === 'string') {
+      return <Icon name={icon} className="w-4 h-4" />;
+    }
+    return icon;
+  };
+
   return (
     <button
       type={type}
@@ -50,13 +59,9 @@ export default function Button({
         </>
       ) : (
         <>
-          {icon && iconPosition === 'left' && (
-            <span className="material-symbols-outlined text-[18px]">{icon}</span>
-          )}
+          {icon && iconPosition === 'left' && renderIcon()}
           <span>{children}</span>
-          {icon && iconPosition === 'right' && (
-            <span className="material-symbols-outlined text-[18px]">{icon}</span>
-          )}
+          {icon && iconPosition === 'right' && renderIcon()}
         </>
       )}
     </button>

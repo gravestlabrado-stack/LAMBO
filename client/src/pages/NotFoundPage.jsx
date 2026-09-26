@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import Icon from '../components/common/Icon';
 
 export default function NotFoundPage() {
   const navigate = useNavigate();
@@ -12,9 +13,7 @@ export default function NotFoundPage() {
           {/* Animated radar rings */}
           <div className="absolute inset-0 rounded-full border border-[#8B9B4C]/30 animate-ping opacity-30" />
           <div className="w-16 h-16 rounded-full border border-[#525E31] flex items-center justify-center">
-            <span className="material-symbols-outlined text-[36px] text-[#A4B566]">
-              radar
-            </span>
+            <Icon name="radar" className="w-9 h-9 text-[#A4B566]" />
           </div>
         </div>
         {/* Warning Badge */}
@@ -62,21 +61,21 @@ export default function NotFoundPage() {
           to="/"
           className="h-11 px-4 rounded-xl bg-[#8B9B4C] hover:bg-[#9EAF6D] text-[#1F240F] font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-md transition-all active:scale-95"
         >
-          <span className="material-symbols-outlined text-[18px]">dashboard</span>
+          <Icon name="dashboard" className="w-4.5 h-4.5" />
           <span>Dashboard</span>
         </Link>
         <Link
           to="/trees"
           className="h-11 px-4 rounded-xl bg-[#30371A] hover:bg-[#3D4721] border border-[#525E31] text-[#F0F3E8] font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-95"
         >
-          <span className="material-symbols-outlined text-[18px] text-[#A4B566]">park</span>
+          <Icon name="park" className="w-4.5 h-4.5 text-[#A4B566]" />
           <span>Tree Ledger</span>
         </Link>
         <Link
           to="/map"
           className="h-11 px-4 rounded-xl bg-[#30371A] hover:bg-[#3D4721] border border-[#525E31] text-[#F0F3E8] font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-95"
         >
-          <span className="material-symbols-outlined text-[18px] text-[#A4B566]">map</span>
+          <Icon name="map" className="w-4.5 h-4.5 text-[#A4B566]" />
           <span>Campus Map</span>
         </Link>
         <button
@@ -84,7 +83,7 @@ export default function NotFoundPage() {
           onClick={() => navigate(-1)}
           className="h-11 px-4 rounded-xl bg-[#262C14] hover:bg-[#30371A] border border-[#4F5A2D] text-[#CCD6B8] font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-95"
         >
-          <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+          <Icon name="arrow_back" className="w-4.5 h-4.5" />
           <span>Previous Screen</span>
         </button>
       </div>
