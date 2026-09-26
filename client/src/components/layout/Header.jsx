@@ -15,6 +15,7 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
   const navigate = useNavigate();
   const { user, logout, updateProfile } = useAuth();
   const {
+    trees = [],
     reminders,
     toggleReminder,
     addReminder,
@@ -27,7 +28,7 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNewReminderInput, setShowNewReminderInput] = useState(false);
   const [newTitle, setNewTitle] = useState('');
-  const [newTreeId, setNewTreeId] = useState('LMB-0001');
+  const [newTreeId, setNewTreeId] = useState('');
   const [newType, setNewType] = useState('watering');
   const [newInterval, setNewInterval] = useState('none');
   const [newDate, setNewDate] = useState(() => new Date().toISOString().split('T')[0]);
@@ -249,10 +250,17 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
     e.preventDefault();
     if (newTitle.trim()) {
       const scheduledDateTime = new Date(`${newDate}T${newTime}:00`);
+      const matchedTree = trees.find(
+        (t) => String(t.treeId).trim().toUpperCase() === newTreeId.trim().toUpperCase()
+      );
       await addReminder({
         title: newTitle.trim(),
-        treeId: newTreeId.trim().toUpperCase(),
-        species: 'Monitored Specimen',
+        treeId: matchedTree?.treeId || newTreeId.trim().toUpperCase() || 'CAMPUS',
+        species: matchedTree
+          ? matchedTree.nickname
+            ? `${matchedTree.nickname} (${matchedTree.species})`
+            : matchedTree.species
+          : 'Campus Specimen',
         scheduledDate: scheduledDateTime.toISOString(),
         dueDate: `${newDate} at ${newTime}`,
         type: newType,
@@ -929,35 +937,57 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
                   autoFocus
                   required
                 />
-                <div className="grid grid-cols-3 gap-2">
-                  <input
-                    type="text"
-                    placeholder="Tree ID"
+                {/* Select Tree Dropdown */}
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-mono text-[#AAB596] uppercase font-semibold">
+                    Monitored Specimen
+                  </label>
+                  <select
                     value={newTreeId}
                     onChange={(e) => setNewTreeId(e.target.value)}
-                    className="h-8 bg-[#1D230E] border border-[#525E31] rounded-lg px-2 text-xs font-mono text-[#F0F3E8] uppercase"
-                  />
-                  <select
-                    value={newType}
-                    onChange={(e) => setNewType(e.target.value)}
-                    className="h-8 bg-[#1D230E] border border-[#525E31] rounded-lg px-1.5 text-xs font-mono text-[#F0F3E8]"
+                    className="w-full h-8 bg-[#1D230E] border border-[#525E31] rounded-lg px-2 text-xs font-mono text-[#F0F3E8] focus:outline-none focus:border-[#A4B566]"
                   >
-                    <option value="watering">Watering</option>
-                    <option value="fertilizer">Fertilizer</option>
-                    <option value="inspection">Inspection</option>
-                    <option value="custom">Custom</option>
+                    <option value="">Campus-wide / General Task</option>
+                    {trees.map((t) => (
+                      <option key={t.treeId} value={t.treeId}>
+                        #{t.treeId} — {t.nickname ? `${t.nickname} (${t.species})` : t.species}
+                      </option>
+                    ))}
                   </select>
-                  <select
-                    value={newInterval}
-                    onChange={(e) => setNewInterval(e.target.value)}
-                    className="h-8 bg-[#1D230E] border border-[#525E31] rounded-lg px-1 text-xs font-mono text-[#F0F3E8]"
-                  >
-                    <option value="none">One-time</option>
-                    <option value="daily">Daily</option>
-                    <option value="weekly">Weekly</option>
-                    <option value="biweekly">Biweekly</option>
-                    <option value="monthly">Monthly</option>
-                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[10px] font-mono text-[#AAB596] uppercase font-semibold">
+                      Task Type
+                    </label>
+                    <select
+                      value={newType}
+                      onChange={(e) => setNewType(e.target.value)}
+                      className="w-full h-8 bg-[#1D230E] border border-[#525E31] rounded-lg px-2 text-xs font-mono text-[#F0F3E8] focus:outline-none focus:border-[#A4B566]"
+                    >
+                      <option value="watering">Watering</option>
+                      <option value="fertilizer">Fertilizer</option>
+                      <option value="inspection">Inspection</option>
+                      <option value="custom">Custom</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-mono text-[#AAB596] uppercase font-semibold">
+                      Recurrence
+                    </label>
+                    <select
+                      value={newInterval}
+                      onChange={(e) => setNewInterval(e.target.value)}
+                      className="w-full h-8 bg-[#1D230E] border border-[#525E31] rounded-lg px-2 text-xs font-mono text-[#F0F3E8] focus:outline-none focus:border-[#A4B566]"
+                    >
+                      <option value="none">One-time</option>
+                      <option value="daily">Daily</option>
+                      <option value="weekly">Weekly</option>
+                      <option value="biweekly">Biweekly</option>
+                      <option value="monthly">Monthly</option>
+                    </select>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">

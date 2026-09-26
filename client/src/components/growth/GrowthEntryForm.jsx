@@ -53,10 +53,11 @@ export default function GrowthEntryForm({
   );
   const [notes, setNotes] = useState(editingLog?.notes || '');
 
-  // Photo upload
+  // Photo upload (Camera & Gallery options)
   const [photoFile, setPhotoFile] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(editingLog?.photo || null);
-  const fileInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
+  const galleryInputRef = useRef(null);
 
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -77,8 +78,11 @@ export default function GrowthEntryForm({
   const handleRemovePhoto = () => {
     setPhotoFile(null);
     setPhotoPreview(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+    if (cameraInputRef.current) {
+      cameraInputRef.current.value = '';
+    }
+    if (galleryInputRef.current) {
+      galleryInputRef.current.value = '';
     }
   };
 
@@ -369,21 +373,48 @@ export default function GrowthEntryForm({
                 </button>
               </div>
             ) : (
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-[#525E31] hover:border-[#8B9B4C] rounded-xl p-4 text-center cursor-pointer bg-[#1D230E] transition-colors"
-              >
-                <span className="material-symbols-outlined text-3xl text-[#A4B566]">add_a_photo</span>
-                <span className="block text-xs font-mono text-[#CCD6B8] mt-1">
-                  Tap to capture or upload field photo
-                </span>
+              <div className="grid grid-cols-2 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => cameraInputRef.current?.click()}
+                  className="border-2 border-dashed border-[#525E31] hover:border-[#8B9B4C] rounded-xl p-3.5 text-center cursor-pointer bg-[#1D230E] hover:bg-[#262C14] transition-all flex flex-col items-center justify-center gap-1 active:scale-95 group"
+                >
+                  <span className="material-symbols-outlined text-2xl text-[#A4B566] group-hover:scale-110 transition-transform">
+                    photo_camera
+                  </span>
+                  <span className="font-mono text-xs font-bold text-[#F0F3E8]">Take Photo</span>
+                  <span className="text-[10px] font-mono text-[#CCD6B8]">Direct Camera</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => galleryInputRef.current?.click()}
+                  className="border-2 border-dashed border-[#525E31] hover:border-[#8B9B4C] rounded-xl p-3.5 text-center cursor-pointer bg-[#1D230E] hover:bg-[#262C14] transition-all flex flex-col items-center justify-center gap-1 active:scale-95 group"
+                >
+                  <span className="material-symbols-outlined text-2xl text-[#8B9B4C] group-hover:scale-110 transition-transform">
+                    photo_library
+                  </span>
+                  <span className="font-mono text-xs font-bold text-[#F0F3E8]">Choose File</span>
+                  <span className="text-[10px] font-mono text-[#CCD6B8]">Gallery / Storage</span>
+                </button>
               </div>
             )}
+
+            {/* Direct Camera Input with capture="environment" */}
             <input
               type="file"
-              ref={fileInputRef}
-              onChange={handlePhotoSelect}
+              ref={cameraInputRef}
               accept="image/*"
+              capture="environment"
+              onChange={handlePhotoSelect}
+              className="hidden"
+            />
+            {/* Storage / Gallery File Picker */}
+            <input
+              type="file"
+              ref={galleryInputRef}
+              accept="image/*"
+              onChange={handlePhotoSelect}
               className="hidden"
             />
           </div>
