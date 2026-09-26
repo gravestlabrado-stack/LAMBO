@@ -82,6 +82,8 @@ app.use(errorHandler);
 if (process.env.NODE_ENV !== 'test') {
   app.listen(PORT, () => {
     console.log(`[LAMBO Server] Running on http://localhost:${PORT}`);
+    const { startReminderScheduler } = require('./src/utils/reminderScheduler');
+    startReminderScheduler(15 * 60 * 1000); // Check every 15 minutes
   });
 }
 

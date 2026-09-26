@@ -29,6 +29,8 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
   const [newTreeId, setNewTreeId] = useState('LMB-0001');
   const [newType, setNewType] = useState('watering');
   const [newInterval, setNewInterval] = useState('none');
+  const [newDate, setNewDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [newTime, setNewTime] = useState('08:00');
   const [deferredPrompt, setDeferredPrompt] = useState(null);
 
   // Push Notifications state
@@ -245,12 +247,13 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
   const handleCreateReminder = async (e) => {
     e.preventDefault();
     if (newTitle.trim()) {
+      const scheduledDateTime = new Date(`${newDate}T${newTime}:00`);
       await addReminder({
         title: newTitle.trim(),
         treeId: newTreeId.trim().toUpperCase(),
         species: 'Monitored Specimen',
-        scheduledDate: new Date().toISOString(),
-        dueDate: 'Today',
+        scheduledDate: scheduledDateTime.toISOString(),
+        dueDate: `${newDate} at ${newTime}`,
         type: newType,
         repeatInterval: newInterval,
       });
@@ -953,6 +956,29 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
                     <option value="biweekly">Biweekly</option>
                     <option value="monthly">Monthly</option>
                   </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[10px] font-mono text-[#AAB596]">Due Date</label>
+                    <input
+                      type="date"
+                      value={newDate}
+                      onChange={(e) => setNewDate(e.target.value)}
+                      required
+                      className="w-full h-8 bg-[#1D230E] border border-[#525E31] rounded-lg px-2 text-xs font-mono text-[#F0F3E8]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-mono text-[#AAB596]">Time (Default 8AM)</label>
+                    <input
+                      type="time"
+                      value={newTime}
+                      onChange={(e) => setNewTime(e.target.value)}
+                      required
+                      className="w-full h-8 bg-[#1D230E] border border-[#525E31] rounded-lg px-2 text-xs font-mono text-[#F0F3E8]"
+                    />
+                  </div>
                 </div>
                 <div className="flex gap-2 pt-1">
                   <button

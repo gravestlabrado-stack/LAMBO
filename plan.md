@@ -437,7 +437,7 @@ fontFamily: {
 ### Phase 13: Polish & Integration (~1-2 hrs)
 - Protected routes, loading states, error handling
 - Empty states, responsive testing, form validation
-- 404 page, favicon, meta tags
+- 404 page, favicon, meta tags og image
 - Test offline → online sync flow
 - Test push notification delivery
 - Test QR scan → tree profile flow

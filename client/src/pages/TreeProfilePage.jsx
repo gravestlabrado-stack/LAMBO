@@ -28,6 +28,7 @@ export default function TreeProfilePage() {
   const [remTitle, setRemTitle] = useState('');
   const [remType, setRemType] = useState('watering');
   const [remDate, setRemDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [remTime, setRemTime] = useState('08:00');
   const [remInterval, setRemInterval] = useState('weekly');
   const [remSuccess, setRemSuccess] = useState('');
   const [remSaving, setRemSaving] = useState(false);
@@ -134,6 +135,7 @@ export default function TreeProfilePage() {
     setRemTitle(`Routine Watering for #${tree?.treeId || ''}`);
     setRemType('watering');
     setRemDate(new Date().toISOString().split('T')[0]);
+    setRemTime('08:00');
     setRemInterval('weekly');
     setRemSuccess('');
     setShowReminderModal(true);
@@ -144,12 +146,13 @@ export default function TreeProfilePage() {
     if (!remTitle.trim()) return;
     setRemSaving(true);
     try {
+      const scheduledDateTime = new Date(`${remDate}T${remTime}:00`);
       await addReminder({
         tree: tree._id,
         treeId: tree.treeId,
         title: remTitle.trim(),
         type: remType,
-        scheduledDate: new Date(remDate).toISOString(),
+        scheduledDate: scheduledDateTime.toISOString(),
         repeatInterval: remInterval,
       });
       setRemSuccess('Care reminder set successfully!');
@@ -758,15 +761,27 @@ export default function TreeProfilePage() {
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="block text-[11px] font-mono text-[#C2CE9F]">Target Due Date</label>
-                <input
-                  type="date"
-                  value={remDate}
-                  onChange={(e) => setRemDate(e.target.value)}
-                  required
-                  className="w-full h-9 bg-[#1D230E] border border-[#525E31] rounded-xl px-3 text-xs font-mono text-[#F0F3E8] focus:outline-none focus:border-[#A4B566]"
-                />
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <label className="block text-[11px] font-mono text-[#C2CE9F]">Target Date</label>
+                  <input
+                    type="date"
+                    value={remDate}
+                    onChange={(e) => setRemDate(e.target.value)}
+                    required
+                    className="w-full h-9 bg-[#1D230E] border border-[#525E31] rounded-xl px-2.5 text-xs font-mono text-[#F0F3E8] focus:outline-none focus:border-[#A4B566]"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-[11px] font-mono text-[#C2CE9F]">Alert Time (Default 8AM)</label>
+                  <input
+                    type="time"
+                    value={remTime}
+                    onChange={(e) => setRemTime(e.target.value)}
+                    required
+                    className="w-full h-9 bg-[#1D230E] border border-[#525E31] rounded-xl px-2.5 text-xs font-mono text-[#F0F3E8] focus:outline-none focus:border-[#A4B566]"
+                  />
+                </div>
               </div>
 
               <div className="flex gap-2 pt-2">
