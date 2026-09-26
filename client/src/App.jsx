@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { TreeProvider } from './context/TreeContext';
 import AppShell from './components/layout/AppShell';
+import ErrorBoundary from './components/common/ErrorBoundary';
 
 // Pages
 import DashboardPage from './pages/DashboardPage';
@@ -18,29 +19,32 @@ import NotFoundPage from './pages/NotFoundPage';
 
 export default function App() {
   return (
-    <AuthProvider>
-      <TreeProvider>
-        <BrowserRouter>
-          <Routes>
-            {/* Public Auth Routes */}
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
+    <ErrorBoundary>
+      <AuthProvider>
+        <TreeProvider>
+          <BrowserRouter>
+            <Routes>
+              {/* Public Auth Routes */}
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
 
-            {/* Main App Layout */}
-            <Route element={<AppShell />}>
-              <Route path="/" element={<DashboardPage />} />
-              <Route path="/scan" element={<ScanPage />} />
-              <Route path="/trees" element={<TreeListPage />} />
-              <Route path="/trees/:id" element={<TreeProfilePage />} />
-              <Route path="/logs" element={<GrowthLogsPage />} />
-              <Route path="/register-tree" element={<RegisterTreePage />} />
-              <Route path="/map" element={<CampusMapPage />} />
-              <Route path="/404" element={<NotFoundPage />} />
-              <Route path="*" element={<NotFoundPage />} />
-            </Route>
-          </Routes>
-        </BrowserRouter>
-      </TreeProvider>
-    </AuthProvider>
+              {/* Main App Layout */}
+              <Route element={<AppShell />}>
+                <Route path="/" element={<DashboardPage />} />
+                <Route path="/scan" element={<ScanPage />} />
+                <Route path="/trees" element={<TreeListPage />} />
+                <Route path="/trees/:id" element={<TreeProfilePage />} />
+                <Route path="/trees/:id/logs" element={<GrowthLogsPage />} />
+                <Route path="/logs" element={<GrowthLogsPage />} />
+                <Route path="/register-tree" element={<RegisterTreePage />} />
+                <Route path="/map" element={<CampusMapPage />} />
+                <Route path="/404" element={<NotFoundPage />} />
+                <Route path="*" element={<NotFoundPage />} />
+              </Route>
+            </Routes>
+          </BrowserRouter>
+        </TreeProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }

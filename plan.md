@@ -396,26 +396,26 @@ fontFamily: {
 - [x] forest Zone / Campus Sector can be added by students and saved to mongo db where it is fetched and showed as dropdown options
 
 ### Phase 7: Frontend — Tree List & Profile (~2-3 hrs)
-- TreeCard, TreeListPage, TreeProfilePage
-- StageProgressBar, vitals grid, photo archive
+- [x] TreeCard, TreeListPage, TreeProfilePage
+- [x] StageProgressBar, vitals grid, photo archive
 
 ### Phase 8: Frontend — Growth Logs & Charts (~2-3 hrs)
-- GrowthEntryForm, GrowthChart, GrowthTimeline
-- GrowthLogsPage, Export to Excel
+- [x] GrowthEntryForm, GrowthChart, GrowthTimeline
+- [x] GrowthLogsPage, Export to Excel
 
 ### Phase 9: Frontend — QR Scanning (~1-2 hrs)
-- ScanPage with html5-qrcode camera integration
-- QRScannerView component with HUD-style reticle overlay
-- Scan result panel: tree info + quick actions (Open Profile, Log Growth)
-- Manual tree ID fallback input
-- **Design Ref:** `DESIGN/lambo_scan_identify_army_green/screen.png`
+- [x] ScanPage with html5-qrcode camera integration
+- [x] QRScannerView component with HUD-style reticle overlay
+- [x] Scan result panel: tree info + quick actions (Open Profile, Log Growth)
+- [x] Manual tree ID fallback input
+- [x] **Design Ref:** `DESIGN/lambo_scan_identify_army_green/screen.png`
 
 ### Phase 10: Frontend — Campus Map (~1-2 hrs)
-- Install & configure Leaflet.js + react-leaflet
-- CampusMap component with tree markers (color-coded by health)
-- CampusMapPage with marker popups (tree ID, species, link to profile)
-- Marker clustering for dense areas (react-leaflet-cluster)
-- Map pin placement on RegisterTreePage (GPS coordinates for the plant on map)
+- [x] Install & configure Leaflet.js + react-leaflet
+- [x] CampusMap component with tree markers (color-coded by health)
+- [x] CampusMapPage with marker popups (tree ID, species, link to profile)
+- [x] Marker clustering for dense areas (leaflet.markercluster)
+- [x] Map pin placement on RegisterTreePage (GPS coordinates for the plant on map)
 
 ### Phase 11: Push Notifications & Reminders (~2-3 hrs)
 - Backend: Reminder model (tree, reminderType, frequency, nextDue)

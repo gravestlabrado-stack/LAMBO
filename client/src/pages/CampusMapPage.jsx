@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import treeService from '../services/treeService';
 import { useAuth } from '../hooks/useAuth';
 import { CAMPUS_COORDINATES } from '../utils/constants';
 import { getCurrentCoordinates } from '../utils/geolocation';
+import MarkerClusterGroup from '../components/map/MarkerClusterGroup';
 
 // Custom Tactical Leaflet Pin Icons with health status colors & owner indicator
 const createPinIcon = (color, isOwner = false) => {
@@ -109,6 +110,8 @@ function MapBoundsController({ trees, hasManualTarget }) {
 
 export default function CampusMapPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const focusTreeId = searchParams.get('focus');
   const { user } = useAuth();
 
   const [allTrees, setAllTrees] = useState([]);
@@ -143,6 +146,21 @@ export default function CampusMapPage() {
   useEffect(() => {
     fetchMapTrees();
   }, []);
+
+  // Handle URL focus parameter (?focus=LMB-0002)
+  useEffect(() => {
+    if (focusTreeId && allTrees.length > 0) {
+      const target = allTrees.find(
+        (t) =>
+          t.treeId?.toLowerCase() === focusTreeId.toLowerCase() ||
+          t._id === focusTreeId
+      );
+      if (target?.coordinates?.lat && target?.coordinates?.lng) {
+        setHasManualTarget(true);
+        setFlyTarget([target.coordinates.lat, target.coordinates.lng]);
+      }
+    }
+  }, [focusTreeId, allTrees]);
 
   // Filter trees based on Scope (All vs My Trees)
   const scopedTrees = useMemo(() => {
@@ -402,84 +420,13 @@ export default function CampusMapPage() {
             </>
           )}
 
-          {/* Specimen Markers */}
-          {displayedTrees.map((tree) => {
-            const lat = tree.coordinates?.lat;
-            const lng = tree.coordinates?.lng;
-
-            if (!lat || !lng || lat === 0 || lng === 0) return null;
-
-            const isOwner =
-              (tree.owner?._id && user?._id && String(tree.owner._id) === String(user._id)) ||
-              (tree.owner && user?.id && String(tree.owner) === String(user.id));
-
-            const iconColor = getHealthColor(tree.healthStatus);
-            const icon = createPinIcon(iconColor, isOwner);
-
-            return (
-              <Marker key={tree._id || tree.treeId} position={[lat, lng]} icon={icon}>
-                <Popup className="tactical-leaflet-popup">
-                  <div className="p-1 text-[#1D230E] font-body space-y-2 min-w-[210px]">
-                    {/* Header */}
-                    <div className="flex items-center justify-between gap-2 border-b border-[#CCD6B8] pb-1.5">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <span className="font-mono text-xs font-bold text-[#4B552A]">
-                          #{tree.treeId}
-                        </span>
-                        {isOwner && (
-                          <span className="px-1.5 py-0.2 rounded bg-[#8B9B4C] text-[#1F240F] font-mono text-[9px] font-bold uppercase">
-                            Yours
-                          </span>
-                        )}
-                      </div>
-                      <span
-                        className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white"
-                        style={{ backgroundColor: iconColor }}
-                      >
-                        {tree.healthStatus}
-                      </span>
-                    </div>
-
-                    {/* Specimen Info */}
-                    <div>
-                      <h4 className="font-bold text-sm text-[#1D230E] leading-tight">
-                        {tree.nickname ? `"${tree.nickname}" • ` : ''}
-                        {tree.species?.split(' (')[0] || tree.species}
-                      </h4>
-                      <p className="text-[11px] text-[#4F5A2D] italic truncate">
-                        {tree.species}
-                      </p>
-                      {tree.location && (
-                        <p className="text-[11px] font-mono text-[#556038] mt-0.5 truncate">
-                          📍 {tree.location}
-                        </p>
-                      )}
-                      {!isOwner && tree.owner?.name && (
-                        <p className="text-[10px] font-mono text-[#778060] mt-0.5 truncate">
-                          Planted by: <strong>{tree.owner.name}</strong>
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Metrics preview */}
-                    <div className="text-[11px] font-mono text-[#30371A] bg-[#E3E8D0] p-1.5 rounded border border-[#CCD6B8] flex items-center justify-between">
-                      <span>Height: <strong>{tree.latestHeight || tree.initialHeight || '—'}cm</strong></span>
-                      <span>DBH: <strong>{tree.latestStemDiameter || tree.initialStemDiameter || '—'}mm</strong></span>
-                    </div>
-
-                    {/* CTA button */}
-                    <button
-                      onClick={() => navigate(`/trees/${tree.treeId}`)}
-                      className="w-full py-1.5 rounded-lg bg-[#6B7D3B] hover:bg-[#54651E] text-white font-mono text-xs font-bold uppercase tracking-wider transition-colors shadow-sm flex items-center justify-center gap-1.5"
-                    >
-                      <span className="material-symbols-outlined text-[14px]">visibility</span>
-                      <span>View Profile</span>
-                    </button>
-                  </div>
-                </Popup>
-              </Marker>
-            );
-          })}
+          {/* Tactical Marker Cluster Group */}
+          <MarkerClusterGroup
+            trees={displayedTrees}
+            currentUserId={user?._id || user?.id}
+            getHealthColor={getHealthColor}
+            createPinIcon={createPinIcon}
+          />
         </MapContainer>
 
         {/* Loading Overlay */}

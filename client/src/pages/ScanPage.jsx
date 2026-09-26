@@ -1,289 +1,306 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Html5QrcodeScanner } from 'html5-qrcode';
-import { useTrees } from '../context/TreeContext';
+import QRScannerView from '../components/scan/QRScannerView';
+import GrowthEntryForm from '../components/growth/GrowthEntryForm';
+import ErrorBoundary from '../components/common/ErrorBoundary';
+import treeService from '../services/treeService';
+
+/**
+ * Extract clean Tree ID from decoded QR string, URL, or JSON payload
+ */
+const extractTreeId = (raw) => {
+  if (!raw || typeof raw !== 'string') return '';
+  let str = raw.trim();
+
+  // Try parsing JSON if encoded as object
+  try {
+    const parsed = JSON.parse(str);
+    if (parsed.treeId) return String(parsed.treeId).trim().replace(/^#/, '');
+    if (parsed.id) return String(parsed.id).trim().replace(/^#/, '');
+  } catch (e) {}
+
+  // If it's a URL, extract path segment or query param
+  if (str.includes('/') || str.includes('?')) {
+    try {
+      const url = new URL(str, window.location.origin);
+      const idParam =
+        url.searchParams.get('id') ||
+        url.searchParams.get('treeId') ||
+        url.searchParams.get('focus');
+      if (idParam) return idParam.replace(/^#/, '');
+      const segments = url.pathname.split('/').filter(Boolean);
+      const last = segments[segments.length - 1];
+      if (last && last !== 'trees' && last !== 'scan') {
+        return last.replace(/^#/, '');
+      }
+    } catch (e) {
+      const segments = str.split(/[/?#&]/).filter(Boolean);
+      const last = segments[segments.length - 1];
+      if (last) return last.replace(/^#/, '');
+    }
+  }
+
+  // Remove leading '#' or whitespace
+  return str.replace(/^#/, '').trim();
+};
 
 export default function ScanPage() {
   const navigate = useNavigate();
-  const { trees } = useTrees();
+
   const [activeTab, setActiveTab] = useState('camera'); // 'camera' | 'manual'
-  const [torchOn, setTorchOn] = useState(false);
-  const [gridOn, setGridOn] = useState(true);
   const [manualId, setManualId] = useState('');
-  const [detectedSpecimen, setDetectedSpecimen] = useState(trees[0] || null);
+  const [detectedSpecimen, setDetectedSpecimen] = useState(null);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState('');
 
-  useEffect(() => {
-    let scanner = null;
-    if (activeTab === 'camera') {
-      try {
-        scanner = new Html5QrcodeScanner(
-          'qr-reader-container',
-          {
-            fps: 10,
-            qrbox: { width: 220, height: 220 },
-            aspectRatio: 1.0,
-          },
-          false
-        );
+  // Growth Entry modal state
+  const [showLogModal, setShowLogModal] = useState(false);
 
-        scanner.render(
-          (decodedText) => {
-            // Check if matches a tree ID
-            const matched = trees.find(
-              (t) => t.treeId.toUpperCase() === decodedText.toUpperCase()
-            );
-            if (matched) {
-              setDetectedSpecimen(matched);
-            } else {
-              setDetectedSpecimen({
-                treeId: decodedText.toUpperCase(),
-                species: 'External Botanical QR',
-                nickname: 'Scanned Tag',
-                healthStatus: 'Healthy',
-                height: 1.5,
-              });
-            }
-          },
-          (error) => {
-            // scanning pass
-          }
-        );
-      } catch (err) {
-        console.warn('QR scanner camera init error:', err);
-      }
-    }
+  // Handle successful QR code decode or direct search
+  const handleScan = async (rawText) => {
+    if (!rawText || isSearching) return;
+    const cleanId = extractTreeId(rawText);
+    if (!cleanId) return;
 
-    return () => {
-      if (scanner) {
-        scanner.clear().catch(() => {});
-      }
-    };
-  }, [activeTab, trees]);
-
-  const handleManualLookup = (e) => {
-    e.preventDefault();
-    if (manualId.trim()) {
-      const matched = trees.find(
-        (t) => t.treeId.toUpperCase() === manualId.trim().toUpperCase()
-      );
-      if (matched) {
-        navigate(`/trees/${matched.treeId}`);
+    setIsSearching(true);
+    setSearchError('');
+    try {
+      const res = await treeService.getTreeById(cleanId);
+      if (res.data) {
+        setDetectedSpecimen(res.data);
       } else {
-        navigate(`/trees/${manualId.trim().toUpperCase()}`);
+        setSearchError(`Tree #${cleanId} not found in database.`);
       }
+    } catch (err) {
+      console.warn('[ScanPage] Specimen lookup error:', err);
+      const msg =
+        err.response?.data?.message || `Specimen #${cleanId} not found in database.`;
+      setSearchError(msg);
+    } finally {
+      setIsSearching(false);
     }
   };
 
-  const handleSimulateScan = (tree) => {
-    setDetectedSpecimen(tree);
+  const handleManualLookup = async (e) => {
+    e.preventDefault();
+    if (!manualId.trim()) return;
+    handleScan(manualId);
   };
 
   return (
-    <div className="space-y-4 pb-8">
-      {/* Switcher: Camera Viewfinder vs Manual Search */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5 p-1 rounded-full bg-[#1D230E] border border-[#525E31]">
-          <button
-            onClick={() => setActiveTab('camera')}
-            className={`px-4 py-1.5 rounded-full font-mono text-xs font-bold uppercase tracking-wider transition-all ${
-              activeTab === 'camera'
-                ? 'bg-[#8B9B4C] text-[#1F240F] shadow-sm'
-                : 'text-[#D8DFC8] hover:text-[#F0F3E8]'
-            }`}
-          >
-            HUD Camera
-          </button>
-          <button
-            onClick={() => setActiveTab('manual')}
-            className={`px-4 py-1.5 rounded-full font-mono text-xs font-bold uppercase tracking-wider transition-all ${
-              activeTab === 'manual'
-                ? 'bg-[#8B9B4C] text-[#1F240F] shadow-sm'
-                : 'text-[#D8DFC8] hover:text-[#F0F3E8]'
-            }`}
-          >
-            Manual Tag Entry
-          </button>
+    <div className="space-y-4 pb-12">
+      {/* Top Header & Mode Switcher */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-[#8B9B4C] animate-pulse" />
+            <span className="font-label-sm text-label-sm text-[#A4B566] uppercase font-mono tracking-wider font-semibold">
+              OPTICAL IDENTIFICATION
+            </span>
+          </div>
+          <h2 className="font-headline-md text-headline-md text-[#F0F3E8] font-bold mt-0.5">
+            Specimen QR Scanner
+          </h2>
         </div>
 
-        {/* GPS Precision Beacon */}
-        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-[#1D230E] border border-[#4E5B2E] text-xs font-mono text-[#D8DFC8]">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#A4B566] opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-[#A4B566]"></span>
-          </span>
-          <span>GPS ±1.2m</span>
+        {/* Mode Switcher Tabs */}
+        <div className="flex items-center gap-1.5 p-1 rounded-full bg-[#1D230E] border border-[#525E31] self-start sm:self-auto shadow-inner">
+          <button
+            type="button"
+            onClick={() => setActiveTab('camera')}
+            className={`px-4 py-1.5 rounded-full font-mono text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 ${
+              activeTab === 'camera'
+                ? 'bg-[#8B9B4C] text-[#1F240F] shadow-md'
+                : 'text-[#CCD6B8] hover:text-[#F0F3E8]'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[16px]">qr_code_scanner</span>
+            <span>Camera</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('manual')}
+            className={`px-4 py-1.5 rounded-full font-mono text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 ${
+              activeTab === 'manual'
+                ? 'bg-[#8B9B4C] text-[#1F240F] shadow-md'
+                : 'text-[#CCD6B8] hover:text-[#F0F3E8]'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[16px]">pin</span>
+            <span>Manual Tag Entry</span>
+          </button>
         </div>
       </div>
 
+      {/* Global Lookup Error Banner */}
+      {searchError && (
+        <div className="rounded-xl bg-[#431B1B] border border-[#E57373]/60 p-3 text-xs text-[#FFCDD2] flex items-center justify-between gap-2 animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-[18px]">error</span>
+            <span>{searchError}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSearchError('')}
+            className="text-[#FFCDD2] hover:text-white"
+          >
+            <span className="material-symbols-outlined text-[16px]">close</span>
+          </button>
+        </div>
+      )}
+
       {activeTab === 'camera' ? (
         <div className="space-y-4">
-          {/* Tactical Viewfinder Viewport Container */}
-          <div className="relative w-full aspect-[4/5] max-h-[500px] overflow-hidden rounded-2xl bg-[#111508] border border-[#5D6A37] shadow-2xl">
-            {/* Simulated Background Camera Photo */}
-            <img
-              src="https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?auto=format&fit=crop&w=800&q=80"
-              alt="Field Camera View"
-              className="w-full h-full object-cover opacity-85 scale-105"
-            />
-
-            {/* Gradient Lighting Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-b from-[#14180A]/80 via-transparent to-[#14180A]/90 pointer-events-none" />
-
-            {/* Optional Coordinate Reticle Grid Overlay */}
-            {gridOn && (
-              <div className="absolute inset-0 pointer-events-none opacity-30">
-                <svg className="w-full h-full">
-                  <defs>
-                    <pattern id="gridReticlePattern" width="40" height="40" patternUnits="userSpaceOnUse">
-                      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#BDCE8A" strokeWidth="0.75" strokeDasharray="2 3" />
-                    </pattern>
-                  </defs>
-                  <rect width="100%" height="100%" fill="url(#gridReticlePattern)" />
-                </svg>
+          {/* Tactical Camera Viewfinder */}
+          <ErrorBoundary
+            title="Viewfinder Standby"
+            fallback={(err, reset) => (
+              <div className="relative w-full aspect-[4/5] max-h-[460px] rounded-2xl overflow-hidden bg-[#14180A] border border-[#5D6A37] shadow-2xl flex flex-col items-center justify-center p-6 text-center space-y-3">
+                <div className="w-14 h-14 rounded-full bg-[#1D230E] border border-[#5D6A37] flex items-center justify-center text-[#A4B566]">
+                  <span className="material-symbols-outlined text-3xl">photo_camera</span>
+                </div>
+                <div className="space-y-1">
+                  <h4 className="font-headline-sm text-sm font-bold text-[#F0F3E8]">
+                    Field Viewfinder Standby
+                  </h4>
+                  <p className="text-xs text-[#CCD6B8] max-w-xs mx-auto">
+                    Camera module is in standby. You can switch to manual entry mode or restart the camera.
+                  </p>
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('manual')}
+                    className="h-9 px-4 rounded-xl bg-[#8B9B4C] text-[#1F240F] font-mono text-xs font-bold uppercase tracking-wider active:scale-95"
+                  >
+                    Manual Tag Entry
+                  </button>
+                  <button
+                    type="button"
+                    onClick={reset}
+                    className="h-9 px-4 rounded-xl bg-[#262C14] text-[#CCD6B8] border border-[#525E31] font-mono text-xs font-bold uppercase tracking-wider active:scale-95"
+                  >
+                    Restart Viewfinder
+                  </button>
+                </div>
               </div>
             )}
-
-            {/* Top Quick Field Controls */}
-            <div className="absolute top-3 inset-x-3 flex items-center justify-between z-20">
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#191E0D]/90 border border-[#4E5B2E] backdrop-blur-md text-[#BDCE8A] text-xs font-mono">
-                <span className="material-symbols-outlined text-[15px] text-[#A4B566]">eco</span>
-                <span>AR Optical Live</span>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setTorchOn(!torchOn)}
-                  className={`w-9 h-9 rounded-full flex items-center justify-center border backdrop-blur-md transition-all ${
-                    torchOn
-                      ? 'bg-[#A4B566] text-[#1D230E] border-[#A4B566]'
-                      : 'bg-[#191E0D]/90 border-[#4E5B2E] text-[#D8DFC8]'
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-[18px]">
-                    {torchOn ? 'flashlight_on' : 'flashlight_off'}
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setGridOn(!gridOn)}
-                  className={`w-9 h-9 rounded-full flex items-center justify-center border backdrop-blur-md transition-all ${
-                    gridOn
-                      ? 'bg-[#A4B566] text-[#1D230E] border-[#A4B566]'
-                      : 'bg-[#191E0D]/90 border-[#4E5B2E] text-[#D8DFC8]'
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-[18px]">grid_4x4</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Camera Reticle Brackets */}
-            <div className="absolute inset-x-8 top-16 bottom-20 pointer-events-none flex flex-col justify-between">
-              {/* Top Bracket Reticle */}
-              <div className="flex justify-between items-start">
-                <div className="w-8 h-8 border-t-[3px] border-l-[3px] border-[#A4B566] rounded-tl shadow-[0_0_8px_rgba(164,181,102,0.8)]" />
-                <div className="flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-[#191E0D]/95 border border-[#A4B566]/60 backdrop-blur-md text-[#F0F3E8] shadow-md -translate-y-2">
-                  <span className="material-symbols-outlined text-[14px] text-[#A4B566]">verified</span>
-                  <span className="font-mono text-xs font-semibold text-[#A4B566]">
-                    {detectedSpecimen ? `#${detectedSpecimen.treeId}` : 'Scan Target Area'}
-                  </span>
-                </div>
-                <div className="w-8 h-8 border-t-[3px] border-r-[3px] border-[#A4B566] rounded-tr shadow-[0_0_8px_rgba(164,181,102,0.8)]" />
-              </div>
-
-              {/* Center Target Laser Circle with Rings */}
-              <div className="relative flex items-center justify-center my-auto">
-                <div className="w-24 h-24 rounded-full border border-[#A4B566]/40 animate-pulse" />
-                <div className="absolute w-14 h-14 rounded-full border-2 border-[#A4B566] shadow-[0_0_12px_rgba(164,181,102,0.7)] flex items-center justify-center">
-                  <div className="w-2 h-2 rounded-full bg-[#A4B566] animate-ping" />
-                </div>
-                <div className="absolute -bottom-8 flex items-center gap-1 px-3 py-0.5 rounded-full bg-[#14180A]/95 border border-[#A4B566]/50 text-[#A4B566] shadow-md text-[11px] font-mono font-bold">
-                  <span className="material-symbols-outlined text-[14px]">straighten</span>
-                  <span>Target Range: 1.8m</span>
-                </div>
-              </div>
-
-              {/* Bottom Bracket Reticle */}
-              <div className="flex justify-between items-end">
-                <div className="w-8 h-8 border-b-[3px] border-l-[3px] border-[#A4B566] rounded-bl shadow-[0_0_8px_rgba(164,181,102,0.8)]" />
-                <div className="w-8 h-8 border-b-[3px] border-r-[3px] border-[#A4B566] rounded-br shadow-[0_0_8px_rgba(164,181,102,0.8)]" />
-              </div>
-            </div>
-
-            {/* Hidden container where html5-qrcode attaches if permitted */}
-            <div id="qr-reader-container" className="hidden" />
-          </div>
-
-          {/* Quick Demo Simulator Bar for instant testing */}
-          <div className="p-3 rounded-xl bg-[#262C14] border border-[#4F5A2D] space-y-2">
-            <span className="font-label-sm text-label-sm text-[#AAB596] block">
-              DEMO SIMULATOR — TAP TO DETECT TAG:
-            </span>
-            <div className="flex gap-2 overflow-x-auto pb-1">
-              {trees.slice(0, 3).map((t) => (
-                <button
-                  key={t.treeId}
-                  onClick={() => handleSimulateScan(t)}
-                  className="px-3 py-1.5 rounded-lg bg-[#30371A] border border-[#525E31] text-xs font-mono text-[#D8DFC8] hover:border-[#A4B566] whitespace-nowrap active:scale-95"
-                >
-                  Simulate #{t.treeId}
-                </button>
-              ))}
-            </div>
-          </div>
+          >
+            <QRScannerView
+              onScan={handleScan}
+              isLocked={Boolean(detectedSpecimen)}
+              scannedId={detectedSpecimen?.treeId}
+            />
+          </ErrorBoundary>
 
           {/* Detected Specimen Action Dock */}
           {detectedSpecimen && (
-            <div className="p-5 rounded-2xl bg-[#262C14] border border-[#5D6A37] shadow-xl space-y-3 animate-in slide-in-from-bottom-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-10 h-10 rounded-xl bg-[#30371A] border border-[#525E31] flex items-center justify-center text-[#A4B566]">
-                    <span className="material-symbols-outlined text-[24px]">park</span>
+            <div className="p-5 rounded-2xl bg-[#262C14] border border-[#8B9B4C] shadow-2xl space-y-3.5 animate-in slide-in-from-bottom-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-[#1D230E] border border-[#525E31] flex items-center justify-center text-[#8B9B4C] shrink-0 shadow-inner">
+                    <span className="material-symbols-outlined text-[28px]">park</span>
                   </div>
                   <div>
-                    <span className="font-mono text-xs font-bold text-[#A4B566]">
-                      #{detectedSpecimen.treeId} IDENTIFIED
-                    </span>
-                    <h3 className="font-display font-bold text-base text-[#F0F3E8]">
-                      {detectedSpecimen.species}
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 rounded-full bg-[#1D230E] text-[#A4B566] border border-[#525E31] font-mono text-xs font-bold">
+                        #{detectedSpecimen.treeId}
+                      </span>
+                      <span className="font-mono text-[11px] text-[#A4B566] uppercase font-bold tracking-wide">
+                        IDENTIFIED
+                      </span>
+                    </div>
+                    <h3 className="font-headline-sm text-base font-bold text-[#F0F3E8] mt-0.5 truncate">
+                      {detectedSpecimen.nickname || detectedSpecimen.species}
                     </h3>
+                    <span className="font-body-sm text-xs text-[#CCD6B8] italic block truncate">
+                      {detectedSpecimen.species}
+                    </span>
                   </div>
                 </div>
-                <span className="px-2.5 py-0.5 rounded-full bg-[#3A4320] border border-[#5D6A37] text-[#D2DCB4] font-mono text-xs font-semibold">
+
+                <span
+                  className={`px-2.5 py-1 rounded-full font-mono text-xs font-semibold shrink-0 border ${
+                    detectedSpecimen.healthStatus === 'Healthy'
+                      ? 'bg-[#3A4320] border-[#5D6A37] text-[#D2DCB4]'
+                      : detectedSpecimen.healthStatus === 'Monitoring'
+                      ? 'bg-[#3A331A] border-[#D99B26]/60 text-[#F5C26B]'
+                      : 'bg-[#431B1B] border-[#E57373]/60 text-[#FFCDD2]'
+                  }`}
+                >
                   {detectedSpecimen.healthStatus || 'Healthy'}
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 pt-1">
+              {/* Specimen Telemetry Row */}
+              <div className="grid grid-cols-2 gap-2 text-xs font-mono bg-[#1D230E] p-3 rounded-xl border border-[#404A24]">
+                <div>
+                  <span className="text-[#AAB596] block text-[10px] uppercase">Campus Sector</span>
+                  <span className="text-[#F0F3E8] font-bold truncate block">
+                    {detectedSpecimen.location || 'CTU Barili Campus'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[#AAB596] block text-[10px] uppercase">Growth Stage</span>
+                  <span className="text-[#A4B566] font-bold block">
+                    {detectedSpecimen.currentStage || 'Seedling'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Quick Actions Grid */}
+              <div className="grid grid-cols-2 gap-2.5 pt-1">
                 <button
+                  type="button"
                   onClick={() => navigate(`/trees/${detectedSpecimen.treeId}`)}
-                  className="h-11 rounded-xl bg-[#8B9B4C] hover:bg-[#9EAF6D] active:scale-[0.98] text-[#1F240F] font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-md"
+                  className="h-11 rounded-xl bg-[#8B9B4C] hover:bg-[#9EAF6D] text-[#1F240F] font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all"
                 >
-                  <span className="material-symbols-outlined text-[16px]">visibility</span>
-                  Open Profile
+                  <span className="material-symbols-outlined text-[16px]">assignment_turned_in</span>
+                  <span>Open Profile</span>
                 </button>
+
                 <button
-                  onClick={() => navigate(`/trees/${detectedSpecimen.treeId}`)}
-                  className="h-11 rounded-xl bg-[#30371A] border border-[#525E31] hover:bg-[#38411F] text-[#F0F3E8] font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5"
+                  type="button"
+                  onClick={() => setShowLogModal(true)}
+                  className="h-11 rounded-xl bg-[#30371A] hover:bg-[#3D4721] text-[#A4B566] border border-[#525E31] font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 active:scale-95 transition-all"
                 >
-                  <span className="material-symbols-outlined text-[16px]">add_chart</span>
-                  Log Growth
+                  <span className="material-symbols-outlined text-[16px]">straighten</span>
+                  <span>Log Growth</span>
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between pt-1">
+                <button
+                  type="button"
+                  onClick={() => navigate(`/map?focus=${detectedSpecimen.treeId}`)}
+                  className="font-mono text-xs text-[#CCD6B8] hover:text-[#F0F3E8] flex items-center gap-1"
+                >
+                  <span className="material-symbols-outlined text-[16px] text-[#A4B566]">pin_drop</span>
+                  <span>View on Campus Map</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setDetectedSpecimen(null)}
+                  className="font-mono text-xs text-[#AAB596] hover:text-[#FFCDD2] flex items-center gap-1"
+                >
+                  <span className="material-symbols-outlined text-[16px]">close</span>
+                  <span>Scan Next Tag</span>
                 </button>
               </div>
             </div>
           )}
         </div>
       ) : (
-        /* Manual Search Mode */
+        /* Manual ID Search Mode */
         <div className="p-6 rounded-2xl bg-[#262C14] border border-[#4F5A2D] shadow-lg space-y-4">
           <div className="text-center max-w-sm mx-auto space-y-1">
-            <span className="material-symbols-outlined text-3xl text-[#A4B566]">pin</span>
+            <span className="material-symbols-outlined text-4xl text-[#A4B566]">pin</span>
             <h3 className="font-headline-sm text-headline-sm text-[#F0F3E8] font-bold">
               Direct Specimen ID Lookup
             </h3>
-            <p className="text-xs text-[#AAB596]">
-              Enter the unique sequential code printed on the physical stake tag.
+            <p className="text-xs text-[#CCD6B8]">
+              Enter the unique sequential code printed on the physical stake tag (e.g. LMB-0001).
             </p>
           </div>
 
@@ -298,13 +315,25 @@ export default function ScanPage() {
             />
             <button
               type="submit"
-              className="w-full h-12 rounded-xl bg-[#8B9B4C] hover:bg-[#9EAF6D] text-[#1F240F] font-mono text-xs font-bold uppercase tracking-wider shadow-md flex items-center justify-center gap-2"
+              disabled={isSearching}
+              className="w-full h-12 rounded-xl bg-[#8B9B4C] hover:bg-[#9EAF6D] disabled:opacity-50 text-[#1F240F] font-mono text-xs font-bold uppercase tracking-wider shadow-md flex items-center justify-center gap-2 transition-all active:scale-95"
             >
               <span className="material-symbols-outlined text-[18px]">search</span>
-              Retrieve Telemetry Records
+              <span>{isSearching ? 'Searching Database...' : 'Retrieve Telemetry Record'}</span>
             </button>
           </form>
         </div>
+      )}
+
+      {/* Growth Entry Modal (Can be triggered directly from the scan screen) */}
+      {showLogModal && detectedSpecimen && (
+        <GrowthEntryForm
+          tree={detectedSpecimen}
+          onClose={() => setShowLogModal(false)}
+          onSuccess={() => {
+            alert(`Observation recorded for specimen #${detectedSpecimen.treeId}!`);
+          }}
+        />
       )}
     </div>
   );

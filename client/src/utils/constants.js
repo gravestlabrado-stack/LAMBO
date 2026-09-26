@@ -9,6 +9,8 @@ export const HEALTH_STATUS = {
   NEEDS_ATTENTION: 'Needs Attention',
 };
 
+export const HEALTH_STATUSES = ['Healthy', 'Monitoring', 'Needs Attention'];
+
 export const GROWTH_STAGES = [
   'Seedling',
   'Vegetative',
