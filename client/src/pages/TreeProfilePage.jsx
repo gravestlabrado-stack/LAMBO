@@ -34,6 +34,8 @@ export default function TreeProfilePage() {
   const [remSaving, setRemSaving] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [isBookmarked, setIsBookmarked] = useState(false);
+  const [isDownloadingQR, setIsDownloadingQR] = useState(false);
+  const [qrDownloadNotice, setQrDownloadNotice] = useState(null);
 
   const fetchTreeData = async () => {
     setLoading(true);
@@ -102,33 +104,53 @@ export default function TreeProfilePage() {
   }, [tree, logs]);
 
   const handleDownloadQR = () => {
+    if (isDownloadingQR) return;
     const svg = document.getElementById('specimen-profile-qr');
     if (!svg) return;
+
+    setIsDownloadingQR(true);
+    setQrDownloadNotice('downloading');
+
     const svgData = new XMLSerializer().serializeToString(svg);
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     const img = new Image();
     img.onload = () => {
-      canvas.width = img.width + 40;
-      canvas.height = img.height + 80;
-      ctx.fillStyle = '#1D230E';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 20, 20);
-      ctx.fillStyle = '#F0F3E8';
-      ctx.font = 'bold 16px monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText(tree.treeId, canvas.width / 2, canvas.height - 30);
-      ctx.fillStyle = '#A4B566';
-      ctx.font = '12px sans-serif';
-      ctx.fillText(tree.species?.split(' (')[0] || tree.species, canvas.width / 2, canvas.height - 12);
+      try {
+        canvas.width = img.width + 40;
+        canvas.height = img.height + 80;
+        ctx.fillStyle = '#1D230E';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 20, 20);
+        ctx.fillStyle = '#F0F3E8';
+        ctx.font = 'bold 16px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(tree.treeId, canvas.width / 2, canvas.height - 30);
+        ctx.fillStyle = '#A4B566';
+        ctx.font = '12px sans-serif';
+        ctx.fillText(tree.species?.split(' (')[0] || tree.species, canvas.width / 2, canvas.height - 12);
 
-      const pngFile = canvas.toDataURL('image/png');
-      const downloadLink = document.createElement('a');
-      downloadLink.download = `${tree.treeId}-QR-TAG.png`;
-      downloadLink.href = pngFile;
-      downloadLink.click();
+        const pngFile = canvas.toDataURL('image/png');
+        const downloadLink = document.createElement('a');
+        downloadLink.download = `${tree.treeId}-QR-TAG.png`;
+        downloadLink.href = pngFile;
+        downloadLink.click();
+        setQrDownloadNotice('success');
+      } catch (err) {
+        console.error('[TreeProfilePage] Download failed:', err);
+        setQrDownloadNotice(null);
+      } finally {
+        setTimeout(() => {
+          setIsDownloadingQR(false);
+          setQrDownloadNotice(null);
+        }, 3000);
+      }
     };
-    img.src = 'data:image/svg+xml;base64,' + btoa(svgData);
+    img.onerror = () => {
+      setIsDownloadingQR(false);
+      setQrDownloadNotice(null);
+    };
+    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
   };
 
   const handleOpenReminderModal = () => {
@@ -210,8 +232,9 @@ export default function TreeProfilePage() {
   const owner = tree.owner;
 
   return (
-    <div className="space-y-5 pb-16">
-      {/* Top Navigation Row */}
+    <>
+      <div className="space-y-5 pb-16">
+        {/* Top Navigation Row */}
       <div className="flex items-center justify-between gap-2">
         <Link
           to="/trees"
@@ -679,6 +702,8 @@ export default function TreeProfilePage() {
         </button>
       </div>
 
+      </div>
+
       {/* Modal: Add Growth Observation Log */}
       {showLogModal && (
         <GrowthEntryForm
@@ -692,7 +717,7 @@ export default function TreeProfilePage() {
 
       {/* Modal: Schedule Care Reminder */}
       {showReminderModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+        <div className="fixed inset-0 !m-0 z-[100] flex items-center justify-center p-4 bg-[#14180A]/60 backdrop-blur-xl animate-in fade-in duration-200">
           <div className="w-full max-w-sm rounded-2xl bg-[#262C14] border border-[#5D6A37] p-5 shadow-2xl space-y-4 animate-in zoom-in-95">
             <div className="flex items-center justify-between border-b border-[#4F5A2D] pb-3">
               <div className="flex items-center gap-2">
@@ -808,7 +833,7 @@ export default function TreeProfilePage() {
 
       {/* Modal: Physical QR Tag Generator */}
       {showQRModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        <div className="fixed inset-0 !m-0 z-[100] flex items-center justify-center p-4 bg-[#14180A]/60 backdrop-blur-xl animate-in fade-in duration-200">
           <div className="w-full max-w-sm rounded-2xl bg-[#262C14] border border-[#5D6A37] p-6 shadow-2xl text-center space-y-4 animate-in fade-in zoom-in-95">
             <div className="flex justify-between items-center border-b border-[#4F5A2D] pb-3">
               <span className="font-mono text-xs text-[#A4B566] font-bold uppercase tracking-wider">
@@ -849,20 +874,46 @@ export default function TreeProfilePage() {
               <button
                 type="button"
                 onClick={handleDownloadQR}
-                className="flex-1 h-11 rounded-xl bg-[#8B9B4C] hover:bg-[#9EAF6D] text-[#1F240F] font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-md"
+                disabled={isDownloadingQR}
+                className="flex-1 h-11 rounded-xl bg-[#8B9B4C] hover:bg-[#9EAF6D] disabled:opacity-60 disabled:cursor-not-allowed text-[#1F240F] font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-md transition-all active:scale-95"
               >
-                <span className="material-symbols-outlined text-[16px]">download</span>
-                <span>Download PNG</span>
+                {isDownloadingQR ? (
+                  <>
+                    <span className="material-symbols-outlined text-[16px] animate-spin">
+                      progress_activity
+                    </span>
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined text-[16px]">download</span>
+                    <span>Download PNG</span>
+                  </>
+                )}
               </button>
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="px-4 h-11 rounded-xl bg-[#30371A] border border-[#525E31] text-[#F0F3E8] font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1"
+                className="px-4 h-11 rounded-xl bg-[#30371A] hover:bg-[#3D4721] border border-[#525E31] text-[#F0F3E8] font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1 transition-colors active:scale-95"
               >
                 <span className="material-symbols-outlined text-[16px]">print</span>
                 <span>Print</span>
               </button>
             </div>
+
+            {/* Real-time Download Feedback Banner */}
+            {qrDownloadNotice === 'downloading' && (
+              <div className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-[#38411F] border border-[#5D6A37] text-xs font-mono text-[#D8DFC8] animate-in fade-in zoom-in-95">
+                <span className="material-symbols-outlined text-[16px] text-[#A4B566] animate-spin">progress_activity</span>
+                <span>Generating high-res PNG tag... download starting</span>
+              </div>
+            )}
+            {qrDownloadNotice === 'success' && (
+              <div className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-[#2D3F1E] border border-[#7A9330] text-xs font-mono text-[#E4F5A6] animate-in fade-in zoom-in-95">
+                <span className="material-symbols-outlined text-[16px] text-[#A4B566]">check_circle</span>
+                <span>Tag downloaded! Check your downloads.</span>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -871,11 +922,11 @@ export default function TreeProfilePage() {
       {selectedPhoto && (
         <div
           onClick={() => setSelectedPhoto(null)}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md"
+          className="fixed inset-0 !m-0 z-[100] flex items-center justify-center p-4 bg-[#14180A]/60 backdrop-blur-xl animate-in fade-in duration-200"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="relative max-w-2xl max-h-[85vh] rounded-2xl overflow-hidden border border-[#525E31] bg-[#1D230E]"
+            className="relative max-w-2xl max-h-[85vh] rounded-2xl overflow-hidden border border-[#525E31] bg-[#1D230E] shadow-2xl animate-in zoom-in-95 duration-200"
           >
             <img
               src={selectedPhoto}
@@ -891,6 +942,6 @@ export default function TreeProfilePage() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

@@ -441,6 +441,7 @@ fontFamily: {
 - Test offline → online sync flow
 - Test push notification delivery
 - Test QR scan → tree profile flow
+- add subtle animations so app feels smoother
 
 ---
 

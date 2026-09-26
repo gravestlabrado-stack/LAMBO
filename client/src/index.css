@@ -97,5 +97,31 @@
     background: #4F5A2D;
     border-color: #BDCE8A;
   }
+
+  /* Micro-animations & Interactive Enhancements */
+  .card-interactive {
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+  }
+  .card-interactive:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 28px -6px rgba(0, 0, 0, 0.5), 0 0 12px rgba(164, 181, 102, 0.15);
+    border-color: #8B9B4C;
+  }
+
+  .interactive-tap {
+    transition: transform 0.15s ease, opacity 0.15s ease;
+  }
+  .interactive-tap:active {
+    transform: scale(0.96);
+  }
+
+  /* Mobile Notch & Gesture Navigation Safe Area Insets */
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
 }
+
 

@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 
@@ -9,12 +9,18 @@ export default function QRCodeDisplay({
 }) {
   const navigate = useNavigate();
   const qrRef = useRef(null);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadNotice, setDownloadNotice] = useState(null);
 
   if (!tree) return null;
 
   const downloadQR = () => {
+    if (isDownloading) return;
     const svg = qrRef.current?.querySelector('svg');
     if (!svg) return;
+
+    setIsDownloading(true);
+    setDownloadNotice('downloading');
 
     const svgData = new XMLSerializer().serializeToString(svg);
     const canvas = document.createElement('canvas');
@@ -27,15 +33,32 @@ export default function QRCodeDisplay({
     canvas.height = size;
 
     img.onload = () => {
-      ctx.fillStyle = '#FFFFFF';
-      ctx.fillRect(0, 0, size, size);
-      ctx.drawImage(img, 20, 20, size - 40, size - 40);
+      try {
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, size, size);
+        ctx.drawImage(img, 20, 20, size - 40, size - 40);
 
-      const pngFile = canvas.toDataURL('image/png');
-      const downloadLink = document.createElement('a');
-      downloadLink.download = `LAMBO_${tree.treeId}_QR.png`;
-      downloadLink.href = pngFile;
-      downloadLink.click();
+        const pngFile = canvas.toDataURL('image/png');
+        const downloadLink = document.createElement('a');
+        downloadLink.download = `LAMBO_${tree.treeId}_QR.png`;
+        downloadLink.href = pngFile;
+        downloadLink.click();
+
+        setDownloadNotice('success');
+      } catch (err) {
+        console.error('[QRCodeDisplay] Export failed:', err);
+        setDownloadNotice(null);
+      } finally {
+        setTimeout(() => {
+          setIsDownloading(false);
+          setDownloadNotice(null);
+        }, 3000);
+      }
+    };
+
+    img.onerror = () => {
+      setIsDownloading(false);
+      setDownloadNotice(null);
     };
 
     img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
@@ -46,8 +69,8 @@ export default function QRCodeDisplay({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
-      <div className="w-full max-w-sm rounded-2xl bg-[#262C14] border border-[#5D6A37] p-6 shadow-2xl space-y-4 text-center animate-in zoom-in-95">
+    <div className="fixed inset-0 !m-0 z-[100] flex items-center justify-center p-4 bg-[#14180A]/60 backdrop-blur-xl animate-in fade-in duration-200">
+      <div className="w-full max-w-sm rounded-2xl bg-[#262C14] border border-[#5D6A37] p-6 shadow-2xl space-y-4 text-center animate-in zoom-in-95 duration-200">
         {/* Success Icon */}
         <div className="w-14 h-14 mx-auto rounded-full bg-[#38411F] text-[#A4B566] border border-[#5D6A37] flex items-center justify-center shadow-md">
           <span className="material-symbols-outlined text-[32px]">check_circle</span>
@@ -97,20 +120,46 @@ export default function QRCodeDisplay({
           <button
             type="button"
             onClick={downloadQR}
-            className="h-10 px-3 rounded-xl bg-[#30371A] hover:bg-[#3D4721] border border-[#525E31] text-[#D8DFC8] hover:text-[#F0F3E8] font-mono text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
+            disabled={isDownloading}
+            className="h-10 px-3 rounded-xl bg-[#30371A] hover:bg-[#3D4721] disabled:opacity-60 disabled:cursor-not-allowed border border-[#525E31] text-[#D8DFC8] hover:text-[#F0F3E8] font-mono text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors shadow-sm active:scale-95"
           >
-            <span className="material-symbols-outlined text-[16px] text-[#A4B566]">download</span>
-            Download PNG
+            {isDownloading ? (
+              <>
+                <span className="material-symbols-outlined text-[16px] text-[#A4B566] animate-spin">
+                  progress_activity
+                </span>
+                <span>Saving...</span>
+              </>
+            ) : (
+              <>
+                <span className="material-symbols-outlined text-[16px] text-[#A4B566]">download</span>
+                <span>Download PNG</span>
+              </>
+            )}
           </button>
           <button
             type="button"
             onClick={handlePrint}
-            className="h-10 px-3 rounded-xl bg-[#30371A] hover:bg-[#3D4721] border border-[#525E31] text-[#D8DFC8] hover:text-[#F0F3E8] font-mono text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
+            className="h-10 px-3 rounded-xl bg-[#30371A] hover:bg-[#3D4721] border border-[#525E31] text-[#D8DFC8] hover:text-[#F0F3E8] font-mono text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors shadow-sm active:scale-95"
           >
             <span className="material-symbols-outlined text-[16px] text-[#A4B566]">print</span>
             Print Tag
           </button>
         </div>
+
+        {/* Real-time Download Feedback Banner */}
+        {downloadNotice === 'downloading' && (
+          <div className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-[#38411F] border border-[#5D6A37] text-xs font-mono text-[#D8DFC8] animate-in fade-in zoom-in-95">
+            <span className="material-symbols-outlined text-[16px] text-[#A4B566] animate-spin">progress_activity</span>
+            <span>Generating high-res PNG tag... download starting</span>
+          </div>
+        )}
+        {downloadNotice === 'success' && (
+          <div className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-[#2D3F1E] border border-[#7A9330] text-xs font-mono text-[#E4F5A6] animate-in fade-in zoom-in-95">
+            <span className="material-symbols-outlined text-[16px] text-[#A4B566]">check_circle</span>
+            <span>Tag downloaded! Check your downloads.</span>
+          </div>
+        )}
 
         {/* Navigation Actions */}
         <div className="flex gap-2 pt-1 border-t border-[#4F5A2D]">

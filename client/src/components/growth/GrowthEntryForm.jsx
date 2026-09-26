@@ -150,7 +150,7 @@ export default function GrowthEntryForm({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-[#14180A]/60 backdrop-blur-xl overflow-hidden animate-in fade-in duration-200">
+    <div className="fixed inset-0 !m-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-[#14180A]/60 backdrop-blur-xl overflow-hidden animate-in fade-in duration-200">
       <div className="w-full max-w-lg rounded-2xl bg-[#262C14] border border-[#5D6A37] shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200">
         {/* Header - Fixed at Top */}
         <div className="p-4 sm:p-5 border-b border-[#4F5A2D] flex items-center justify-between shrink-0 bg-[#262C14]">

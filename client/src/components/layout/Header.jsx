@@ -555,7 +555,7 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
 
       {/* Edit Profile & Photo Modal */}
       {showEditProfile && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in">
+        <div className="fixed inset-0 !m-0 z-[100] flex items-center justify-center p-4 bg-[#14180A]/60 backdrop-blur-xl animate-in fade-in duration-200">
           <div className="w-full max-w-md rounded-2xl bg-[#262C14] border border-[#5D6A37] shadow-2xl p-5 space-y-4 max-h-[90vh] overflow-y-auto">
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-[#4F5A2D] pb-3">
@@ -765,7 +765,7 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
 
       {/* Care Reminders Drawer / Popover Modal */}
       {showReminders && (
-        <div className="fixed inset-0 z-50 flex items-start justify-end p-4 pt-20 bg-black/60 backdrop-blur-sm animate-in fade-in">
+        <div className="fixed inset-0 !m-0 z-[100] flex items-start justify-end p-4 pt-20 bg-[#14180A]/60 backdrop-blur-xl animate-in fade-in duration-200">
           <div className="w-full max-w-sm rounded-2xl bg-[#262C14] border border-[#5D6A37] p-4 shadow-2xl space-y-3 animate-in zoom-in-95">
             <div className="flex items-center justify-between border-b border-[#4F5A2D] pb-3">
               <div className="flex items-center gap-2">

@@ -93,8 +93,9 @@ export default function ScanPage() {
   const canLogSpecimen = canUserLogTree(user, detectedSpecimen);
 
   return (
-    <div className="space-y-4 pb-12">
-      {/* Top Header & Mode Switcher */}
+    <>
+      <div className="space-y-4 pb-12">
+        {/* Top Header & Mode Switcher */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
@@ -352,6 +353,7 @@ export default function ScanPage() {
           </div>
         </div>
       )}
+      </div>
 
       {/* Growth Entry Modal */}
       {showLogModal && detectedSpecimen && (
@@ -363,6 +365,6 @@ export default function ScanPage() {
           }}
         />
       )}
-    </div>
+    </>
   );
 }
