@@ -7,12 +7,14 @@ import StageProgressBar from '../components/tree/StageProgressBar';
 import GrowthEntryForm from '../components/growth/GrowthEntryForm';
 import { formatDate, formatRelativeTime } from '../utils/formatters';
 import { useAuth } from '../hooks/useAuth';
+import { useTrees } from '../context/TreeContext';
 import { canUserLogTree } from '../utils/permissions';
 
 export default function TreeProfilePage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { addReminder } = useTrees();
 
   const [tree, setTree] = useState(null);
   const [logs, setLogs] = useState([]);
@@ -22,6 +24,13 @@ export default function TreeProfilePage() {
   // Modals
   const [showLogModal, setShowLogModal] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
+  const [showReminderModal, setShowReminderModal] = useState(false);
+  const [remTitle, setRemTitle] = useState('');
+  const [remType, setRemType] = useState('watering');
+  const [remDate, setRemDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [remInterval, setRemInterval] = useState('weekly');
+  const [remSuccess, setRemSuccess] = useState('');
+  const [remSaving, setRemSaving] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [isBookmarked, setIsBookmarked] = useState(false);
 
@@ -119,6 +128,40 @@ export default function TreeProfilePage() {
       downloadLink.click();
     };
     img.src = 'data:image/svg+xml;base64,' + btoa(svgData);
+  };
+
+  const handleOpenReminderModal = () => {
+    setRemTitle(`Routine Watering for #${tree?.treeId || ''}`);
+    setRemType('watering');
+    setRemDate(new Date().toISOString().split('T')[0]);
+    setRemInterval('weekly');
+    setRemSuccess('');
+    setShowReminderModal(true);
+  };
+
+  const handleSaveReminder = async (e) => {
+    e.preventDefault();
+    if (!remTitle.trim()) return;
+    setRemSaving(true);
+    try {
+      await addReminder({
+        tree: tree._id,
+        treeId: tree.treeId,
+        title: remTitle.trim(),
+        type: remType,
+        scheduledDate: new Date(remDate).toISOString(),
+        repeatInterval: remInterval,
+      });
+      setRemSuccess('Care reminder set successfully!');
+      setTimeout(() => {
+        setShowReminderModal(false);
+        setRemSuccess('');
+      }, 1000);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setRemSaving(false);
+    }
   };
 
   if (loading) {
@@ -622,6 +665,15 @@ export default function TreeProfilePage() {
             <span>Print QR Tag</span>
           </button>
         </div>
+
+        <button
+          type="button"
+          onClick={handleOpenReminderModal}
+          className="w-full h-11 rounded-xl bg-[#30371A] hover:bg-[#3D4721] text-[#CCD6B8] border border-[#525E31] font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 active:scale-[0.98] transition-all"
+        >
+          <span className="material-symbols-outlined text-[18px] text-[#A4B566]">alarm_add</span>
+          <span>Schedule Care Reminder</span>
+        </button>
       </div>
 
       {/* Modal: Add Growth Observation Log */}
@@ -633,6 +685,110 @@ export default function TreeProfilePage() {
             fetchTreeData();
           }}
         />
+      )}
+
+      {/* Modal: Schedule Care Reminder */}
+      {showReminderModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+          <div className="w-full max-w-sm rounded-2xl bg-[#262C14] border border-[#5D6A37] p-5 shadow-2xl space-y-4 animate-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-[#4F5A2D] pb-3">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[#A4B566]">alarm_add</span>
+                <h3 className="font-display font-bold text-sm text-[#F0F3E8]">
+                  Schedule Care Task
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowReminderModal(false)}
+                className="w-7 h-7 rounded-full bg-[#1D230E] border border-[#525E31] text-[#AAB596] flex items-center justify-center hover:text-[#F0F3E8]"
+              >
+                <span className="material-symbols-outlined text-[16px]">close</span>
+              </button>
+            </div>
+
+            {remSuccess && (
+              <div className="p-2.5 rounded-xl bg-[#1D331A] border border-[#A4B566]/60 text-[#C5E1A5] text-xs font-mono flex items-center gap-2">
+                <span className="material-symbols-outlined text-[16px]">check_circle</span>
+                <span>{remSuccess}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveReminder} className="space-y-3">
+              <div className="space-y-1">
+                <label className="block text-[11px] font-mono text-[#C2CE9F]">Task Description</label>
+                <input
+                  type="text"
+                  value={remTitle}
+                  onChange={(e) => setRemTitle(e.target.value)}
+                  placeholder="e.g. Deep Root Watering"
+                  required
+                  className="w-full h-9 bg-[#1D230E] border border-[#525E31] rounded-xl px-3 text-xs text-[#F0F3E8] focus:outline-none focus:border-[#A4B566]"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <label className="block text-[11px] font-mono text-[#C2CE9F]">Task Type</label>
+                  <select
+                    value={remType}
+                    onChange={(e) => setRemType(e.target.value)}
+                    className="w-full h-9 bg-[#1D230E] border border-[#525E31] rounded-xl px-2 text-xs font-mono text-[#F0F3E8] focus:outline-none focus:border-[#A4B566]"
+                  >
+                    <option value="watering">Watering</option>
+                    <option value="fertilizer">Fertilizer</option>
+                    <option value="inspection">Inspection</option>
+                    <option value="custom">Custom</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-[11px] font-mono text-[#C2CE9F]">Recurrence</label>
+                  <select
+                    value={remInterval}
+                    onChange={(e) => setRemInterval(e.target.value)}
+                    className="w-full h-9 bg-[#1D230E] border border-[#525E31] rounded-xl px-2 text-xs font-mono text-[#F0F3E8] focus:outline-none focus:border-[#A4B566]"
+                  >
+                    <option value="none">One-time</option>
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="biweekly">Biweekly</option>
+                    <option value="monthly">Monthly</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="block text-[11px] font-mono text-[#C2CE9F]">Target Due Date</label>
+                <input
+                  type="date"
+                  value={remDate}
+                  onChange={(e) => setRemDate(e.target.value)}
+                  required
+                  className="w-full h-9 bg-[#1D230E] border border-[#525E31] rounded-xl px-3 text-xs font-mono text-[#F0F3E8] focus:outline-none focus:border-[#A4B566]"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="submit"
+                  disabled={remSaving}
+                  className="flex-1 h-10 rounded-xl bg-[#8B9B4C] hover:bg-[#9EAF6D] text-[#1F240F] font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 disabled:opacity-50 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[16px]">save</span>
+                  <span>{remSaving ? 'Scheduling...' : 'Save Task'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowReminderModal(false)}
+                  className="h-10 px-3 rounded-xl bg-[#30371A] border border-[#525E31] text-xs font-mono text-[#AAB596]"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
       {/* Modal: Physical QR Tag Generator */}

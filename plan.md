@@ -418,21 +418,21 @@ fontFamily: {
 - [x] Map pin placement on RegisterTreePage (GPS coordinates for the plant on map)
 
 ### Phase 11: Push Notifications & Reminders (~2-3 hrs)
-- Backend: Reminder model (tree, reminderType, frequency, nextDue)
-- Backend: reminderController + reminderRoutes (CRUD + trigger endpoint)
-- Backend: web-push integration (VAPID keys, push subscription storage on User model)
-- Frontend: Service worker push event handler
-- Frontend: Notification permission request on first login
-- Frontend: Reminder settings per tree (water every X days, fertilize every Y days)
-- Push payload: tree name, reminder type, quick link to log growth
+- [x] Backend: Reminder model (tree, reminderType, frequency, nextDue)
+- [x] Backend: reminderController + reminderRoutes (CRUD + trigger endpoint)
+- [x] Backend: web-push integration (VAPID keys, push subscription storage on User model)
+- [x] Frontend: Service worker push event handler
+- [x] Frontend: Notification permission request & control panel
+- [x] Frontend: Reminder settings per tree (water every X days, fertilize every Y days)
+- [x] Push payload: tree name, reminder type, quick link to log growth
 
 ### Phase 12: Offline Mode & PWA (~2-3 hrs)
-- Install vite-plugin-pwa, configure Workbox service worker
-- Cache static assets (app shell, fonts, icons) for offline load
-- IndexedDB offline queue: store growth log entries created offline
-- Background sync: push queued entries to server when connection restores
-- Offline indicator in Header (swap "Online" badge → "Offline" badge)
-- PWA manifest: app name, icons, theme color, installable on home screen
+- [x] Install & configure service worker precaching and runtime caching
+- [x] Cache static assets (app shell, fonts, icons) for offline load
+- [x] IndexedDB offline queue: store growth log entries created offline
+- [x] Background sync: push queued entries to server when connection restores
+- [x] Offline indicator in Header (Online/Offline status + pending sync count badge)
+- [x] PWA manifest: app name, icons, theme color, installable on home screen
 
 ### Phase 13: Polish & Integration (~1-2 hrs)
 - Protected routes, loading states, error handling
