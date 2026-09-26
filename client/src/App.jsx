@@ -4,6 +4,7 @@ import { AuthProvider } from './context/AuthContext';
 import { TreeProvider } from './context/TreeContext';
 import AppShell from './components/layout/AppShell';
 import ErrorBoundary from './components/common/ErrorBoundary';
+import { Analytics } from '@vercel/analytics/react';
 
 // Pages
 import DashboardPage from './pages/DashboardPage';
@@ -42,6 +43,7 @@ export default function App() {
                 <Route path="*" element={<NotFoundPage />} />
               </Route>
             </Routes>
+            <Analytics />
           </BrowserRouter>
         </TreeProvider>
       </AuthProvider>

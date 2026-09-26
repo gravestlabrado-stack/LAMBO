@@ -1,0 +1,6 @@
+# Robots.txt for LAMBO — Landscape Analytics for Monitoring Botanical Observation
+User-agent: *
+Allow: /
+
+# Sitemap Location
+Sitemap: https://lambo-v1.vercel.app/sitemap.xml

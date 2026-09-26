@@ -27,6 +27,7 @@ export default function GrowthLogsPage() {
   const [showLogModal, setShowLogModal] = useState(false);
   const [editingLog, setEditingLog] = useState(null);
   const [exporting, setExporting] = useState(false);
+  const [exportNotice, setExportNotice] = useState(null);
 
   // 1. Fetch available trees
   const loadTrees = useCallback(async () => {
@@ -125,7 +126,9 @@ export default function GrowthLogsPage() {
 
   // Handle Export to Excel via SheetJS
   const handleExportExcel = () => {
+    if (exporting || logs.length === 0) return;
     setExporting(true);
+    setExportNotice('exporting');
     try {
       const dataToExport = logs.map((log) => {
         const auditor = log.loggedBy;
@@ -185,9 +188,16 @@ export default function GrowthLogsPage() {
         .toISOString()
         .slice(0, 10)}.xlsx`;
       XLSX.writeFile(workbook, fileName);
+      setExportNotice('success');
+      setTimeout(() => {
+        setExportNotice(null);
+      }, 3500);
     } catch (err) {
       console.error('[GrowthLogsPage] Export error:', err);
-      alert('Failed to generate Excel spreadsheet. Please try again.');
+      setExportNotice('error');
+      setTimeout(() => {
+        setExportNotice(null);
+      }, 4000);
     } finally {
       setExporting(false);
     }
@@ -204,7 +214,8 @@ export default function GrowthLogsPage() {
   };
 
   return (
-    <div className="space-y-5 pb-20">
+    <>
+      <div className="space-y-5 pb-20">
       {/* Page Title & Fast Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
@@ -236,16 +247,47 @@ export default function GrowthLogsPage() {
             type="button"
             onClick={handleExportExcel}
             disabled={exporting || logs.length === 0}
-            className="h-10 px-3.5 rounded-full bg-[#30371A] hover:bg-[#3D4721] disabled:opacity-50 text-[#CCD6B8] border border-[#525E31] font-mono text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-sm active:scale-95 transition-all"
+            className="h-10 px-3.5 rounded-full bg-[#30371A] hover:bg-[#3D4721] disabled:opacity-50 disabled:cursor-not-allowed text-[#CCD6B8] border border-[#525E31] font-mono text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-sm active:scale-95 transition-all"
             title="Download full observation ledger as Excel (.xlsx)"
           >
-            <span className="material-symbols-outlined text-[18px] text-[#A4B566]">
-              download
-            </span>
-            <span>{exporting ? 'Exporting...' : 'Excel Export'}</span>
+            {exporting ? (
+              <>
+                <span className="material-symbols-outlined text-[18px] text-[#A4B566] animate-spin">
+                  progress_activity
+                </span>
+                <span>Exporting...</span>
+              </>
+            ) : (
+              <>
+                <span className="material-symbols-outlined text-[18px] text-[#A4B566]">
+                  download
+                </span>
+                <span>Excel Export</span>
+              </>
+            )}
           </button>
         </div>
       </div>
+
+      {/* Real-time Download Feedback Banner */}
+      {exportNotice === 'exporting' && (
+        <div className="flex items-center gap-2.5 py-2.5 px-4 rounded-xl bg-[#38411F] border border-[#5D6A37] text-xs font-mono text-[#D8DFC8] shadow-md animate-in fade-in slide-in-from-top-1">
+          <span className="material-symbols-outlined text-[18px] text-[#A4B566] animate-spin">progress_activity</span>
+          <span>Preparing and compiling Excel (.xlsx) growth ledger... please wait</span>
+        </div>
+      )}
+      {exportNotice === 'success' && (
+        <div className="flex items-center gap-2.5 py-2.5 px-4 rounded-xl bg-[#2D3F1E] border border-[#7A9330] text-xs font-mono text-[#E4F5A6] shadow-md animate-in fade-in slide-in-from-top-1">
+          <span className="material-symbols-outlined text-[18px] text-[#A4B566]">check_circle</span>
+          <span>Spreadsheet download initiated! Check your downloads folder.</span>
+        </div>
+      )}
+      {exportNotice === 'error' && (
+        <div className="flex items-center gap-2.5 py-2.5 px-4 rounded-xl bg-[#4A1E1E] border border-[#8C3A3A] text-xs font-mono text-[#F5C6C6] shadow-md animate-in fade-in slide-in-from-top-1">
+          <span className="material-symbols-outlined text-[18px] text-[#FF8585]">error</span>
+          <span>Failed to compile spreadsheet. Please try again.</span>
+        </div>
+      )}
 
       {/* Specimen Selector & Context Banner */}
       <div className="p-4 sm:p-5 rounded-2xl bg-[#262C14] border border-[#4F5A2D] shadow-md space-y-3">
@@ -442,6 +484,8 @@ export default function GrowthLogsPage() {
         )}
       </div>
 
+      </div>
+
       {/* Modal: New / Edit Observation Entry */}
       {showLogModal && (
         <GrowthEntryForm
@@ -459,6 +503,6 @@ export default function GrowthLogsPage() {
           }}
         />
       )}
-    </div>
+    </>
   );
 }

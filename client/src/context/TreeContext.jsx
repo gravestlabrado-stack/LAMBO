@@ -64,6 +64,8 @@ export function TreeProvider({ children }) {
     try {
       const data = await reminderService.getReminders();
       setReminders(data.data || []);
+      // Automatically evaluate any due reminders on app activity
+      reminderService.triggerDueCheck().catch(() => {});
     } catch (err) {
       console.warn('[TreeContext] Failed to fetch reminders from API:', err.message);
     }

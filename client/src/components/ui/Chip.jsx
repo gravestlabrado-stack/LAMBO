@@ -1,4 +1,5 @@
 import React from 'react';
+import Icon from '../common/Icon';
 
 export default function Chip({
   children,
@@ -45,6 +46,14 @@ export default function Chip({
 
   const Component = clickable || onClick ? 'button' : 'span';
 
+  const renderIcon = () => {
+    if (!icon) return null;
+    if (typeof icon === 'string') {
+      return <Icon name={icon} className="w-3.5 h-3.5 shrink-0" />;
+    }
+    return icon;
+  };
+
   return (
     <Component
       type={Component === 'button' ? 'button' : undefined}
@@ -54,11 +63,7 @@ export default function Chip({
       } ${sizes[size] || sizes.sm} ${getVariantStyles()} ${className}`}
       {...props}
     >
-      {icon && (
-        <span className="material-symbols-outlined text-[14px] leading-none shrink-0">
-          {icon}
-        </span>
-      )}
+      {icon && renderIcon()}
       <span className="truncate">{children}</span>
       {onRemove && (
         <button
@@ -69,7 +74,7 @@ export default function Chip({
           }}
           className="ml-1 hover:text-white"
         >
-          <span className="material-symbols-outlined text-[14px]">close</span>
+          <Icon name="close" className="w-3.5 h-3.5" />
         </button>
       )}
     </Component>

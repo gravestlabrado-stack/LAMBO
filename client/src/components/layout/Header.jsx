@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useTrees } from '../../context/TreeContext';
@@ -29,6 +30,8 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
   const [newTreeId, setNewTreeId] = useState('LMB-0001');
   const [newType, setNewType] = useState('watering');
   const [newInterval, setNewInterval] = useState('none');
+  const [newDate, setNewDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [newTime, setNewTime] = useState('08:00');
   const [deferredPrompt, setDeferredPrompt] = useState(null);
 
   // Push Notifications state
@@ -245,12 +248,13 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
   const handleCreateReminder = async (e) => {
     e.preventDefault();
     if (newTitle.trim()) {
+      const scheduledDateTime = new Date(`${newDate}T${newTime}:00`);
       await addReminder({
         title: newTitle.trim(),
         treeId: newTreeId.trim().toUpperCase(),
         species: 'Monitored Specimen',
-        scheduledDate: new Date().toISOString(),
-        dueDate: 'Today',
+        scheduledDate: scheduledDateTime.toISOString(),
+        dueDate: `${newDate} at ${newTime}`,
         type: newType,
         repeatInterval: newInterval,
       });
@@ -409,7 +413,7 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
                 />
 
                 {/* Dropdown Card */}
-                <div className="absolute right-0 top-12 z-50 w-72 rounded-2xl bg-[#262C14] border border-[#5D6A37] shadow-2xl p-4 space-y-3 animate-in fade-in zoom-in-95">
+                <div className="absolute right-0 top-12 z-50 w-72 rounded-2xl bg-[#262C14] border border-[#5D6A37] shadow-2xl p-4 space-y-3 origin-top-right animate-pop-out">
                   {/* User Details Header with quick edit indicator */}
                   <div className="flex items-center gap-3 pb-3 border-b border-[#4F5A2D]">
                     <div className="relative shrink-0">
@@ -551,9 +555,9 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
       </header>
 
       {/* Edit Profile & Photo Modal */}
-      {showEditProfile && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in">
-          <div className="w-full max-w-md rounded-2xl bg-[#262C14] border border-[#5D6A37] shadow-2xl p-5 space-y-4 max-h-[90vh] overflow-y-auto">
+      {showEditProfile && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="w-full max-w-md rounded-2xl bg-[#262C14] border border-[#5D6A37] shadow-2xl p-5 space-y-4 max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200">
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-[#4F5A2D] pb-3">
               <div className="flex items-center gap-2.5">
@@ -757,13 +761,14 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Care Reminders Drawer / Popover Modal */}
-      {showReminders && (
-        <div className="fixed inset-0 z-50 flex items-start justify-end p-4 pt-20 bg-black/60 backdrop-blur-sm animate-in fade-in">
-          <div className="w-full max-w-sm rounded-2xl bg-[#262C14] border border-[#5D6A37] p-4 shadow-2xl space-y-3 animate-in zoom-in-95">
+      {showReminders && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-start justify-end p-4 pt-20 bg-black/70 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="w-full max-w-sm rounded-2xl bg-[#262C14] border border-[#5D6A37] p-4 shadow-2xl space-y-3 animate-drawer-enter">
             <div className="flex items-center justify-between border-b border-[#4F5A2D] pb-3">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-[#A4B566]">event_available</span>
@@ -954,6 +959,29 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
                     <option value="monthly">Monthly</option>
                   </select>
                 </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[10px] font-mono text-[#AAB596]">Due Date</label>
+                    <input
+                      type="date"
+                      value={newDate}
+                      onChange={(e) => setNewDate(e.target.value)}
+                      required
+                      className="w-full h-8 bg-[#1D230E] border border-[#525E31] rounded-lg px-2 text-xs font-mono text-[#F0F3E8]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-mono text-[#AAB596]">Time (Default 8AM)</label>
+                    <input
+                      type="time"
+                      value={newTime}
+                      onChange={(e) => setNewTime(e.target.value)}
+                      required
+                      className="w-full h-8 bg-[#1D230E] border border-[#525E31] rounded-lg px-2 text-xs font-mono text-[#F0F3E8]"
+                    />
+                  </div>
+                </div>
                 <div className="flex gap-2 pt-1">
                   <button
                     type="submit"
@@ -981,7 +1009,8 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
               </button>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

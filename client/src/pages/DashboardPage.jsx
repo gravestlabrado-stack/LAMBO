@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useTrees } from '../context/TreeContext';
 import { formatRelativeTime } from '../utils/formatters';
+import Icon from '../components/common/Icon';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -42,11 +43,11 @@ export default function DashboardPage() {
             {greeting}, {user?.name?.split(' ')[0] || 'Observer'}
           </h2>
           <span className="flex items-center justify-center w-8 h-8 rounded-full bg-[#30371A] border border-[#525E31] text-[#A4B566]">
-            <span className="material-symbols-outlined text-[20px]">forest</span>
+            <Icon name="forest" className="w-5 h-5 text-[#A4B566]" />
           </span>
         </div>
         <div className="inline-flex items-center gap-2 self-start px-3 py-1 rounded-full bg-[#1D230E] border border-[#525E31]/60 text-[#D8DFC8] font-label-md text-label-md">
-          <span className="material-symbols-outlined text-[16px] text-[#A4B566]">eco</span>
+          <Icon name="eco" className="w-4 h-4 text-[#A4B566]" />
           <span className="font-medium text-[#F0F3E8]">{user?.course || 'Student Observer'}</span>
           <span className="w-1 h-1 rounded-full bg-[#8B9B4C]"></span>
           <span className="text-[#F0F3E8]">{user?.rollNumber}</span>
@@ -69,7 +70,7 @@ export default function DashboardPage() {
             </p>
           </div>
           <div className="w-12 h-12 rounded-xl bg-[#30371A] border border-[#5D6A37] flex items-center justify-center shrink-0 text-[#A4B566] shadow-inner">
-            <span className="material-symbols-outlined text-[28px]">park</span>
+            <Icon name="park" className="w-7 h-7 text-[#A4B566]" />
           </div>
         </div>
 
@@ -79,7 +80,7 @@ export default function DashboardPage() {
             className="w-full h-12 rounded-lg bg-[#8B9B4C] hover:bg-[#9EAF6D] active:scale-[0.98] transition-transform text-[#1F240F] font-label-lg text-label-lg font-bold flex items-center justify-center gap-2 shadow-md"
             type="button"
           >
-            <span className="material-symbols-outlined text-[20px] font-bold">add_circle</span>
+            <Icon name="add_circle" className="w-5 h-5 font-bold" />
             <span>Register Plant / Tree</span>
           </button>
           <button
@@ -87,7 +88,7 @@ export default function DashboardPage() {
             className="w-full h-12 rounded-lg bg-[#30371A] hover:bg-[#3D4721] active:scale-[0.98] transition-transform text-[#F0F3E8] border border-[#525E31] font-label-lg text-label-lg font-bold flex items-center justify-center gap-2 shadow-sm"
             type="button"
           >
-            <span className="material-symbols-outlined text-[20px] text-[#A4B566]">map</span>
+            <Icon name="map" className="w-5 h-5 text-[#A4B566]" />
             <span>Explore Campus Map</span>
           </button>
         </div>
@@ -112,7 +113,7 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between">
             <span className="font-label-md text-label-md text-[#C2CE9F]">Specimens Monitored</span>
             <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-[#1D230E] border border-[#5D6A37] text-[#D2DCB4] font-label-sm text-label-sm font-semibold">
-              <span className="material-symbols-outlined text-[14px]">monitoring</span>
+              <Icon name="monitoring" className="w-3.5 h-3.5" />
               {totalLogs} logs
             </span>
           </div>
@@ -146,7 +147,7 @@ export default function DashboardPage() {
         <div className="rounded-lg bg-[#30371A] p-3.5 shadow-sm border border-[#525E31] space-y-1">
           <div className="flex items-center justify-between">
             <span className="font-label-sm text-label-sm text-[#C2CE9F] truncate">Care Tasks</span>
-            <span className="material-symbols-outlined text-[16px] text-[#A4B566]">event_repeat</span>
+            <Icon name="event_repeat" className="w-4 h-4 text-[#A4B566]" />
           </div>
           <div className="font-headline-md text-headline-md text-[#F0F3E8] font-bold">
             {reminders.filter((r) => !r.completed).length}
@@ -167,7 +168,7 @@ export default function DashboardPage() {
               </h4>
               <p className="font-body-sm text-body-sm text-[#AAB596]">Your registered trees</p>
             </div>
-            <span className="material-symbols-outlined text-[#C2CE9F]">donut_large</span>
+            <Icon name="donut_large" className="w-5 h-5 text-[#C2CE9F]" />
           </div>
 
           <div className="flex items-center gap-6">
@@ -284,7 +285,7 @@ export default function DashboardPage() {
         {/* Loading State */}
         {loading && (
           <div className="rounded-lg bg-[#30371A] p-8 border border-[#525E31] flex flex-col items-center justify-center gap-3">
-            <span className="material-symbols-outlined text-[32px] text-[#A4B566] animate-spin">progress_activity</span>
+            <Icon name="progress_activity" className="w-8 h-8 text-[#A4B566] animate-spin" />
             <p className="font-body-sm text-body-sm text-[#AAB596]">Loading your field data...</p>
           </div>
         )}
@@ -293,7 +294,7 @@ export default function DashboardPage() {
         {!loading && trees.length === 0 && (
           <div className="rounded-lg bg-[#30371A] p-8 border border-[#525E31] border-dashed flex flex-col items-center justify-center gap-3 text-center">
             <div className="w-14 h-14 rounded-2xl bg-[#1D230E] border border-[#525E31] flex items-center justify-center">
-              <span className="material-symbols-outlined text-[28px] text-[#8B9B4C]">park</span>
+              <Icon name="park" className="w-7 h-7 text-[#8B9B4C]" />
             </div>
             <div>
               <h4 className="font-headline-sm text-headline-sm text-[#F0F3E8] font-bold mb-1">
@@ -308,7 +309,7 @@ export default function DashboardPage() {
               className="mt-1 h-10 px-5 rounded-lg bg-[#8B9B4C] hover:bg-[#9EAF6D] text-[#1F240F] font-label-md text-label-md font-bold flex items-center gap-2 transition-colors"
               type="button"
             >
-              <span className="material-symbols-outlined text-[18px]">add_circle</span>
+              <Icon name="add_circle" className="w-4.5 h-4.5" />
               Register First Tree
             </button>
           </div>
@@ -334,7 +335,7 @@ export default function DashboardPage() {
                       {photoUrl ? (
                         <img className="w-full h-full object-cover" alt={tree.species} src={photoUrl} />
                       ) : (
-                        <span className="material-symbols-outlined text-[24px] text-[#525E31]">park</span>
+                        <Icon name="park" className="w-6 h-6 text-[#525E31]" />
                       )}
                     </div>
                     <div className="flex flex-col min-w-0">

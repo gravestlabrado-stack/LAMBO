@@ -435,12 +435,13 @@ fontFamily: {
 - [x] PWA manifest: app name, icons, theme color, installable on home screen
 
 ### Phase 13: Polish & Integration (~1-2 hrs)
-- Protected routes, loading states, error handling
-- Empty states, responsive testing, form validation
-- 404 page, favicon, meta tags
-- Test offline → online sync flow
-- Test push notification delivery
-- Test QR scan → tree profile flow
+- [x] Protected routes, loading states, error handling
+- [x] Empty states, responsive testing, form validation
+- [x] 404 page, favicon, meta tags og image, robots.txt, sitemap.xml, Vercel Analytics
+- [x] Test offline → online sync flow (IndexedDB queue + auto-sync)
+- [x] Test push notification delivery (Web-push VAPID + 15-min background scheduler)
+- [x] Test QR scan → tree profile flow (Camera viewfinder + manual lookup + direct navigation)
+- [x] Add subtle micro-animations and zero-latency bundled SVG icons so app feels smoother and has zero loading flash
 
 ---
 
