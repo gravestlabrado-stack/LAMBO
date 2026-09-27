@@ -83,8 +83,20 @@ export async function subscribeUserToPush() {
 }
 
 /**
- * Send a test push notification to this device
+ * Send a test push notification to this device only
  */
 export async function sendTestAlert() {
-  return await reminderService.sendTestPush();
+  let endpoint = null;
+  if (isPushSupported()) {
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.getSubscription();
+      if (subscription) {
+        endpoint = subscription.endpoint;
+      }
+    } catch (e) {
+      console.warn('[PushManager] Could not retrieve active subscription endpoint:', e);
+    }
+  }
+  return await reminderService.sendTestPush(endpoint);
 }

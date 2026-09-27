@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const Reminder = require('../models/Reminder');
 const Tree = require('../models/Tree');
 const User = require('../models/User');
-const { sendPushToUser } = require('../utils/pushNotifier');
+const { sendPushToUser, sendNotification } = require('../utils/pushNotifier');
 
 /**
  * @desc    Get user's reminders
@@ -292,17 +292,50 @@ const sendTestPush = async (req, res, next) => {
       });
     }
 
-    const result = await sendPushToUser(user, {
-      title: 'LAMBO Telemetry Alert',
-      body: 'Push notifications are operational! You will receive care reminders for monitored specimens.',
-      url: '/trees',
-    });
+    const { endpoint } = req.body;
+    let targetSub = null;
 
-    res.status(200).json({
-      success: true,
-      message: 'Test notification dispatched',
-      result,
-    });
+    if (endpoint) {
+      targetSub = user.pushSubscriptions.find((sub) => sub.endpoint === endpoint);
+    }
+
+    // If endpoint is not matched or omitted, target only the most recent device subscription
+    if (!targetSub && user.pushSubscriptions.length > 0) {
+      targetSub = user.pushSubscriptions[user.pushSubscriptions.length - 1];
+    }
+
+    if (!targetSub) {
+      return res.status(404).json({
+        success: false,
+        message: 'Device subscription not found. Please enable notifications on this device.',
+      });
+    }
+
+    try {
+      await sendNotification(targetSub, {
+        title: 'LAMBO Telemetry Alert',
+        body: 'Push notifications are operational on this device! You will receive care reminders for monitored specimens.',
+        url: '/trees',
+      });
+
+      res.status(200).json({
+        success: true,
+        message: 'Test notification dispatched to this device',
+        result: { success: true, sentCount: 1 },
+      });
+    } catch (pushErr) {
+      if (pushErr.statusCode === 404 || pushErr.statusCode === 410) {
+        user.pushSubscriptions = user.pushSubscriptions.filter(
+          (s) => s.endpoint !== targetSub.endpoint
+        );
+        await user.save();
+        return res.status(400).json({
+          success: false,
+          message: 'Device subscription has expired. Please toggle notification permissions to re-subscribe.',
+        });
+      }
+      throw pushErr;
+    }
   } catch (error) {
     next(error);
   }

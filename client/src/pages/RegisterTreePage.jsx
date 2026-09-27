@@ -40,7 +40,8 @@ export default function RegisterTreePage() {
   // Photo Upload
   const [photoFile, setPhotoFile] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
-  const fileInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
+  const galleryInputRef = useRef(null);
 
   // Submission & Post-Registration State
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -120,13 +121,17 @@ export default function RegisterTreePage() {
   const removePhoto = () => {
     setPhotoFile(null);
     setPhotoPreview(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+    if (cameraInputRef.current) {
+      cameraInputRef.current.value = '';
+    }
+    if (galleryInputRef.current) {
+      galleryInputRef.current.value = '';
     }
   };
 
   const adjustMetric = (setter, val, delta, min = 0) => {
-    setter(Math.max(min, Number((val + delta).toFixed(1))));
+    const current = parseFloat(val) || 0;
+    setter(Math.max(min, Number((current + delta).toFixed(1))));
   };
 
   const handleSubmit = async (e) => {
@@ -155,9 +160,9 @@ export default function RegisterTreePage() {
       formData.append('lng', coordinates.lng);
       formData.append('healthStatus', healthStatus);
       formData.append('currentStage', currentStage);
-      formData.append('initialHeight', height);
-      formData.append('initialStemDiameter', stemDiameter);
-      formData.append('initialLeafCount', leafCount);
+      formData.append('initialHeight', height === '' || isNaN(height) ? 0 : height);
+      formData.append('initialStemDiameter', stemDiameter === '' || isNaN(stemDiameter) ? 0 : stemDiameter);
+      formData.append('initialLeafCount', leafCount === '' || isNaN(leafCount) ? 0 : leafCount);
       if (notes.trim()) formData.append('notes', notes.trim());
       if (photoFile) {
         formData.append('photo', photoFile);
@@ -409,17 +414,8 @@ export default function RegisterTreePage() {
 
           {/* Photo Upload Container */}
           <div className="p-4 rounded-xl bg-[#1D230E] border border-[#525E31] flex flex-col sm:flex-row items-center gap-4">
-            <input
-              type="file"
-              ref={fileInputRef}
-              accept="image/*"
-              capture="environment"
-              onChange={handlePhotoSelect}
-              className="hidden"
-            />
-
             {photoPreview ? (
-              <div className="relative w-32 h-32 rounded-xl overflow-hidden ring-2 ring-[#8B9B4C] shrink-0 shadow-md">
+              <div className="relative w-36 h-36 rounded-xl overflow-hidden ring-2 ring-[#8B9B4C] shrink-0 shadow-md">
                 <img
                   src={photoPreview}
                   alt="Specimen preview"
@@ -428,44 +424,88 @@ export default function RegisterTreePage() {
                 <button
                   type="button"
                   onClick={removePhoto}
-                  className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/75 text-[#FFCDD2] flex items-center justify-center hover:bg-black transition-colors"
+                  className="absolute top-1.5 right-1.5 w-7 h-7 rounded-full bg-black/75 text-[#FFCDD2] flex items-center justify-center hover:bg-black transition-colors"
                   title="Remove photo"
                 >
-                  <span className="material-symbols-outlined text-[14px]">close</span>
+                  <span className="material-symbols-outlined text-[16px]">close</span>
                 </button>
               </div>
             ) : (
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                className="w-32 h-32 rounded-xl border-2 border-dashed border-[#525E31] hover:border-[#8B9B4C] flex flex-col items-center justify-center text-[#AAB596] hover:text-[#F0F3E8] cursor-pointer bg-[#262C14] transition-colors shrink-0"
-              >
-                <span className="material-symbols-outlined text-[32px] text-[#A4B566] mb-1">
-                  add_a_photo
-                </span>
-                <span className="font-mono text-[10px] text-center px-2">
-                  Snap or Upload Photo
-                </span>
+              <div className="grid grid-cols-2 gap-2.5 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => cameraInputRef.current?.click()}
+                  className="w-full sm:w-32 h-28 rounded-xl border-2 border-dashed border-[#525E31] hover:border-[#8B9B4C] flex flex-col items-center justify-center gap-1 text-[#AAB596] hover:text-[#F0F3E8] cursor-pointer bg-[#262C14] hover:bg-[#30371A] active:scale-95 transition-all shrink-0 group"
+                >
+                  <span className="material-symbols-outlined text-2xl text-[#A4B566] group-hover:scale-110 transition-transform">
+                    photo_camera
+                  </span>
+                  <span className="text-xs font-mono font-bold text-[#F0F3E8]">Take Photo</span>
+                  <span className="text-[10px] font-mono text-[#CCD6B8]">Direct Camera</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => galleryInputRef.current?.click()}
+                  className="w-full sm:w-32 h-28 rounded-xl border-2 border-dashed border-[#525E31] hover:border-[#8B9B4C] flex flex-col items-center justify-center gap-1 text-[#AAB596] hover:text-[#F0F3E8] cursor-pointer bg-[#262C14] hover:bg-[#30371A] active:scale-95 transition-all shrink-0 group"
+                >
+                  <span className="material-symbols-outlined text-2xl text-[#8B9B4C] group-hover:scale-110 transition-transform">
+                    photo_library
+                  </span>
+                  <span className="text-xs font-mono font-bold text-[#F0F3E8]">Choose File</span>
+                  <span className="text-[10px] font-mono text-[#CCD6B8]">Gallery / Storage</span>
+                </button>
               </div>
             )}
 
-            <div className="space-y-2 flex-1 text-center sm:text-left">
+            <div className="space-y-1.5 flex-1 text-center sm:text-left">
               <div>
                 <h4 className="font-mono text-xs font-bold text-[#F0F3E8]">
                   Baseline Specimen Photo
                 </h4>
-                <p className="font-body-sm text-xs text-[#AAB596]">
-                  Take a clear photo showing the whole wildling / plant, leaves, and tag for verification.
+                <p className="font-body-sm text-xs text-[#AAB596] leading-relaxed">
+                  Snap directly in the field with your camera or select an existing wildling photo from your device gallery.
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="h-9 px-4 rounded-xl bg-[#30371A] hover:bg-[#3D4721] border border-[#525E31] text-xs font-mono text-[#D8DFC8] inline-flex items-center gap-1.5 transition-colors"
-              >
-                <span className="material-symbols-outlined text-[16px] text-[#A4B566]">upload</span>
-                {photoPreview ? 'Change Photo' : 'Choose / Capture Photo'}
-              </button>
+              {photoPreview && (
+                <div className="flex gap-2 justify-center sm:justify-start pt-1">
+                  <button
+                    type="button"
+                    onClick={() => cameraInputRef.current?.click()}
+                    className="h-8 px-3 rounded-lg bg-[#30371A] hover:bg-[#3D4721] border border-[#525E31] text-[11px] font-mono text-[#D8DFC8] inline-flex items-center gap-1 active:scale-95 transition-all"
+                  >
+                    <span className="material-symbols-outlined text-[14px] text-[#A4B566]">photo_camera</span>
+                    Retake Camera
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => galleryInputRef.current?.click()}
+                    className="h-8 px-3 rounded-lg bg-[#30371A] hover:bg-[#3D4721] border border-[#525E31] text-[11px] font-mono text-[#D8DFC8] inline-flex items-center gap-1 active:scale-95 transition-all"
+                  >
+                    <span className="material-symbols-outlined text-[14px] text-[#8B9B4C]">photo_library</span>
+                    From Gallery
+                  </button>
+                </div>
+              )}
             </div>
+
+            {/* Direct Camera Input with capture="environment" */}
+            <input
+              type="file"
+              ref={cameraInputRef}
+              accept="image/*"
+              capture="environment"
+              onChange={handlePhotoSelect}
+              className="hidden"
+            />
+            {/* Storage / Gallery File Picker */}
+            <input
+              type="file"
+              ref={galleryInputRef}
+              accept="image/*"
+              onChange={handlePhotoSelect}
+              className="hidden"
+            />
           </div>
 
           {/* Health Status & Growth Stage */}
@@ -529,84 +569,117 @@ export default function RegisterTreePage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {/* Height Stepper */}
-            <div className="p-3 bg-[#1D230E] border border-[#525E31] rounded-xl flex items-center justify-between">
-              <div>
-                <span className="font-mono text-[11px] text-[#AAB596] block">
-                  Height
-                </span>
-                <span className="font-mono text-lg text-[#F0F3E8] font-bold">
-                  {height} <span className="text-xs text-[#8B9B4C]">cm</span>
-                </span>
+            {/* Height Stepper / Direct Input */}
+            <div className="p-3 bg-[#1D230E] border border-[#525E31] rounded-xl flex items-center justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <label className="font-mono text-[11px] text-[#AAB596] block mb-1">
+                  Height (cm)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  value={height}
+                  onChange={(e) => setHeight(e.target.value)}
+                  onBlur={() => {
+                    const num = parseFloat(height);
+                    setHeight(isNaN(num) || num < 0 ? 0 : Number(num.toFixed(1)));
+                  }}
+                  className="w-full bg-[#262C14] text-[#F0F3E8] font-mono text-base font-bold px-2.5 py-1 rounded-lg border border-[#525E31] focus:outline-none focus:border-[#A4B566]"
+                />
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 shrink-0 self-end mb-0.5">
                 <button
                   type="button"
-                  onClick={() => adjustMetric(setHeight, height, -5, 1)}
-                  className="w-8 h-8 rounded-lg bg-[#30371A] border border-[#525E31] text-[#D8DFC8] flex items-center justify-center hover:bg-[#3D4721]"
+                  onClick={() => adjustMetric(setHeight, height, -5, 0)}
+                  className="w-8 h-8 rounded-lg bg-[#30371A] border border-[#525E31] text-[#D8DFC8] flex items-center justify-center hover:bg-[#3D4721] active:scale-95 transition-all"
+                  title="Decrease height (-5)"
                 >
                   <span className="material-symbols-outlined text-[16px]">remove</span>
                 </button>
                 <button
                   type="button"
-                  onClick={() => adjustMetric(setHeight, height, 5)}
-                  className="w-8 h-8 rounded-lg bg-[#30371A] border border-[#525E31] text-[#D8DFC8] flex items-center justify-center hover:bg-[#3D4721]"
+                  onClick={() => adjustMetric(setHeight, height, 5, 0)}
+                  className="w-8 h-8 rounded-lg bg-[#30371A] border border-[#525E31] text-[#D8DFC8] flex items-center justify-center hover:bg-[#3D4721] active:scale-95 transition-all"
+                  title="Increase height (+5)"
                 >
                   <span className="material-symbols-outlined text-[16px]">add</span>
                 </button>
               </div>
             </div>
 
-            {/* Stem Diameter Stepper */}
-            <div className="p-3 bg-[#1D230E] border border-[#525E31] rounded-xl flex items-center justify-between">
-              <div>
-                <span className="font-mono text-[11px] text-[#AAB596] block">
-                  Stem DBH
-                </span>
-                <span className="font-mono text-lg text-[#F0F3E8] font-bold">
-                  {stemDiameter} <span className="text-xs text-[#8B9B4C]">mm</span>
-                </span>
+            {/* Stem Diameter Stepper / Direct Input */}
+            <div className="p-3 bg-[#1D230E] border border-[#525E31] rounded-xl flex items-center justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <label className="font-mono text-[11px] text-[#AAB596] block mb-1">
+                  Stem DBH (mm)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={stemDiameter}
+                  onChange={(e) => setStemDiameter(e.target.value)}
+                  onBlur={() => {
+                    const num = parseFloat(stemDiameter);
+                    setStemDiameter(isNaN(num) || num < 0 ? 0 : Number(num.toFixed(1)));
+                  }}
+                  className="w-full bg-[#262C14] text-[#F0F3E8] font-mono text-base font-bold px-2.5 py-1 rounded-lg border border-[#525E31] focus:outline-none focus:border-[#A4B566]"
+                />
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 shrink-0 self-end mb-0.5">
                 <button
                   type="button"
-                  onClick={() => adjustMetric(setStemDiameter, stemDiameter, -1, 1)}
-                  className="w-8 h-8 rounded-lg bg-[#30371A] border border-[#525E31] text-[#D8DFC8] flex items-center justify-center hover:bg-[#3D4721]"
+                  onClick={() => adjustMetric(setStemDiameter, stemDiameter, -1, 0)}
+                  className="w-8 h-8 rounded-lg bg-[#30371A] border border-[#525E31] text-[#D8DFC8] flex items-center justify-center hover:bg-[#3D4721] active:scale-95 transition-all"
+                  title="Decrease stem DBH (-1)"
                 >
                   <span className="material-symbols-outlined text-[16px]">remove</span>
                 </button>
                 <button
                   type="button"
-                  onClick={() => adjustMetric(setStemDiameter, stemDiameter, 1)}
-                  className="w-8 h-8 rounded-lg bg-[#30371A] border border-[#525E31] text-[#D8DFC8] flex items-center justify-center hover:bg-[#3D4721]"
+                  onClick={() => adjustMetric(setStemDiameter, stemDiameter, 1, 0)}
+                  className="w-8 h-8 rounded-lg bg-[#30371A] border border-[#525E31] text-[#D8DFC8] flex items-center justify-center hover:bg-[#3D4721] active:scale-95 transition-all"
+                  title="Increase stem DBH (+1)"
                 >
                   <span className="material-symbols-outlined text-[16px]">add</span>
                 </button>
               </div>
             </div>
 
-            {/* Leaf Count Stepper */}
-            <div className="p-3 bg-[#1D230E] border border-[#525E31] rounded-xl flex items-center justify-between">
-              <div>
-                <span className="font-mono text-[11px] text-[#AAB596] block">
+            {/* Leaf Count Stepper / Direct Input */}
+            <div className="p-3 bg-[#1D230E] border border-[#525E31] rounded-xl flex items-center justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <label className="font-mono text-[11px] text-[#AAB596] block mb-1">
                   Leaf Count
-                </span>
-                <span className="font-mono text-lg text-[#F0F3E8] font-bold">
-                  {leafCount} <span className="text-xs text-[#8B9B4C]">leaves</span>
-                </span>
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={leafCount}
+                  onChange={(e) => setLeafCount(e.target.value)}
+                  onBlur={() => {
+                    const num = parseInt(leafCount, 10);
+                    setLeafCount(isNaN(num) || num < 0 ? 0 : num);
+                  }}
+                  className="w-full bg-[#262C14] text-[#F0F3E8] font-mono text-base font-bold px-2.5 py-1 rounded-lg border border-[#525E31] focus:outline-none focus:border-[#A4B566]"
+                />
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 shrink-0 self-end mb-0.5">
                 <button
                   type="button"
                   onClick={() => adjustMetric(setLeafCount, leafCount, -1, 0)}
-                  className="w-8 h-8 rounded-lg bg-[#30371A] border border-[#525E31] text-[#D8DFC8] flex items-center justify-center hover:bg-[#3D4721]"
+                  className="w-8 h-8 rounded-lg bg-[#30371A] border border-[#525E31] text-[#D8DFC8] flex items-center justify-center hover:bg-[#3D4721] active:scale-95 transition-all"
+                  title="Decrease leaf count (-1)"
                 >
                   <span className="material-symbols-outlined text-[16px]">remove</span>
                 </button>
                 <button
                   type="button"
-                  onClick={() => adjustMetric(setLeafCount, leafCount, 1)}
-                  className="w-8 h-8 rounded-lg bg-[#30371A] border border-[#525E31] text-[#D8DFC8] flex items-center justify-center hover:bg-[#3D4721]"
+                  onClick={() => adjustMetric(setLeafCount, leafCount, 1, 0)}
+                  className="w-8 h-8 rounded-lg bg-[#30371A] border border-[#525E31] text-[#D8DFC8] flex items-center justify-center hover:bg-[#3D4721] active:scale-95 transition-all"
+                  title="Increase leaf count (+1)"
                 >
                   <span className="material-symbols-outlined text-[16px]">add</span>
                 </button>

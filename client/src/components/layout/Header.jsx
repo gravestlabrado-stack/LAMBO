@@ -225,10 +225,10 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
   };
 
   const handleTestPush = async () => {
-    setPushMessage('Sending test alert...');
+    setPushMessage('Sending test alert to this device...');
     try {
       await sendTestAlert();
-      setPushMessage('Test alert sent! Check your notification tray.');
+      setPushMessage('Test alert sent to this device! Check your notification tray.');
     } catch (err) {
       setPushMessage(err.message || 'Failed to dispatch test notification');
     }
@@ -836,10 +836,11 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
                     <button
                       type="button"
                       onClick={handleTestPush}
+                      title="Send a test notification only to this device"
                       className="flex-1 h-8 rounded-lg bg-[#30371A] hover:bg-[#3D4721] border border-[#525E31] text-[#A4B566] font-mono text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
                     >
                       <span className="material-symbols-outlined text-[14px]">send</span>
-                      <span>Send Test Alert</span>
+                      <span>Test This Device</span>
                     </button>
                   )}
                 </div>

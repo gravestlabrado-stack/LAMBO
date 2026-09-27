@@ -43,10 +43,10 @@ const reminderService = {
   },
 
   /**
-   * Dispatch a test push notification to user's devices
+   * Dispatch a test push notification to user's device
    */
-  async sendTestPush() {
-    const res = await api.post('/reminders/test-push');
+  async sendTestPush(endpoint) {
+    const res = await api.post('/reminders/test-push', { endpoint });
     return res.data;
   },
 
