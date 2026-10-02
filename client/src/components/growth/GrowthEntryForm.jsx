@@ -4,6 +4,9 @@ import growthLogService from '../../services/growthLogService';
 import { useAuth } from '../../hooks/useAuth';
 import { canUserLogTree, canUserEditOrDeleteLog } from '../../utils/permissions';
 import { GROWTH_STAGES, HEALTH_STATUSES } from '../../utils/constants';
+import { compressImage } from '../../utils/imageCompressor';
+import { enqueueOfflineLog } from '../../utils/offlineQueue';
+import Icon from '../common/Icon';
 
 export default function GrowthEntryForm({
   tree,
@@ -49,7 +52,7 @@ export default function GrowthEntryForm({
     editingLog?.growthStage || targetTree?.currentStage || 'Seedling'
   );
   const [health, setHealth] = useState(
-    editingLog?.healthStatus || targetTree?.healthStatus || 'Healthy'
+    editingLog?.healthStatus || targetTree?.healthStatus || 'Thriving'
   );
   const [notes, setNotes] = useState(editingLog?.notes || '');
 
@@ -62,16 +65,23 @@ export default function GrowthEntryForm({
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  const handlePhotoSelect = (e) => {
+  const handlePhotoSelect = async (e) => {
     const file = e.target.files[0];
     if (file) {
       if (!file.type.startsWith('image/')) {
         setErrorMessage('Please select a valid image file (JPEG, PNG, WebP).');
         return;
       }
-      setPhotoFile(file);
-      setPhotoPreview(URL.createObjectURL(file));
       setErrorMessage('');
+      try {
+        const compressed = await compressImage(file, { maxWidth: 1280, maxHeight: 1280, quality: 0.8 });
+        setPhotoFile(compressed);
+        setPhotoPreview(URL.createObjectURL(compressed));
+      } catch (err) {
+        console.warn('[GrowthEntryForm] Compression fallback:', err);
+        setPhotoFile(file);
+        setPhotoPreview(URL.createObjectURL(file));
+      }
     }
   };
 
@@ -107,6 +117,13 @@ export default function GrowthEntryForm({
       return;
     }
 
+    if (!photoFile && !photoPreview) {
+      setErrorMessage(
+        'Observation Photo Mandatory: Visual photographic evidence is required for all observation logs.'
+      );
+      return;
+    }
+
     setSubmitting(true);
     try {
       const formData = new FormData();
@@ -131,6 +148,29 @@ export default function GrowthEntryForm({
         formData.append('photo', photoFile);
       }
 
+      // If device is offline, enqueue directly into IndexedDB
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        console.log('[GrowthEntryForm] Offline mode active: storing observation in local queue...');
+        const offlineRecord = await enqueueOfflineLog({
+          tree: targetTree?._id || selectedTreeId,
+          treeId: targetTree?.treeId || selectedTreeId,
+          height: parseFloat(height),
+          stemDiameter: stemDiameter ? parseFloat(stemDiameter) : null,
+          leafCount: leafCount ? parseInt(leafCount, 10) : null,
+          fruitCount: fruitCount ? parseInt(fruitCount, 10) : null,
+          growthStage: stage,
+          healthStatus: health,
+          notes: notes.trim(),
+          photo: photoFile || photoPreview,
+          loggedAt: new Date().toISOString(),
+        });
+        if (onSuccess) {
+          onSuccess({ ...offlineRecord, isOffline: true });
+        }
+        onClose();
+        return;
+      }
+
       let res;
       if (editingLog?._id) {
         res = await growthLogService.updateLog(editingLog._id, formData);
@@ -144,6 +184,34 @@ export default function GrowthEntryForm({
       onClose();
     } catch (err) {
       console.error('[GrowthEntryForm] Submit failed:', err);
+
+      // If connection dropped during submit, save to offline IndexedDB queue
+      if (!navigator.onLine || err.message === 'Network Error' || !err.response) {
+        console.warn('[GrowthEntryForm] Network drop during submit, falling back to offline queue:', err.message);
+        try {
+          const offlineRecord = await enqueueOfflineLog({
+            tree: targetTree?._id || selectedTreeId,
+            treeId: targetTree?.treeId || selectedTreeId,
+            height: parseFloat(height),
+            stemDiameter: stemDiameter ? parseFloat(stemDiameter) : null,
+            leafCount: leafCount ? parseInt(leafCount, 10) : null,
+            fruitCount: fruitCount ? parseInt(fruitCount, 10) : null,
+            growthStage: stage,
+            healthStatus: health,
+            notes: notes.trim(),
+            photo: photoFile || photoPreview,
+            loggedAt: new Date().toISOString(),
+          });
+          if (onSuccess) {
+            onSuccess({ ...offlineRecord, isOffline: true });
+          }
+          onClose();
+          return;
+        } catch (queueErr) {
+          console.error('[GrowthEntryForm] Offline queue failed:', queueErr);
+        }
+      }
+
       const msg =
         err.response?.data?.message ||
         err.message ||
@@ -174,7 +242,7 @@ export default function GrowthEntryForm({
             className="w-8 h-8 rounded-full bg-[#1D230E] text-[#AAB596] hover:text-[#F0F3E8] flex items-center justify-center border border-[#4F5A2D] active:scale-95 transition-all"
             title="Close"
           >
-            <span className="material-symbols-outlined text-[18px]">close</span>
+            <Icon name="close" className="w-4.5 h-4.5" />
           </button>
         </div>
 
@@ -183,7 +251,7 @@ export default function GrowthEntryForm({
           {/* Permission Alert if not authorized */}
           {!isAuthorized && (
             <div className="rounded-xl bg-[#431B1B] border border-[#E57373]/60 p-3.5 text-xs text-[#FFCDD2] flex items-start gap-2.5">
-              <span className="material-symbols-outlined text-[20px] shrink-0 text-[#E57373]">lock</span>
+              <Icon name="lock" className="w-5 h-5 shrink-0 text-[#E57373]" />
               <div>
                 <span className="font-bold block uppercase font-mono text-[11px]">
                   Restricted Observation Access
@@ -198,7 +266,7 @@ export default function GrowthEntryForm({
           {/* Error Message */}
           {errorMessage && (
             <div className="rounded-xl bg-[#431B1B] border border-[#E57373]/60 p-3 text-xs text-[#FFCDD2] flex items-center gap-2">
-              <span className="material-symbols-outlined text-[18px] shrink-0">error</span>
+              <Icon name="error" className="w-4.5 h-4.5 shrink-0" />
               <span>{errorMessage}</span>
             </div>
           )}
@@ -207,7 +275,7 @@ export default function GrowthEntryForm({
           {targetTree ? (
             <div className="p-3 rounded-xl bg-[#1D230E] border border-[#4F5A2D] flex items-center justify-between">
               <div className="flex items-center gap-2.5 min-w-0">
-                <span className="material-symbols-outlined text-[#8B9B4C] text-[22px] shrink-0">park</span>
+                <Icon name="park" className="text-[#8B9B4C] w-5 h-5 shrink-0" />
                 <div className="min-w-0">
                   <span className="font-mono text-xs font-bold text-[#F0F3E8] block">
                     #{targetTree.treeId}
@@ -353,9 +421,15 @@ export default function GrowthEntryForm({
 
           {/* Photo Upload Field */}
           <div>
-            <label className="block text-xs font-mono text-[#C2CE9F] uppercase mb-1 font-semibold">
-              Observation Photo (Field Verification)
-            </label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-mono text-[#C2CE9F] uppercase font-semibold">
+                Observation Photo (Field Verification) *
+              </label>
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#E57373]/20 border border-[#E57373]/50 text-[#FFCDD2] text-[10px] font-mono font-bold tracking-tight">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#E57373] animate-pulse"></span>
+                Proof Mandatory
+              </span>
+            </div>
             {photoPreview ? (
               <div className="relative rounded-xl overflow-hidden border border-[#525E31] h-36 bg-black">
                 <img
@@ -369,7 +443,7 @@ export default function GrowthEntryForm({
                   className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/70 text-[#FFCDD2] flex items-center justify-center backdrop-blur-md active:scale-95 transition-all"
                   title="Remove photo"
                 >
-                  <span className="material-symbols-outlined text-[18px]">close</span>
+                  <Icon name="close" className="w-4.5 h-4.5" />
                 </button>
               </div>
             ) : (
@@ -379,9 +453,10 @@ export default function GrowthEntryForm({
                   onClick={() => cameraInputRef.current?.click()}
                   className="border-2 border-dashed border-[#525E31] hover:border-[#8B9B4C] rounded-xl p-3.5 text-center cursor-pointer bg-[#1D230E] hover:bg-[#262C14] transition-all flex flex-col items-center justify-center gap-1 active:scale-95 group"
                 >
-                  <span className="material-symbols-outlined text-2xl text-[#A4B566] group-hover:scale-110 transition-transform">
-                    photo_camera
-                  </span>
+                  <Icon
+                    name="photo_camera"
+                    className="w-6 h-6 text-[#A4B566] group-hover:scale-110 transition-transform"
+                  />
                   <span className="font-mono text-xs font-bold text-[#F0F3E8]">Take Photo</span>
                   <span className="text-[10px] font-mono text-[#CCD6B8]">Direct Camera</span>
                 </button>
@@ -391,9 +466,10 @@ export default function GrowthEntryForm({
                   onClick={() => galleryInputRef.current?.click()}
                   className="border-2 border-dashed border-[#525E31] hover:border-[#8B9B4C] rounded-xl p-3.5 text-center cursor-pointer bg-[#1D230E] hover:bg-[#262C14] transition-all flex flex-col items-center justify-center gap-1 active:scale-95 group"
                 >
-                  <span className="material-symbols-outlined text-2xl text-[#8B9B4C] group-hover:scale-110 transition-transform">
-                    photo_library
-                  </span>
+                  <Icon
+                    name="photo_library"
+                    className="w-6 h-6 text-[#8B9B4C] group-hover:scale-110 transition-transform"
+                  />
                   <span className="font-mono text-xs font-bold text-[#F0F3E8]">Choose File</span>
                   <span className="text-[10px] font-mono text-[#CCD6B8]">Gallery / Storage</span>
                 </button>
@@ -448,12 +524,12 @@ export default function GrowthEntryForm({
             >
               {submitting ? (
                 <>
-                  <span className="material-symbols-outlined text-[18px] animate-spin">refresh</span>
+                  <Icon name="refresh" className="w-4.5 h-4.5 animate-spin" />
                   <span>Saving...</span>
                 </>
               ) : (
                 <>
-                  <span className="material-symbols-outlined text-[18px]">verified</span>
+                  <Icon name="verified" className="w-4.5 h-4.5" />
                   <span>{editingLog ? 'Update Audit' : 'Commit Audit Log'}</span>
                 </>
               )}

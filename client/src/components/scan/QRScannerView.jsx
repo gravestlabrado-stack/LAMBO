@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
+import Icon from '../common/Icon';
 
 export default function QRScannerView({
   onScan,
@@ -413,7 +414,7 @@ export default function QRScannerView({
       {!cameraActive && (
         <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center z-20 pointer-events-auto">
           <div className="w-14 h-14 rounded-full bg-[#1D230E]/90 border border-[#5D6A37] flex items-center justify-center text-[#A4B566] shadow-xl backdrop-blur-md">
-            <span className="material-symbols-outlined text-3xl">photo_camera</span>
+            <Icon name="photo_camera" className="w-8 h-8" />
           </div>
 
           <div className="space-y-1.5 mt-2">
@@ -438,7 +439,7 @@ export default function QRScannerView({
               disabled={cameraLoading}
               className="h-10 px-4 rounded-xl bg-[#8B9B4C] hover:bg-[#9EAF6D] text-[#1F240F] font-mono text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-md active:scale-95 transition-all"
             >
-              <span className="material-symbols-outlined text-[18px]">photo_camera</span>
+              <Icon name="photo_camera" className="w-4.5 h-4.5" />
               <span>{cameraLoading ? 'Starting...' : 'Start Camera'}</span>
             </button>
 
@@ -447,7 +448,7 @@ export default function QRScannerView({
               onClick={() => fileInputRef.current?.click()}
               className="h-10 px-3.5 rounded-xl bg-[#30371A] hover:bg-[#3D4721] text-[#CCD6B8] border border-[#525E31] font-mono text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 active:scale-95 transition-all"
             >
-              <span className="material-symbols-outlined text-[16px]">upload_file</span>
+              <Icon name="upload_file" className="w-4 h-4" />
               <span>Upload QR Image</span>
             </button>
           </div>
@@ -468,7 +469,7 @@ export default function QRScannerView({
               className="w-9 h-9 rounded-full bg-[#191E0D]/90 border border-[#4E5B2E] text-[#D8DFC8] flex items-center justify-center backdrop-blur-md active:scale-95 transition-all hover:border-[#8B9B4C]"
               title="Flip Camera (Front/Rear)"
             >
-              <span className="material-symbols-outlined text-[18px]">flip_camera_ios</span>
+              <Icon name="flip_camera_ios" className="w-4.5 h-4.5" />
             </button>
           )}
 
@@ -483,9 +484,10 @@ export default function QRScannerView({
               }`}
               title="Toggle Flashlight / Torch"
             >
-              <span className="material-symbols-outlined text-[18px]">
-                {torchOn ? 'flashlight_on' : 'flashlight_off'}
-              </span>
+              <Icon
+                name={torchOn ? 'flashlight_on' : 'flashlight_off'}
+                className="w-4.5 h-4.5"
+              />
             </button>
           )}
 
@@ -495,7 +497,7 @@ export default function QRScannerView({
             className="w-9 h-9 rounded-full bg-[#191E0D]/90 border border-[#4E5B2E] text-[#D8DFC8] flex items-center justify-center backdrop-blur-md active:scale-95 transition-all hover:border-[#8B9B4C]"
             title="Scan QR from Gallery Image"
           >
-            <span className="material-symbols-outlined text-[18px]">photo_library</span>
+            <Icon name="photo_library" className="w-4.5 h-4.5" />
           </button>
         </div>
       </div>
@@ -503,13 +505,12 @@ export default function QRScannerView({
       {/* Clean Scanner Status Indicator (Clean, uncluttered, no bulky corners) */}
       <div className="absolute top-16 inset-x-0 flex justify-center pointer-events-none z-25">
         <div className="flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#191E0D]/90 border border-[#525E31] backdrop-blur-md text-[#F0F3E8] shadow-lg">
-          <span
-            className={`material-symbols-outlined text-[15px] ${
+          <Icon
+            name={isLocked ? 'verified' : 'qr_code_scanner'}
+            className={`w-3.5 h-3.5 ${
               isLocked ? 'text-[#BDCE8A]' : 'text-[#A4B566]'
             }`}
-          >
-            {isLocked ? 'verified' : 'qr_code_scanner'}
-          </span>
+          />
           <span className="font-mono text-xs font-semibold text-[#A4B566]">
             {isLocked && scannedId ? `#${scannedId} LOCKED` : 'Align Specimen QR Tag'}
           </span>

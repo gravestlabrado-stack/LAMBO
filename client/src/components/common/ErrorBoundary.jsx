@@ -1,4 +1,5 @@
 import React from 'react';
+import Icon from './Icon';
 
 /**
  * Tactical Error Boundary Component
@@ -35,7 +36,7 @@ export default class ErrorBoundary extends React.Component {
       return (
         <div className="p-6 rounded-2xl bg-[#1E2410] border border-[#5A6834] text-center space-y-4 my-4 max-w-lg mx-auto shadow-2xl">
           <div className="w-14 h-14 mx-auto rounded-full bg-[#2A3316] border border-[#7D8F42] flex items-center justify-center text-[#A4B566]">
-            <span className="material-symbols-outlined text-3xl">warning</span>
+            <Icon name="warning" className="w-8 h-8" />
           </div>
 
           <div className="space-y-1">
@@ -54,7 +55,7 @@ export default class ErrorBoundary extends React.Component {
               onClick={this.handleReset}
               className="h-9 px-4 rounded-xl bg-[#8B9B4C] hover:bg-[#9EAF6D] text-[#1F240F] font-mono text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-md active:scale-95 transition-all"
             >
-              <span className="material-symbols-outlined text-[16px]">refresh</span>
+              <Icon name="refresh" className="w-4 h-4" />
               <span>Retry</span>
             </button>
             <button

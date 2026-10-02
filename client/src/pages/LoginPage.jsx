@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import Icon from '../components/common/Icon';
 
 export default function LoginPage() {
   const [rollNumber, setRollNumber] = useState('');
@@ -61,7 +62,7 @@ export default function LoginPage() {
 
         {error && (
           <div className="rounded-xl bg-[#431B1B] border border-[#E57373] text-[#FFCDD2] p-3 text-xs mb-4 flex items-center gap-2">
-            <span className="material-symbols-outlined text-[18px]">error</span>
+            <Icon name="error" className="text-[#FFCDD2] w-4.5 h-4.5" />
             {error}
           </div>
         )}
@@ -72,9 +73,7 @@ export default function LoginPage() {
               Student / Roll Number
             </label>
             <div className="relative flex items-center">
-              <span className="material-symbols-outlined absolute left-3 text-[#AAB596] text-[18px]">
-                badge
-              </span>
+              <Icon name="badge" className="absolute left-3 text-[#AAB596] w-4.5 h-4.5" />
               <input
                 type="text"
                 placeholder="e.g. 1234567"
@@ -91,9 +90,7 @@ export default function LoginPage() {
               Password
             </label>
             <div className="relative flex items-center">
-              <span className="material-symbols-outlined absolute left-3 text-[#AAB596] text-[18px]">
-                lock
-              </span>
+              <Icon name="lock" className="absolute left-3 text-[#AAB596] w-4.5 h-4.5" />
               <input
                 type="password"
                 placeholder="••••••••"
@@ -108,20 +105,49 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full h-12 rounded-xl bg-[#8B9B4C] hover:bg-[#9EAF6D] active:scale-[0.98] transition-all text-[#1F240F] font-mono text-sm font-bold uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 mt-2"
+            className="w-full h-12 rounded-xl bg-[#8B9B4C] hover:bg-[#9EAF6D] active:scale-[0.98] transition-all text-[#1F240F] font-mono text-sm font-bold uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 mt-2 cursor-pointer"
           >
-            <span className="material-symbols-outlined text-[20px]">login</span>
+            <Icon name="login" className="w-5 h-5" />
             {loading ? 'Authenticating...' : 'Authenticate & Enter'}
           </button>
         </form>
 
-        <div className="mt-5 text-center relative z-10">
+        {/* Quick Demo Credentials for Fast Evaluation */}
+        <div className="mt-5 pt-4 border-t border-[#3E4723] relative z-10">
+          <p className="text-[11px] font-mono text-[#AAB596] uppercase tracking-wider mb-2 text-center">
+            ⚡ Quick Demo Fill
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setRollNumber('NSTP-OFFICER-01');
+                setPassword('password123');
+              }}
+              className="px-2.5 py-1.5 rounded-lg bg-[#30371A] hover:bg-[#3D4722] border border-[#5D6A37] text-[11px] font-mono text-[#D8DFC8] flex items-center justify-center gap-1.5 transition-all text-center"
+            >
+              <span>🎖️</span> Officer
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setRollNumber('2024-BSF-001');
+                setPassword('password123');
+              }}
+              className="px-2.5 py-1.5 rounded-lg bg-[#30371A] hover:bg-[#3D4722] border border-[#5D6A37] text-[11px] font-mono text-[#D8DFC8] flex items-center justify-center gap-1.5 transition-all text-center"
+            >
+              <span>🌱</span> Cadet (Elena)
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-4 text-center relative z-10">
           <Link
             to="/register"
-            className="text-xs text-[#AAB596] hover:text-[#A4B566] transition-colors inline-flex items-center gap-1 font-mono"
+            className="text-xs text-[#A4B566] hover:text-[#C2CE9F] transition-colors inline-flex items-center gap-1 font-mono font-medium underline underline-offset-2"
           >
-            New cadet? Enroll student profile
-            <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+            New cadet or staff? Go to Registration Page
+            <Icon name="arrow_forward" className="w-3.5 h-3.5 inline-block" />
           </Link>
         </div>
       </div>

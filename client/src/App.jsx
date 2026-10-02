@@ -14,6 +14,7 @@ import TreeProfilePage from './pages/TreeProfilePage';
 import GrowthLogsPage from './pages/GrowthLogsPage';
 import RegisterTreePage from './pages/RegisterTreePage';
 import CampusMapPage from './pages/CampusMapPage';
+import OfficerDashboardPage from './pages/OfficerDashboardPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import NotFoundPage from './pages/NotFoundPage';
@@ -39,6 +40,8 @@ export default function App() {
                 <Route path="/logs" element={<GrowthLogsPage />} />
                 <Route path="/register-tree" element={<RegisterTreePage />} />
                 <Route path="/map" element={<CampusMapPage />} />
+                <Route path="/officer" element={<OfficerDashboardPage />} />
+                <Route path="/officer/dashboard" element={<OfficerDashboardPage />} />
                 <Route path="/404" element={<NotFoundPage />} />
                 <Route path="*" element={<NotFoundPage />} />
               </Route>

@@ -16,6 +16,7 @@ import {
   CheckCircle2,
   ChevronRight,
   ChevronDown,
+  ChevronUp,
   X,
   LayoutDashboard,
   Trash2,
@@ -40,8 +41,11 @@ import {
   Activity,
   Crosshair,
   Bell,
+  BellRing,
+  BellOff,
   User,
   UserPlus,
+  Users,
   Image,
   Hash,
   Printer,
@@ -60,11 +64,22 @@ import {
   ShieldCheck,
   Sliders,
   Upload,
+  UploadCloud,
   CheckCheck,
   Eye,
   AlertTriangle,
   Droplets,
   HelpCircle,
+  IdCard,
+  History,
+  Info,
+  Circle,
+  LineChart,
+  RefreshCw,
+  Flashlight,
+  FlashlightOff,
+  UserCheck,
+  ZoomIn,
 } from 'lucide-react';
 
 const ICON_MAP = {
@@ -78,30 +93,48 @@ const ICON_MAP = {
   arrow_back: ArrowLeft,
   arrow_forward: ArrowRight,
   arrow_upward: ArrowUp,
+  arrow_upward_alt: ArrowUp,
+  arrow_drop_down: ChevronDown,
   assignment_turned_in: CheckSquare,
+  badge: IdCard,
   calendar_month: Calendar,
+  calendar_today: Calendar,
   cancel: XCircle,
   check: Check,
   check_circle: CheckCircle2,
   chevron_right: ChevronRight,
   chevron_down: ChevronDown,
+  chevron_up: ChevronUp,
+  circle: Circle,
+  cloud_upload: UploadCloud,
   close: X,
   dashboard: LayoutDashboard,
   grid_view: LayoutDashboard,
   delete: Trash2,
   donut_large: PieChart,
   download: Download,
+  download_for_offline: Download,
   eco: Leaf,
   edit: Pencil,
   energy_savings_leaf: Leaf,
   error: AlertCircle,
   event_available: CalendarCheck,
+  event_note: Calendar,
   event_repeat: Repeat,
+  expand_more: ChevronDown,
+  expand_less: ChevronUp,
+  fact_check: CheckSquare,
   favorite: Heart,
+  flashlight_on: Flashlight,
+  flashlight_off: FlashlightOff,
   flip_camera_ios: SwitchCamera,
   forest: Trees,
   grid_4x4: Grid,
+  groups: Users,
   height: Ruler,
+  history_toggle_off: History,
+  id_card: IdCard,
+  info: Info,
   install_mobile: Download,
   location_on: MapPin,
   lock: Lock,
@@ -109,12 +142,17 @@ const ICON_MAP = {
   logout: LogOut,
   manage_accounts: UserCog,
   map: Map,
+  military_tech: ShieldCheck,
   monitoring: Activity,
   my_location: Crosshair,
   notifications: Bell,
+  notifications_active: BellRing,
+  notifications_paused: BellOff,
+  officer: ShieldCheck,
   park: Trees,
   person: User,
   person_add: UserPlus,
+  person_search: UserCheck,
   photo_camera: Camera,
   photo_library: Image,
   pin: Hash,
@@ -123,33 +161,42 @@ const ICON_MAP = {
   progress_activity: Loader2,
   public: Globe,
   qr_code: QrCode,
+  qr_code_2: QrCode,
   qr_code_scanner: ScanLine,
   query_stats: TrendingUp,
   radar: Radio,
+  radio_button_checked: CheckCircle2,
+  radio_button_unchecked: Circle,
   refresh: RotateCw,
   remove: Minus,
   save: Save,
   school: GraduationCap,
   search: Search,
   send: Send,
+  shield: ShieldCheck,
   shield_person: ShieldCheck,
+  ssid_chart: LineChart,
   straighten: Ruler,
+  sync: RefreshCw,
+  timeline: TrendingUp,
   tune: Sliders,
   upload: Upload,
   upload_file: Upload,
   verified: CheckCheck,
   visibility: Eye,
+  vital_signs: Activity,
   warning: AlertTriangle,
   water_drop: Droplets,
+  zoom_in: ZoomIn,
 };
 
 /**
  * Universal Tailwind-styled Icon component.
- * Explicitly tree-shaken Lucide React SVG components for instant rendering, zero network lag, and minimal bundle footprint.
+ * 100% offline self-hosted, tree-shaken Lucide React SVG components for instant zero-network rendering.
  */
 export default function Icon({
   name,
-  className = 'w-5 h-5',
+  className = '',
   size,
   strokeWidth = 2,
   ...props
@@ -159,10 +206,13 @@ export default function Icon({
   const normalized = String(name).trim().toLowerCase();
   const Component = ICON_MAP[normalized] || HelpCircle;
 
+  const hasExplicitWidth = /\bw-/.test(className);
+  const sizeClass = hasExplicitWidth || size ? '' : 'w-[1em] h-[1em]';
+
   return (
     <Component
-      className={`inline-block shrink-0 ${className}`}
-      size={size}
+      className={`inline-block shrink-0 ${sizeClass} ${className}`.trim()}
+      size={size || (hasExplicitWidth ? undefined : 20)}
       strokeWidth={strokeWidth}
       {...props}
     />

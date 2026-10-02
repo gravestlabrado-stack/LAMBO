@@ -11,6 +11,7 @@ const treeRoutes = require('./src/routes/treeRoutes');
 const growthLogRoutes = require('./src/routes/growthLogRoutes');
 const reminderRoutes = require('./src/routes/reminderRoutes');
 const zoneRoutes = require('./src/routes/zoneRoutes');
+const officerRoutes = require('./src/routes/officerRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -74,6 +75,7 @@ app.use('/api/trees', treeRoutes);
 app.use('/api/growth-logs', growthLogRoutes);
 app.use('/api/reminders', reminderRoutes);
 app.use('/api/zones', zoneRoutes);
+app.use('/api/officer', officerRoutes);
 
 // Centralized Error Handler
 app.use(errorHandler);

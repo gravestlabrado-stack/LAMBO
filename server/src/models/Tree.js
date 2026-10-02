@@ -45,8 +45,17 @@ const treeSchema = new mongoose.Schema(
     },
     healthStatus: {
       type: String,
-      enum: ['Healthy', 'Monitoring', 'Needs Attention'],
-      default: 'Healthy',
+      enum: [
+        'Thriving',
+        'Stable / Fair',
+        'Distressed / At Risk',
+        'Dead / Mortality',
+        // Legacy support
+        'Healthy',
+        'Monitoring',
+        'Needs Attention',
+      ],
+      default: 'Thriving',
     },
     currentStage: {
       type: String,

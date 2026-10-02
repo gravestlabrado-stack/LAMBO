@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import Icon from '../components/common/Icon';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import treeService from '../services/treeService';
 import { useAuth } from '../hooks/useAuth';
+import { useTrees } from '../context/TreeContext';
 import { CAMPUS_COORDINATES } from '../utils/constants';
 import { getCurrentCoordinates } from '../utils/geolocation';
 import MarkerClusterGroup from '../components/map/MarkerClusterGroup';
@@ -113,9 +115,17 @@ export default function CampusMapPage() {
   const [searchParams] = useSearchParams();
   const focusTreeId = searchParams.get('focus');
   const { user } = useAuth();
+  const { trees: userTrees, campusCatalog } = useTrees();
 
-  const [allTrees, setAllTrees] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [allTrees, setAllTrees] = useState(() => {
+    try {
+      const cached = localStorage.getItem('lambo_cached_all_trees') || localStorage.getItem('lambo_cached_campus_catalog');
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [loading, setLoading] = useState(allTrees.length === 0);
   const [scope, setScope] = useState('all'); // 'all' (Global Campus) | 'my' (My Plants/Trees)
   const [selectedHealth, setSelectedHealth] = useState('All');
 
@@ -130,14 +140,28 @@ export default function CampusMapPage() {
   // Default campus center coordinates: CTU Barili Campus (Cagay, Barili, Cebu)
   const defaultCenter = [CAMPUS_COORDINATES.lat, CAMPUS_COORDINATES.lng];
 
-  // Fetch all campus trees from backend API
+  // Fetch all campus trees from backend API with offline cache fallback
   const fetchMapTrees = async () => {
     try {
-      setLoading(true);
+      if (allTrees.length === 0) setLoading(true);
       const res = await treeService.getTrees({ all: 'true' });
-      setAllTrees(res.data || []);
+      const treeList = res.data || [];
+      setAllTrees(treeList);
+      try {
+        localStorage.setItem('lambo_cached_all_trees', JSON.stringify(treeList));
+      } catch {}
     } catch (err) {
-      console.error('[CampusMap] Error loading campus trees:', err);
+      console.warn('[CampusMap] Offline or error loading campus trees, falling back to cache:', err.message);
+      try {
+        const cached = localStorage.getItem('lambo_cached_all_trees') || localStorage.getItem('lambo_cached_campus_catalog');
+        if (cached) {
+          setAllTrees(JSON.parse(cached));
+        } else if (campusCatalog && campusCatalog.length > 0) {
+          setAllTrees(campusCatalog);
+        } else if (userTrees && userTrees.length > 0) {
+          setAllTrees(userTrees);
+        }
+      } catch (e) {}
     } finally {
       setLoading(false);
     }
@@ -177,10 +201,20 @@ export default function CampusMapPage() {
   // Filter trees based on Health Status
   const displayedTrees = useMemo(() => {
     return scopedTrees.filter((tree) => {
-      if (selectedHealth === 'Healthy') return tree.healthStatus === 'Healthy';
-      if (selectedHealth === 'Monitoring') return tree.healthStatus === 'Monitoring';
-      if (selectedHealth === 'Needs Attention') return tree.healthStatus === 'Needs Attention';
-      return true;
+      if (selectedHealth === 'All') return true;
+      if (selectedHealth === 'Thriving' || selectedHealth === 'Healthy') {
+        return tree.healthStatus === 'Thriving' || tree.healthStatus === 'Healthy';
+      }
+      if (selectedHealth === 'Stable / Fair' || selectedHealth === 'Monitoring') {
+        return tree.healthStatus === 'Stable / Fair' || tree.healthStatus === 'Monitoring';
+      }
+      if (selectedHealth === 'Distressed / At Risk' || selectedHealth === 'Needs Attention') {
+        return tree.healthStatus === 'Distressed / At Risk' || tree.healthStatus === 'Needs Attention';
+      }
+      if (selectedHealth === 'Dead / Mortality' || selectedHealth === 'Dead') {
+        return tree.healthStatus === 'Dead / Mortality' || tree.status === 'dead';
+      }
+      return tree.healthStatus === selectedHealth;
     });
   }, [scopedTrees, selectedHealth]);
 
@@ -214,12 +248,17 @@ export default function CampusMapPage() {
   // Health color mapping
   const getHealthColor = (status) => {
     switch (status) {
+      case 'Thriving':
       case 'Healthy':
         return '#A4B566';
+      case 'Stable / Fair':
       case 'Monitoring':
         return '#D99B26';
+      case 'Distressed / At Risk':
       case 'Needs Attention':
         return '#E57373';
+      case 'Dead / Mortality':
+        return '#757575';
       default:
         return '#A4B566';
     }
@@ -263,7 +302,7 @@ export default function CampusMapPage() {
                 : 'text-[#D8DFC8] hover:text-[#F0F3E8] hover:bg-[#30371A]'
             }`}
           >
-            <span className="material-symbols-outlined text-[17px]">public</span>
+            <Icon name="public" className="text-[17px]" />
             <span>All Campus ({allTrees.length})</span>
           </button>
 
@@ -276,7 +315,7 @@ export default function CampusMapPage() {
                 : 'text-[#D8DFC8] hover:text-[#F0F3E8] hover:bg-[#30371A]'
             }`}
           >
-            <span className="material-symbols-outlined text-[17px]">person</span>
+            <Icon name="person" className="text-[17px]" />
             <span>My Plants &amp; Trees ({myTreesCount})</span>
           </button>
         </div>
@@ -286,7 +325,7 @@ export default function CampusMapPage() {
       {locationError && (
         <div className="p-3 rounded-xl bg-[#431B1B]/85 border border-[#E57373]/60 text-xs font-mono text-[#FFCDD2] flex items-center justify-between gap-3 animate-in fade-in">
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-[18px] text-[#E57373]">warning</span>
+            <Icon name="warning" className="text-[18px] text-[#E57373]" />
             <span>{locationError}</span>
           </div>
           <button
@@ -294,19 +333,25 @@ export default function CampusMapPage() {
             onClick={() => setLocationError('')}
             className="text-[#FFCDD2] hover:text-white"
           >
-            <span className="material-symbols-outlined text-[16px]">close</span>
+            <Icon name="close" className="text-[16px]" />
           </button>
         </div>
       )}
 
       {/* Health Status Filter Pills & Quick Location Buttons */}
-      <div className="flex flex-wrap items-center justify-between gap-2.5">
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-          {['All', 'Healthy', 'Monitoring', 'Needs Attention'].map((f) => {
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+        <div className="flex flex-wrap items-center gap-2">
+          {['All', 'Thriving', 'Stable / Fair', 'Distressed / At Risk', 'Dead / Mortality'].map((f) => {
             const count =
               f === 'All'
                 ? scopedTrees.length
-                : scopedTrees.filter((t) => t.healthStatus === f).length;
+                : scopedTrees.filter((t) => {
+                    if (f === 'Thriving') return t.healthStatus === 'Thriving' || t.healthStatus === 'Healthy';
+                    if (f === 'Stable / Fair') return t.healthStatus === 'Stable / Fair' || t.healthStatus === 'Monitoring';
+                    if (f === 'Distressed / At Risk') return t.healthStatus === 'Distressed / At Risk' || t.healthStatus === 'Needs Attention';
+                    if (f === 'Dead / Mortality') return t.healthStatus === 'Dead / Mortality' || t.status === 'dead';
+                    return t.healthStatus === f;
+                  }).length;
 
             return (
               <button
@@ -332,7 +377,7 @@ export default function CampusMapPage() {
             className="h-9 px-3 rounded-xl bg-[#262C14] hover:bg-[#30371A] border border-[#525E31] text-[#C2CE9F] text-xs font-mono font-semibold flex items-center gap-1.5 transition-colors shadow-sm"
             title="Center map on CTU Barili Campus"
           >
-            <span className="material-symbols-outlined text-[16px] text-[#A4B566]">school</span>
+            <Icon name="school" className="text-[16px] text-[#A4B566]" />
             <span>CTU Barili</span>
           </button>
 
@@ -351,7 +396,7 @@ export default function CampusMapPage() {
               </>
             ) : (
               <>
-                <span className="material-symbols-outlined text-[16px]">my_location</span>
+                <Icon name="my_location" className="text-[16px]" />
                 <span>Find My Location</span>
               </>
             )}
@@ -406,7 +451,7 @@ export default function CampusMapPage() {
                 <Popup>
                   <div className="p-1 font-mono text-xs text-[#1D230E]">
                     <strong className="text-[#4285F4] flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[14px]">my_location</span>
+                      <Icon name="my_location" className="text-[14px]" />
                       You are here
                     </strong>
                     <span className="text-[11px] block mt-0.5">
@@ -449,15 +494,19 @@ export default function CampusMapPage() {
           </span>
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-[#A4B566] shadow-[0_0_6px_#A4B566]" />
-            <span className="text-[#F0F3E8] text-[11px]">Healthy</span>
+            <span className="text-[#F0F3E8] text-[11px]">Thriving</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-[#D99B26] shadow-[0_0_6px_#D99B26]" />
-            <span className="text-[#F0F3E8] text-[11px]">Monitoring</span>
+            <span className="text-[#F0F3E8] text-[11px]">Stable / Fair</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-[#E57373] shadow-[0_0_6px_#E57373]" />
-            <span className="text-[#F0F3E8] text-[11px]">Needs Attention</span>
+            <span className="text-[#F0F3E8] text-[11px]">Distressed</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-[#757575] shadow-[0_0_6px_#757575]" />
+            <span className="text-[#F0F3E8] text-[11px]">Dead / Mortality</span>
           </div>
           <div className="pt-1 border-t border-[#525E31]/60 flex items-center gap-1.5 text-[10px] text-[#C2CE9F]">
             <span className="w-2 h-2 rounded-full border border-white bg-[#8B9B4C]" />

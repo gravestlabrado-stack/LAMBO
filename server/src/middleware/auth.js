@@ -38,4 +38,22 @@ const protect = async (req, res, next) => {
   }
 };
 
-module.exports = { protect };
+/**
+ * Require user to have the officer role or supervisor clearance
+ */
+const requireOfficer = (req, res, next) => {
+  if (
+    req.user &&
+    (req.user.role === 'officer' ||
+      (req.user.rollNumber && String(req.user.rollNumber).trim() === '9260572'))
+  ) {
+    return next();
+  }
+
+  return res.status(403).json({
+    success: false,
+    message: 'Access Denied: NSTP Officer or staff clearance required.',
+  });
+};
+
+module.exports = { protect, requireOfficer };

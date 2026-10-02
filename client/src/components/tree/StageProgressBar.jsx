@@ -1,5 +1,6 @@
 import React from 'react';
 import { GROWTH_STAGES } from '../../utils/constants';
+import Icon from '../common/Icon';
 
 export default function StageProgressBar({
   currentStage = 'Seedling',
@@ -10,12 +11,12 @@ export default function StageProgressBar({
     : 0;
 
   const stageIcons = {
-    Seedling: 'potted_plant',
+    Seedling: 'eco',
     Vegetative: 'energy_savings_leaf',
-    Flowering: 'local_florist',
-    'Fruit Set': 'nutrition',
+    Flowering: 'eco',
+    'Fruit Set': 'eco',
     Ripening: 'eco',
-    Harvest: 'agriculture',
+    Harvest: 'check_circle',
   };
 
   return (
@@ -23,9 +24,7 @@ export default function StageProgressBar({
       {/* Header */}
       <div className="flex items-center justify-between border-b border-[#4F5A2D]/60 pb-2.5">
         <div className="flex items-center gap-2">
-          <span className="material-symbols-outlined text-[18px] text-[#A4B566]">
-            timeline
-          </span>
+          <Icon name="timeline" className="w-4.5 h-4.5 text-[#A4B566]" />
           <h4 className="font-mono text-xs font-bold text-[#F0F3E8] uppercase tracking-wider">
             Phenological Growth Stage
           </h4>
@@ -73,9 +72,10 @@ export default function StageProgressBar({
                       : 'bg-[#1D230E] text-[#636F45] border border-[#3E4724]'
                   }`}
                 >
-                  <span className="material-symbols-outlined text-[16px]">
-                    {isCompleted ? 'check' : stageIcons[stage] || 'circle'}
-                  </span>
+                  <Icon
+                    name={isCompleted ? 'check' : stageIcons[stage] || 'circle'}
+                    className="w-4 h-4"
+                  />
                 </div>
 
                 {/* Stage Label */}

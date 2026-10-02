@@ -5,6 +5,8 @@ import { SPECIES_PRESETS, GROWTH_STAGES, CAMPUS_COORDINATES } from '../utils/con
 import LocationPickerMap from '../components/map/LocationPickerMap';
 import QRCodeDisplay from '../components/tree/QRCodeDisplay';
 import zoneService from '../services/zoneService';
+import { compressImage } from '../utils/imageCompressor';
+import Icon from '../components/common/Icon';
 
 export default function RegisterTreePage() {
   const navigate = useNavigate();
@@ -14,8 +16,9 @@ export default function RegisterTreePage() {
   const [species, setSpecies] = useState('Narra (Pterocarpus indicus)');
   const [customSpecies, setCustomSpecies] = useState('');
   const [nickname, setNickname] = useState('');
-  const [healthStatus, setHealthStatus] = useState('Healthy');
+  const [healthStatus, setHealthStatus] = useState('Thriving');
   const [currentStage, setCurrentStage] = useState('Seedling');
+  const [isCompressingPhoto, setIsCompressingPhoto] = useState(false);
 
   // Forest Zone / Campus Sector from MongoDB
   const [zones, setZones] = useState([]);
@@ -99,7 +102,7 @@ export default function RegisterTreePage() {
     }
   };
 
-  const handlePhotoSelect = (e) => {
+  const handlePhotoSelect = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -108,14 +111,26 @@ export default function RegisterTreePage() {
       return;
     }
 
-    if (file.size > 10 * 1024 * 1024) {
-      setSubmitError('Photo size must be less than 10MB.');
+    if (file.size > 20 * 1024 * 1024) {
+      setSubmitError('Photo size must be less than 20MB.');
       return;
     }
 
-    setPhotoFile(file);
-    setPhotoPreview(URL.createObjectURL(file));
+    setIsCompressingPhoto(true);
     setSubmitError('');
+
+    try {
+      // Auto-compress high-resolution camera photo down to ~150-250KB JPEG
+      const compressed = await compressImage(file, { maxWidth: 1280, maxHeight: 1280, quality: 0.8 });
+      setPhotoFile(compressed);
+      setPhotoPreview(URL.createObjectURL(compressed));
+    } catch (err) {
+      console.warn('[RegisterTree] Image compression fallback:', err);
+      setPhotoFile(file);
+      setPhotoPreview(URL.createObjectURL(file));
+    } finally {
+      setIsCompressingPhoto(false);
+    }
   };
 
   const removePhoto = () => {
@@ -159,6 +174,7 @@ export default function RegisterTreePage() {
       formData.append('lat', coordinates.lat);
       formData.append('lng', coordinates.lng);
       formData.append('healthStatus', healthStatus);
+      formData.append('status', healthStatus === 'Dead / Mortality' ? 'dead' : 'alive');
       formData.append('currentStage', currentStage);
       formData.append('initialHeight', height === '' || isNaN(height) ? 0 : height);
       formData.append('initialStemDiameter', stemDiameter === '' || isNaN(stemDiameter) ? 0 : stemDiameter);
@@ -193,7 +209,7 @@ export default function RegisterTreePage() {
   };
 
   return (
-    <div className="space-y-6 pb-12 max-w-3xl mx-auto">
+    <div className="space-y-6 pb-8 max-w-3xl mx-auto">
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -208,13 +224,13 @@ export default function RegisterTreePage() {
           </p>
         </div>
         <div className="w-11 h-11 rounded-2xl bg-[#30371A] border border-[#525E31] flex items-center justify-center text-[#A4B566] shrink-0 shadow-sm">
-          <span className="material-symbols-outlined text-[24px]">add_task</span>
+          <Icon name="add_task" className="w-6 h-6" />
         </div>
       </div>
 
       {submitError && (
         <div className="p-4 rounded-xl bg-[#431B1B]/80 border border-[#E57373]/60 text-[#FFCDD2] text-xs font-mono flex items-center gap-2.5 animate-in fade-in">
-          <span className="material-symbols-outlined text-[20px] text-[#E57373]">error</span>
+          <Icon name="error" className="w-5 h-5 text-[#E57373]" />
           <span>{submitError}</span>
         </div>
       )}
@@ -224,16 +240,11 @@ export default function RegisterTreePage() {
         <section className="bg-[#30371A] rounded-2xl p-5 shadow-sm border border-[#525E31] space-y-4">
           <div className="flex items-center justify-between border-b border-[#4F5A2D] pb-3">
             <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-[#A4B566] text-[22px]">
-                pin_drop
-              </span>
+              <Icon name="pin_drop" className="text-[#A4B566] w-5 h-5" />
               <h3 className="font-headline-sm text-headline-sm text-[#F0F3E8] font-bold">
                 Geospatial Location &amp; Sector
               </h3>
             </div>
-            <span className="text-xs font-mono text-[#A4B566] bg-[#1D230E] px-2.5 py-1 rounded-full border border-[#525E31]">
-              Interactive GPS Pin
-            </span>
           </div>
 
           {/* Interactive Map Pin Placement */}
@@ -260,7 +271,7 @@ export default function RegisterTreePage() {
                   onClick={() => setShowAddZoneInput(true)}
                   className="text-xs font-mono text-[#A4B566] hover:underline flex items-center gap-1"
                 >
-                  <span className="material-symbols-outlined text-[15px]">add_circle</span>
+                  <Icon name="add_circle" className="w-3.5 h-3.5" />
                   Add New Sector
                 </button>
               )}
@@ -322,9 +333,10 @@ export default function RegisterTreePage() {
                   ))
                 )}
               </select>
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#A4B566] material-symbols-outlined text-[20px]">
-                arrow_drop_down
-              </span>
+              <Icon
+                name="arrow_drop_down"
+                className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#A4B566] w-5 h-5"
+              />
             </div>
           </div>
         </section>
@@ -332,9 +344,7 @@ export default function RegisterTreePage() {
         {/* SECTION 2: Botanical Species & Specimen ID */}
         <section className="bg-[#30371A] rounded-2xl p-5 shadow-sm border border-[#525E31] space-y-4">
           <div className="flex items-center gap-2 border-b border-[#4F5A2D] pb-3">
-            <span className="material-symbols-outlined text-[#A4B566] text-[22px]">
-              eco
-            </span>
+            <Icon name="eco" className="text-[#A4B566] w-5 h-5" />
             <h3 className="font-headline-sm text-headline-sm text-[#F0F3E8] font-bold">
               Botanical Species &amp; Identification
             </h3>
@@ -356,14 +366,13 @@ export default function RegisterTreePage() {
                       setSpecies(preset);
                       setCustomSpecies('');
                     }}
-                    className={`px-3 py-1.5 rounded-full font-mono text-xs flex items-center gap-1.5 transition-all active:scale-95 ${
-                      isSelected
-                        ? 'bg-[#8B9B4C] text-[#1F240F] font-bold shadow-md border border-[#A4B566]'
-                        : 'bg-[#1D230E] text-[#D8DFC8] border border-[#525E31] hover:bg-[#38411F]'
-                    }`}
+                    className={`px-3 py-1.5 rounded-full font-mono text-xs flex items-center gap-1.5 transition-all active:scale-95 ${isSelected
+                      ? 'bg-[#8B9B4C] text-[#1F240F] font-bold shadow-md border border-[#A4B566]'
+                      : 'bg-[#1D230E] text-[#D8DFC8] border border-[#525E31] hover:bg-[#38411F]'
+                      }`}
                   >
                     {isSelected && (
-                      <span className="material-symbols-outlined text-[14px]">check</span>
+                      <Icon name="check" className="w-3.5 h-3.5" />
                     )}
                     {preset.split(' (')[0]}
                   </button>
@@ -404,9 +413,7 @@ export default function RegisterTreePage() {
         {/* SECTION 3: Wildling Photo & Status */}
         <section className="bg-[#30371A] rounded-2xl p-5 shadow-sm border border-[#525E31] space-y-4">
           <div className="flex items-center gap-2 border-b border-[#4F5A2D] pb-3">
-            <span className="material-symbols-outlined text-[#A4B566] text-[22px]">
-              photo_camera
-            </span>
+            <Icon name="photo_camera" className="text-[#A4B566] w-5 h-5" />
             <h3 className="font-headline-sm text-headline-sm text-[#F0F3E8] font-bold">
               Field Photo &amp; Health Assessment
             </h3>
@@ -427,7 +434,7 @@ export default function RegisterTreePage() {
                   className="absolute top-1.5 right-1.5 w-7 h-7 rounded-full bg-black/75 text-[#FFCDD2] flex items-center justify-center hover:bg-black transition-colors"
                   title="Remove photo"
                 >
-                  <span className="material-symbols-outlined text-[16px]">close</span>
+                  <Icon name="close" className="w-4 h-4" />
                 </button>
               </div>
             ) : (
@@ -437,9 +444,10 @@ export default function RegisterTreePage() {
                   onClick={() => cameraInputRef.current?.click()}
                   className="w-full sm:w-32 h-28 rounded-xl border-2 border-dashed border-[#525E31] hover:border-[#8B9B4C] flex flex-col items-center justify-center gap-1 text-[#AAB596] hover:text-[#F0F3E8] cursor-pointer bg-[#262C14] hover:bg-[#30371A] active:scale-95 transition-all shrink-0 group"
                 >
-                  <span className="material-symbols-outlined text-2xl text-[#A4B566] group-hover:scale-110 transition-transform">
-                    photo_camera
-                  </span>
+                  <Icon
+                    name="photo_camera"
+                    className="w-6 h-6 text-[#A4B566] group-hover:scale-110 transition-transform"
+                  />
                   <span className="text-xs font-mono font-bold text-[#F0F3E8]">Take Photo</span>
                   <span className="text-[10px] font-mono text-[#CCD6B8]">Direct Camera</span>
                 </button>
@@ -449,9 +457,10 @@ export default function RegisterTreePage() {
                   onClick={() => galleryInputRef.current?.click()}
                   className="w-full sm:w-32 h-28 rounded-xl border-2 border-dashed border-[#525E31] hover:border-[#8B9B4C] flex flex-col items-center justify-center gap-1 text-[#AAB596] hover:text-[#F0F3E8] cursor-pointer bg-[#262C14] hover:bg-[#30371A] active:scale-95 transition-all shrink-0 group"
                 >
-                  <span className="material-symbols-outlined text-2xl text-[#8B9B4C] group-hover:scale-110 transition-transform">
-                    photo_library
-                  </span>
+                  <Icon
+                    name="photo_library"
+                    className="w-6 h-6 text-[#8B9B4C] group-hover:scale-110 transition-transform"
+                  />
                   <span className="text-xs font-mono font-bold text-[#F0F3E8]">Choose File</span>
                   <span className="text-[10px] font-mono text-[#CCD6B8]">Gallery / Storage</span>
                 </button>
@@ -474,7 +483,7 @@ export default function RegisterTreePage() {
                     onClick={() => cameraInputRef.current?.click()}
                     className="h-8 px-3 rounded-lg bg-[#30371A] hover:bg-[#3D4721] border border-[#525E31] text-[11px] font-mono text-[#D8DFC8] inline-flex items-center gap-1 active:scale-95 transition-all"
                   >
-                    <span className="material-symbols-outlined text-[14px] text-[#A4B566]">photo_camera</span>
+                    <Icon name="photo_camera" className="w-3.5 h-3.5 text-[#A4B566]" />
                     Retake Camera
                   </button>
                   <button
@@ -482,7 +491,7 @@ export default function RegisterTreePage() {
                     onClick={() => galleryInputRef.current?.click()}
                     className="h-8 px-3 rounded-lg bg-[#30371A] hover:bg-[#3D4721] border border-[#525E31] text-[11px] font-mono text-[#D8DFC8] inline-flex items-center gap-1 active:scale-95 transition-all"
                   >
-                    <span className="material-symbols-outlined text-[14px] text-[#8B9B4C]">photo_library</span>
+                    <Icon name="photo_library" className="w-3.5 h-3.5 text-[#8B9B4C]" />
                     From Gallery
                   </button>
                 </div>
@@ -515,21 +524,21 @@ export default function RegisterTreePage() {
               <label className="block text-xs font-mono font-medium text-[#C2CE9F]">
                 Initial Health Status
               </label>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {[
-                  { label: 'Healthy', val: 'Healthy', color: 'border-[#5D6A37] text-[#D2DCB4]' },
-                  { label: 'Monitor', val: 'Monitoring', color: 'border-[#D99B26]/60 text-[#F5C26B]' },
-                  { label: 'Attention', val: 'Needs Attention', color: 'border-[#E57373]/60 text-[#FFCDD2]' },
+                  { label: 'Thriving', val: 'Thriving', color: 'border-[#5D6A37] text-[#D2DCB4]' },
+                  { label: 'Stable / Fair', val: 'Stable / Fair', color: 'border-[#D99B26]/60 text-[#F5C26B]' },
+                  { label: 'Distressed', val: 'Distressed / At Risk', color: 'border-[#E57373]/60 text-[#FFCDD2]' },
+                  { label: 'Dead / Mortality', val: 'Dead / Mortality', color: 'border-[#4B5563] text-[#9CA3AF]' },
                 ].map((item) => (
                   <button
                     key={item.val}
                     type="button"
                     onClick={() => setHealthStatus(item.val)}
-                    className={`h-10 rounded-xl font-mono text-xs font-bold transition-all border ${
-                      healthStatus === item.val
-                        ? 'bg-[#1D230E] ring-2 ring-[#8B9B4C] shadow-sm ' + item.color
-                        : 'bg-[#1D230E]/60 border-[#525E31]/60 text-[#8B9B70] hover:bg-[#1D230E]'
-                    }`}
+                    className={`h-10 rounded-xl font-mono text-xs font-bold transition-all border ${healthStatus === item.val
+                      ? 'bg-[#1D230E] ring-2 ring-[#8B9B4C] shadow-sm ' + item.color
+                      : 'bg-[#1D230E]/60 border-[#525E31]/60 text-[#8B9B70] hover:bg-[#1D230E]'
+                      }`}
                   >
                     {item.label}
                   </button>
@@ -560,9 +569,7 @@ export default function RegisterTreePage() {
         {/* SECTION 4: Baseline Morphometrics */}
         <section className="bg-[#30371A] rounded-2xl p-5 shadow-sm border border-[#525E31] space-y-4">
           <div className="flex items-center gap-2 border-b border-[#4F5A2D] pb-3">
-            <span className="material-symbols-outlined text-[#A4B566] text-[22px]">
-              straighten
-            </span>
+            <Icon name="straighten" className="text-[#A4B566] w-5 h-5" />
             <h3 className="font-headline-sm text-headline-sm text-[#F0F3E8] font-bold">
               Baseline Measurements
             </h3>
@@ -595,7 +602,7 @@ export default function RegisterTreePage() {
                   className="w-8 h-8 rounded-lg bg-[#30371A] border border-[#525E31] text-[#D8DFC8] flex items-center justify-center hover:bg-[#3D4721] active:scale-95 transition-all"
                   title="Decrease height (-5)"
                 >
-                  <span className="material-symbols-outlined text-[16px]">remove</span>
+                  <Icon name="remove" className="w-4 h-4" />
                 </button>
                 <button
                   type="button"
@@ -603,7 +610,7 @@ export default function RegisterTreePage() {
                   className="w-8 h-8 rounded-lg bg-[#30371A] border border-[#525E31] text-[#D8DFC8] flex items-center justify-center hover:bg-[#3D4721] active:scale-95 transition-all"
                   title="Increase height (+5)"
                 >
-                  <span className="material-symbols-outlined text-[16px]">add</span>
+                  <Icon name="add" className="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -634,7 +641,7 @@ export default function RegisterTreePage() {
                   className="w-8 h-8 rounded-lg bg-[#30371A] border border-[#525E31] text-[#D8DFC8] flex items-center justify-center hover:bg-[#3D4721] active:scale-95 transition-all"
                   title="Decrease stem DBH (-1)"
                 >
-                  <span className="material-symbols-outlined text-[16px]">remove</span>
+                  <Icon name="remove" className="w-4 h-4" />
                 </button>
                 <button
                   type="button"
@@ -642,7 +649,7 @@ export default function RegisterTreePage() {
                   className="w-8 h-8 rounded-lg bg-[#30371A] border border-[#525E31] text-[#D8DFC8] flex items-center justify-center hover:bg-[#3D4721] active:scale-95 transition-all"
                   title="Increase stem DBH (+1)"
                 >
-                  <span className="material-symbols-outlined text-[16px]">add</span>
+                  <Icon name="add" className="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -673,7 +680,7 @@ export default function RegisterTreePage() {
                   className="w-8 h-8 rounded-lg bg-[#30371A] border border-[#525E31] text-[#D8DFC8] flex items-center justify-center hover:bg-[#3D4721] active:scale-95 transition-all"
                   title="Decrease leaf count (-1)"
                 >
-                  <span className="material-symbols-outlined text-[16px]">remove</span>
+                  <Icon name="remove" className="w-4 h-4" />
                 </button>
                 <button
                   type="button"
@@ -681,7 +688,7 @@ export default function RegisterTreePage() {
                   className="w-8 h-8 rounded-lg bg-[#30371A] border border-[#525E31] text-[#D8DFC8] flex items-center justify-center hover:bg-[#3D4721] active:scale-95 transition-all"
                   title="Increase leaf count (+1)"
                 >
-                  <span className="material-symbols-outlined text-[16px]">add</span>
+                  <Icon name="add" className="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -706,17 +713,17 @@ export default function RegisterTreePage() {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full h-14 rounded-2xl bg-[#8B9B4C] hover:bg-[#9EAF6D] active:scale-[0.98] transition-all text-[#1F240F] font-mono text-sm font-bold uppercase tracking-wider shadow-xl flex items-center justify-center gap-2.5 disabled:opacity-50"
+          className="w-full h-14 rounded-xl bg-gradient-to-r from-[#8B9B4C] via-[#9AB056] to-[#A4B566] hover:from-[#9BB057] hover:to-[#B4C674] active:scale-[0.98] active:brightness-95 transition-all text-[#161C0B] font-mono text-sm font-bold uppercase tracking-wider shadow-[0_4px_20px_rgba(139,155,76,0.3)] hover:shadow-[0_6px_28px_rgba(164,181,102,0.45)] border border-[#D2E29A]/50 flex items-center justify-center gap-2.5 disabled:opacity-50 cursor-pointer"
         >
           {isSubmitting ? (
             <>
-              <div className="w-5 h-5 border-2 border-[#1F240F] border-t-transparent rounded-full animate-spin" />
+              <div className="w-5 h-5 border-2 border-[#161C0B] border-t-transparent rounded-full animate-spin" />
               <span>Enrolling Specimen &amp; Uploading...</span>
             </>
           ) : (
             <>
-              <span className="material-symbols-outlined text-[24px]">app_registration</span>
-              <span>Enroll Plant / Tree &amp; Generate QR Tag</span>
+              <Icon name="qr_code_2" className="w-5 h-5 text-[#161C0B]" />
+              <span>Enroll Specimen &amp; Generate QR</span>
             </>
           )}
         </button>

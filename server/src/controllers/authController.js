@@ -17,7 +17,7 @@ const generateToken = (id) => {
  */
 const register = async (req, res, next) => {
   try {
-    const { name, rollNumber, password, course, section, avatar } = req.body;
+    const { name, rollNumber, password, course, section, phone, officerPasscode, avatar } = req.body;
 
     if (!name || !rollNumber || !password) {
       return res.status(400).json({
@@ -37,11 +37,17 @@ const register = async (req, res, next) => {
       });
     }
 
+    const officerKey = process.env.OFFICER_SIGNUP_KEY || 'NSTP2025'; // TODO: remove the default key and add a proper key in .env file
+    const isOfficer = Boolean(officerPasscode && officerPasscode.trim() === officerKey);
+    const assignedRole = isOfficer ? 'officer' : 'student';
+
     // Create user
     const user = await User.create({
       name: name.trim(),
       rollNumber: normalizedRoll,
       password,
+      role: assignedRole,
+      phone: (phone || '').trim(),
       course: (course || section || '').trim(),
       avatar: avatar || '',
     });
@@ -55,6 +61,8 @@ const register = async (req, res, next) => {
         id: user._id,
         name: user.name,
         rollNumber: user.rollNumber,
+        role: user.role || 'student',
+        phone: user.phone || '',
         course: user.course,
         avatar: user.avatar,
         createdAt: user.createdAt,
@@ -110,6 +118,8 @@ const login = async (req, res, next) => {
         id: user._id,
         name: user.name,
         rollNumber: user.rollNumber,
+        role: user.role || 'student',
+        phone: user.phone || '',
         course: user.course,
         avatar: user.avatar,
       },
@@ -153,10 +163,14 @@ const updateProfile = async (req, res, next) => {
       });
     }
 
-    const { name, course, section, currentPassword, newPassword } = req.body;
+    const { name, course, section, phone, currentPassword, newPassword } = req.body;
 
     if (name && name.trim()) {
       user.name = name.trim();
+    }
+
+    if (phone !== undefined) {
+      user.phone = phone.trim();
     }
 
     if (course !== undefined || section !== undefined) {
@@ -204,6 +218,8 @@ const updateProfile = async (req, res, next) => {
         id: user._id,
         name: user.name,
         rollNumber: user.rollNumber,
+        role: user.role || 'student',
+        phone: user.phone || '',
         course: user.course,
         avatar: user.avatar,
         createdAt: user.createdAt,
