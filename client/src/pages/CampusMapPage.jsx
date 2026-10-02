@@ -177,10 +177,20 @@ export default function CampusMapPage() {
   // Filter trees based on Health Status
   const displayedTrees = useMemo(() => {
     return scopedTrees.filter((tree) => {
-      if (selectedHealth === 'Healthy') return tree.healthStatus === 'Healthy';
-      if (selectedHealth === 'Monitoring') return tree.healthStatus === 'Monitoring';
-      if (selectedHealth === 'Needs Attention') return tree.healthStatus === 'Needs Attention';
-      return true;
+      if (selectedHealth === 'All') return true;
+      if (selectedHealth === 'Thriving' || selectedHealth === 'Healthy') {
+        return tree.healthStatus === 'Thriving' || tree.healthStatus === 'Healthy';
+      }
+      if (selectedHealth === 'Stable / Fair' || selectedHealth === 'Monitoring') {
+        return tree.healthStatus === 'Stable / Fair' || tree.healthStatus === 'Monitoring';
+      }
+      if (selectedHealth === 'Distressed / At Risk' || selectedHealth === 'Needs Attention') {
+        return tree.healthStatus === 'Distressed / At Risk' || tree.healthStatus === 'Needs Attention';
+      }
+      if (selectedHealth === 'Dead / Mortality' || selectedHealth === 'Dead') {
+        return tree.healthStatus === 'Dead / Mortality' || tree.status === 'dead';
+      }
+      return tree.healthStatus === selectedHealth;
     });
   }, [scopedTrees, selectedHealth]);
 
@@ -214,12 +224,17 @@ export default function CampusMapPage() {
   // Health color mapping
   const getHealthColor = (status) => {
     switch (status) {
+      case 'Thriving':
       case 'Healthy':
         return '#A4B566';
+      case 'Stable / Fair':
       case 'Monitoring':
         return '#D99B26';
+      case 'Distressed / At Risk':
       case 'Needs Attention':
         return '#E57373';
+      case 'Dead / Mortality':
+        return '#757575';
       default:
         return '#A4B566';
     }
@@ -301,12 +316,18 @@ export default function CampusMapPage() {
 
       {/* Health Status Filter Pills & Quick Location Buttons */}
       <div className="flex flex-wrap items-center justify-between gap-2.5">
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-          {['All', 'Healthy', 'Monitoring', 'Needs Attention'].map((f) => {
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+          {['All', 'Thriving', 'Stable / Fair', 'Distressed / At Risk', 'Dead / Mortality'].map((f) => {
             const count =
               f === 'All'
                 ? scopedTrees.length
-                : scopedTrees.filter((t) => t.healthStatus === f).length;
+                : scopedTrees.filter((t) => {
+                    if (f === 'Thriving') return t.healthStatus === 'Thriving' || t.healthStatus === 'Healthy';
+                    if (f === 'Stable / Fair') return t.healthStatus === 'Stable / Fair' || t.healthStatus === 'Monitoring';
+                    if (f === 'Distressed / At Risk') return t.healthStatus === 'Distressed / At Risk' || t.healthStatus === 'Needs Attention';
+                    if (f === 'Dead / Mortality') return t.healthStatus === 'Dead / Mortality' || t.status === 'dead';
+                    return t.healthStatus === f;
+                  }).length;
 
             return (
               <button
@@ -449,15 +470,19 @@ export default function CampusMapPage() {
           </span>
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-[#A4B566] shadow-[0_0_6px_#A4B566]" />
-            <span className="text-[#F0F3E8] text-[11px]">Healthy</span>
+            <span className="text-[#F0F3E8] text-[11px]">Thriving</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-[#D99B26] shadow-[0_0_6px_#D99B26]" />
-            <span className="text-[#F0F3E8] text-[11px]">Monitoring</span>
+            <span className="text-[#F0F3E8] text-[11px]">Stable / Fair</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-[#E57373] shadow-[0_0_6px_#E57373]" />
-            <span className="text-[#F0F3E8] text-[11px]">Needs Attention</span>
+            <span className="text-[#F0F3E8] text-[11px]">Distressed</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-[#757575] shadow-[0_0_6px_#757575]" />
+            <span className="text-[#F0F3E8] text-[11px]">Dead / Mortality</span>
           </div>
           <div className="pt-1 border-t border-[#525E31]/60 flex items-center gap-1.5 text-[10px] text-[#C2CE9F]">
             <span className="w-2 h-2 rounded-full border border-white bg-[#8B9B4C]" />

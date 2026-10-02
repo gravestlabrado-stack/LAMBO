@@ -1,16 +1,20 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import Icon from '../common/Icon';
-
-const navItems = [
-  { name: 'Home', path: '/', icon: 'grid_view' },
-  { name: 'Scan', path: '/scan', icon: 'qr_code_scanner' },
-  { name: 'Trees', path: '/trees', icon: 'park' },
-  { name: 'Logs', path: '/logs', icon: 'query_stats' },
-  { name: 'Register', path: '/register-tree', icon: 'add_circle' },
-];
+import { useAuth } from '../../hooks/useAuth';
 
 export default function BottomNav() {
+  const { user } = useAuth();
+  const isOfficer = user?.role === 'officer' || String(user?.rollNumber).trim() === '9260572';
+
+  const navItems = [
+    { name: 'Home', path: '/', icon: 'grid_view' },
+    { name: 'Scan', path: '/scan', icon: 'qr_code_scanner' },
+    { name: 'Trees', path: '/trees', icon: 'park' },
+    { name: 'Logs', path: '/logs', icon: 'query_stats' },
+    { name: 'Plant', path: '/register-tree', icon: 'add_circle' },
+    ...(isOfficer ? [{ name: 'Officer', path: '/officer/dashboard', icon: 'shield' }] : []),
+  ];
   return (
     <nav className="fixed bottom-0 w-full z-50 pb-safe bg-[#1D230E]/95 backdrop-blur-xl border-t border-[#525E31]/40 shadow-[0_-2px_16px_rgba(0,0,0,0.5)]">
       <div className="h-16 flex items-center justify-around px-2 max-w-lg mx-auto">

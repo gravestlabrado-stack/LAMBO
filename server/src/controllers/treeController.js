@@ -115,32 +115,51 @@ const getTreeStats = async (req, res, next) => {
   try {
     const ownerId = req.user._id;
 
-    const [totalTrees, healthyCount, monitoringCount, attentionCount, totalLogs, speciesStats] =
-      await Promise.all([
-        Tree.countDocuments({ owner: ownerId }),
-        Tree.countDocuments({ owner: ownerId, healthStatus: 'Healthy' }),
-        Tree.countDocuments({ owner: ownerId, healthStatus: 'Monitoring' }),
-        Tree.countDocuments({ owner: ownerId, healthStatus: 'Needs Attention' }),
-        GrowthLog.countDocuments({ loggedBy: ownerId }),
-        Tree.aggregate([
-          { $match: { owner: ownerId } },
-          { $group: { _id: '$species', count: { $sum: 1 } } },
-          { $sort: { count: -1 } },
-          { $limit: 6 },
-        ]),
-      ]);
+    const [
+      totalTrees,
+      thrivingCount,
+      fairCount,
+      distressedCount,
+      mortalityCount,
+      totalLogs,
+      speciesStats,
+    ] = await Promise.all([
+      Tree.countDocuments({ owner: ownerId }),
+      Tree.countDocuments({ owner: ownerId, healthStatus: { $in: ['Thriving', 'Healthy'] } }),
+      Tree.countDocuments({ owner: ownerId, healthStatus: { $in: ['Stable / Fair', 'Monitoring'] } }),
+      Tree.countDocuments({ owner: ownerId, healthStatus: { $in: ['Distressed / At Risk', 'Needs Attention'] } }),
+      Tree.countDocuments({
+        owner: ownerId,
+        $or: [{ healthStatus: 'Dead / Mortality' }, { status: 'dead' }],
+      }),
+      GrowthLog.countDocuments({ loggedBy: ownerId }),
+      Tree.aggregate([
+        { $match: { owner: ownerId } },
+        { $group: { _id: '$species', count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $limit: 6 },
+      ]),
+    ]);
 
-    const healthRate = totalTrees > 0 ? Math.round((healthyCount / totalTrees) * 100) : 100;
+    const livingTrees = totalTrees - mortalityCount;
+    const healthRate = totalTrees > 0 ? Math.round((thrivingCount / totalTrees) * 100) : 100;
+    const survivalRate = totalTrees > 0 ? Math.round((livingTrees / totalTrees) * 100) : 100;
 
     res.status(200).json({
       success: true,
       data: {
         totalTrees,
         healthRate,
+        survivalRate,
         breakdown: {
-          healthy: healthyCount,
-          monitoring: monitoringCount,
-          needsAttention: attentionCount,
+          thriving: thrivingCount,
+          fair: fairCount,
+          distressed: distressedCount,
+          mortality: mortalityCount,
+          // Backwards compatibility TODO: project wide bakcwards compatibility to be removed on final deployment along with database wipe
+          healthy: thrivingCount,
+          monitoring: fairCount,
+          needsAttention: distressedCount,
         },
         totalLogs,
         speciesDistribution: speciesStats.map((s) => ({
@@ -259,10 +278,10 @@ const createTree = async (req, res, next) => {
       location: location ? location.trim() : '',
       coordinates,
       datePlanted: datePlanted ? new Date(datePlanted) : new Date(),
-      healthStatus: healthStatus || 'Healthy',
+      healthStatus: healthStatus || 'Thriving',
       currentStage: currentStage || 'Seedling',
       photos,
-      status: 'alive',
+      status: (healthStatus === 'Dead / Mortality') ? 'dead' : 'alive',
     });
 
     // If initial baseline morphometrics provided, automatically create baseline growth log
@@ -274,8 +293,8 @@ const createTree = async (req, res, next) => {
         stemDiameter: initialStemDiameter ? parseFloat(initialStemDiameter) : null,
         leafCount: initialLeafCount ? parseInt(initialLeafCount, 10) : null,
         growthStage: currentStage || 'Seedling',
-        healthStatus: healthStatus || 'Healthy',
-        photo: photoUrl || null,
+        healthStatus: healthStatus || 'Thriving',
+        photo: photoUrl || (photos.length > 0 ? photos[0].url : 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=600&auto=format&fit=crop&q=80'),
         notes: notes ? notes.trim() : 'Initial baseline seedling registration measurement',
         loggedAt: datePlanted ? new Date(datePlanted) : new Date(),
       });

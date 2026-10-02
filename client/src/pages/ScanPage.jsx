@@ -262,14 +262,16 @@ export default function ScanPage() {
 
             <span
               className={`px-2.5 py-1 rounded-full font-mono text-xs font-semibold shrink-0 border ${
-                detectedSpecimen.healthStatus === 'Healthy'
+                detectedSpecimen.healthStatus === 'Thriving' || detectedSpecimen.healthStatus === 'Healthy'
                   ? 'bg-[#3A4320] border-[#5D6A37] text-[#D2DCB4]'
-                  : detectedSpecimen.healthStatus === 'Monitoring'
+                  : detectedSpecimen.healthStatus === 'Stable / Fair' || detectedSpecimen.healthStatus === 'Monitoring'
                   ? 'bg-[#3A331A] border-[#D99B26]/60 text-[#F5C26B]'
+                  : detectedSpecimen.healthStatus === 'Dead / Mortality'
+                  ? 'bg-[#2A2D24] border-[#757575]/60 text-[#BDBDBD]'
                   : 'bg-[#431B1B] border-[#E57373]/60 text-[#FFCDD2]'
               }`}
             >
-              {detectedSpecimen.healthStatus || 'Healthy'}
+              {detectedSpecimen.healthStatus || 'Thriving'}
             </span>
           </div>
 

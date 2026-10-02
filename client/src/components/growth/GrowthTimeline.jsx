@@ -201,14 +201,16 @@ export default function GrowthTimeline({
                   </span>
                   <span
                     className={`font-mono text-xs font-bold block truncate mt-0.5 ${
-                      log.healthStatus === 'Healthy'
+                      log.healthStatus === 'Thriving' || log.healthStatus === 'Healthy'
                         ? 'text-[#C2CE9F]'
-                        : log.healthStatus === 'Monitoring'
+                        : log.healthStatus === 'Stable / Fair' || log.healthStatus === 'Monitoring'
                         ? 'text-[#F5C26B]'
+                        : log.healthStatus === 'Dead / Mortality'
+                        ? 'text-[#AAB596]'
                         : 'text-[#FFCDD2]'
                     }`}
                   >
-                    {log.healthStatus || 'Healthy'}
+                    {log.healthStatus || 'Thriving'}
                   </span>
                 </div>
               </div>

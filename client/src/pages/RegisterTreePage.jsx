@@ -14,7 +14,7 @@ export default function RegisterTreePage() {
   const [species, setSpecies] = useState('Narra (Pterocarpus indicus)');
   const [customSpecies, setCustomSpecies] = useState('');
   const [nickname, setNickname] = useState('');
-  const [healthStatus, setHealthStatus] = useState('Healthy');
+  const [healthStatus, setHealthStatus] = useState('Thriving');
   const [currentStage, setCurrentStage] = useState('Seedling');
 
   // Forest Zone / Campus Sector from MongoDB
@@ -517,9 +517,9 @@ export default function RegisterTreePage() {
               </label>
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { label: 'Healthy', val: 'Healthy', color: 'border-[#5D6A37] text-[#D2DCB4]' },
-                  { label: 'Monitor', val: 'Monitoring', color: 'border-[#D99B26]/60 text-[#F5C26B]' },
-                  { label: 'Attention', val: 'Needs Attention', color: 'border-[#E57373]/60 text-[#FFCDD2]' },
+                  { label: 'Thriving', val: 'Thriving', color: 'border-[#5D6A37] text-[#D2DCB4]' },
+                  { label: 'Stable / Fair', val: 'Stable / Fair', color: 'border-[#D99B26]/60 text-[#F5C26B]' },
+                  { label: 'Distressed', val: 'Distressed / At Risk', color: 'border-[#E57373]/60 text-[#FFCDD2]' },
                 ].map((item) => (
                   <button
                     key={item.val}

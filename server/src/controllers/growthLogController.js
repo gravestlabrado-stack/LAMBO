@@ -151,24 +151,32 @@ const createGrowthLog = async (req, res, next) => {
       });
     }
 
-    // Authorization: only tree owner or authorized supervisor (Roll #9260572) can log growth
+    // Authorization: only tree owner or authorized supervisor / officer can log growth
     const targetTreeOwnerId = targetTree.owner ? String(targetTree.owner._id || targetTree.owner) : '';
     const userId = String(req.user._id || '');
     const isOwner = Boolean(targetTreeOwnerId && userId && targetTreeOwnerId === userId);
     const isSupervisor = req.user.rollNumber && String(req.user.rollNumber).trim() === '9260572';
+    const isOfficer = req.user.role === 'officer';
 
-    if (!isOwner && !isSupervisor) {
+    if (!isOwner && !isSupervisor && !isOfficer) {
       return res.status(403).json({
         success: false,
         message: 'Only the specimen owner or authorized field supervisor can record growth for this tree.',
       });
     }
 
-    // Handle photo upload if present
+    // Handle photo upload (mandatory for growth observation logs)
     let photoUrl = req.body.photo || null;
     if (req.file) {
       const uploadRes = await uploadBufferToCloudinary(req.file.buffer, 'lambo_logs');
       photoUrl = uploadRes.url;
+    }
+
+    if (!photoUrl) {
+      return res.status(400).json({
+        success: false,
+        message: 'Visual photographic evidence is mandatory for all observation entries.',
+      });
     }
 
     const log = await GrowthLog.create({
@@ -179,7 +187,7 @@ const createGrowthLog = async (req, res, next) => {
       leafCount: leafCount ? parseInt(leafCount, 10) : null,
       fruitCount: fruitCount ? parseInt(fruitCount, 10) : null,
       growthStage: growthStage || targetTree.currentStage || 'Seedling',
-      healthStatus: healthStatus || targetTree.healthStatus || 'Healthy',
+      healthStatus: healthStatus || targetTree.healthStatus || 'Thriving',
       photo: photoUrl,
       notes: notes ? notes.trim() : '',
       loggedAt: loggedAt ? new Date(loggedAt) : new Date(),
@@ -191,6 +199,11 @@ const createGrowthLog = async (req, res, next) => {
     }
     if (healthStatus) {
       targetTree.healthStatus = healthStatus;
+      if (healthStatus === 'Dead / Mortality') {
+        targetTree.status = 'dead';
+      } else if (targetTree.status === 'dead') {
+        targetTree.status = 'alive';
+      }
     }
     if (photoUrl) {
       targetTree.photos.push({
@@ -248,8 +261,9 @@ const updateGrowthLog = async (req, res, next) => {
     const isCreator = Boolean(loggedById && userId && loggedById === userId);
     const isTreeOwner = Boolean(treeOwnerId && userId && treeOwnerId === userId);
     const isSupervisor = req.user.rollNumber && String(req.user.rollNumber).trim() === '9260572';
+    const isOfficer = req.user.role === 'officer';
 
-    if (!isCreator && !isTreeOwner && !isSupervisor) {
+    if (!isCreator && !isTreeOwner && !isSupervisor && !isOfficer) {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to modify this log entry. Only the specimen owner or supervisor can edit.',

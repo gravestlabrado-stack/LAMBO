@@ -4,12 +4,22 @@ export const APP_NAME = 'LAMBO';
 export const APP_TAGLINE = 'Landscape Analytics for Monitoring Botanical Observation';
 
 export const HEALTH_STATUS = {
+  THRIVING: 'Thriving',
+  FAIR: 'Stable / Fair',
+  DISTRESSED: 'Distressed / At Risk',
+  DEAD: 'Dead / Mortality',
+  // Legacy aliases
   HEALTHY: 'Healthy',
   MONITORING: 'Monitoring',
   NEEDS_ATTENTION: 'Needs Attention',
 };
 
-export const HEALTH_STATUSES = ['Healthy', 'Monitoring', 'Needs Attention'];
+export const HEALTH_STATUSES = [
+  'Thriving',
+  'Stable / Fair',
+  'Distressed / At Risk',
+  'Dead / Mortality',
+];
 
 export const GROWTH_STAGES = [
   'Seedling',
@@ -45,26 +55,55 @@ export const SPECIES_PRESETS = [
 ];
 
 export const HEALTH_COLOR_MAP = {
+  Thriving: {
+    bg: 'bg-[#3A4320]',
+    text: 'text-[#D2DCB4]',
+    border: 'border-[#5D6A37]',
+    dot: 'bg-[#A4B566]',
+    badge: 'border-[#5D6A37] text-[#D2DCB4] bg-[#3A4320]',
+  },
+  'Stable / Fair': {
+    bg: 'bg-[#3A331A]',
+    text: 'text-[#F5C26B]',
+    border: 'border-[#D99B26]/60',
+    dot: 'bg-[#D99B26]',
+    badge: 'border-[#D99B26]/60 text-[#F5C26B] bg-[#3A331A]',
+  },
+  'Distressed / At Risk': {
+    bg: 'bg-[#431B1B]',
+    text: 'text-[#FFCDD2]',
+    border: 'border-[#E57373]/60',
+    dot: 'bg-[#E57373]',
+    badge: 'border-[#E57373]/60 text-[#FFCDD2] bg-[#431B1B]',
+  },
+  'Dead / Mortality': {
+    bg: 'bg-[#2A2D24]',
+    text: 'text-[#BDBDBD]',
+    border: 'border-[#757575]/60',
+    dot: 'bg-[#757575]',
+    badge: 'border-[#757575]/60 text-[#BDBDBD] bg-[#2A2D24]',
+  },
+  // Legacy compatibility mappings
   Healthy: {
-    bg: 'bg-surface-raised',
-    text: 'text-status-healthy',
-    border: 'border-status-healthy/40',
-    dot: 'bg-status-healthy',
-    badge: 'border-[#A4B566] text-[#A4B566]',
+    bg: 'bg-[#3A4320]',
+    text: 'text-[#D2DCB4]',
+    border: 'border-[#5D6A37]',
+    dot: 'bg-[#A4B566]',
+    badge: 'border-[#5D6A37] text-[#D2DCB4] bg-[#3A4320]',
   },
   Monitoring: {
-    bg: 'bg-surface-raised',
-    text: 'text-status-monitor',
-    border: 'border-status-monitor/40',
-    dot: 'bg-status-monitor',
-    badge: 'border-[#D99B26] text-[#D99B26]',
+    bg: 'bg-[#3A331A]',
+    text: 'text-[#F5C26B]',
+    border: 'border-[#D99B26]/60',
+    dot: 'bg-[#D99B26]',
+    badge: 'border-[#D99B26]/60 text-[#F5C26B] bg-[#3A331A]',
   },
   'Needs Attention': {
-    bg: 'bg-surface-raised',
-    text: 'text-status-danger',
-    border: 'border-status-danger/40',
-    dot: 'bg-status-danger',
-    badge: 'border-[#E57373] text-[#E57373]',
+    bg: 'bg-[#431B1B]',
+    text: 'text-[#FFCDD2]',
+    border: 'border-[#E57373]/60',
+    dot: 'bg-[#E57373]',
+    badge: 'border-[#E57373]/60 text-[#FFCDD2] bg-[#431B1B]',
   },
 };
 

@@ -469,6 +469,14 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
                           {user.course}
                         </span>
                       )}
+                      {(user?.role === 'officer' || String(user?.rollNumber).trim() === '9260572') && (
+                        <div className="mt-1.5 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#D99B26]/20 border border-[#F5C26B]/80 text-[#F5C26B] font-mono text-[10px] font-bold uppercase tracking-wider select-none shadow-[0_0_8px_rgba(245,194,107,0.25)]">
+                          <span className="material-symbols-outlined text-[14px] text-[#F5C26B]">
+                            military_tech
+                          </span>
+                          <span>NSTP Officer</span>
+                        </div>
+                      )}
                       {String(user?.rollNumber).trim() === '9260572' && (
                         <div className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-[#D99B26]/30 via-[#E57373]/25 to-[#F5C26B]/30 border border-[#F5C26B]/80 shadow-[0_0_10px_rgba(245,194,107,0.35)] select-none">
                           <span className="text-[10px] font-bold text-[#F5C26B] tracking-tight whitespace-nowrap">
@@ -498,6 +506,23 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
 
                   {/* Dropdown Actions */}
                   <div className="space-y-1 pt-1">
+                    {/* NSTP Officer Command Portal (Visible to officers / supervisors) */}
+                    {(user?.role === 'officer' || String(user?.rollNumber).trim() === '9260572') && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowProfileMenu(false);
+                          navigate('/officer/dashboard');
+                        }}
+                        className="w-full px-3 py-2.5 rounded-xl text-left text-xs font-mono font-bold text-[#F5C26B] bg-[#30371A] hover:bg-[#3D4721] border border-[#D99B26]/50 transition-colors flex items-center gap-2.5 group shadow-sm"
+                      >
+                        <span className="material-symbols-outlined text-[18px] text-[#F5C26B] group-hover:scale-110 transition-transform">
+                          military_tech
+                        </span>
+                        <span>Officer Command Portal</span>
+                      </button>
+                    )}
+
                     {/* Global Campus Map Button */}
                     <button
                       type="button"

@@ -108,19 +108,48 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full h-12 rounded-xl bg-[#8B9B4C] hover:bg-[#9EAF6D] active:scale-[0.98] transition-all text-[#1F240F] font-mono text-sm font-bold uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 mt-2"
+            className="w-full h-12 rounded-xl bg-[#8B9B4C] hover:bg-[#9EAF6D] active:scale-[0.98] transition-all text-[#1F240F] font-mono text-sm font-bold uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 mt-2 cursor-pointer"
           >
             <span className="material-symbols-outlined text-[20px]">login</span>
             {loading ? 'Authenticating...' : 'Authenticate & Enter'}
           </button>
         </form>
 
-        <div className="mt-5 text-center relative z-10">
+        {/* Quick Demo Credentials for Fast Evaluation */}
+        <div className="mt-5 pt-4 border-t border-[#3E4723] relative z-10">
+          <p className="text-[11px] font-mono text-[#AAB596] uppercase tracking-wider mb-2 text-center">
+            ⚡ Quick Demo Fill
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setRollNumber('NSTP-OFFICER-01');
+                setPassword('password123');
+              }}
+              className="px-2.5 py-1.5 rounded-lg bg-[#30371A] hover:bg-[#3D4722] border border-[#5D6A37] text-[11px] font-mono text-[#D8DFC8] flex items-center justify-center gap-1.5 transition-all text-center"
+            >
+              <span>🎖️</span> Officer
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setRollNumber('2024-BSF-001');
+                setPassword('password123');
+              }}
+              className="px-2.5 py-1.5 rounded-lg bg-[#30371A] hover:bg-[#3D4722] border border-[#5D6A37] text-[11px] font-mono text-[#D8DFC8] flex items-center justify-center gap-1.5 transition-all text-center"
+            >
+              <span>🌱</span> Cadet (Elena)
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-4 text-center relative z-10">
           <Link
             to="/register"
-            className="text-xs text-[#AAB596] hover:text-[#A4B566] transition-colors inline-flex items-center gap-1 font-mono"
+            className="text-xs text-[#A4B566] hover:text-[#C2CE9F] transition-colors inline-flex items-center gap-1 font-mono font-medium underline underline-offset-2"
           >
-            New cadet? Enroll student profile
+            New cadet or staff? Go to Registration Page
             <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
           </Link>
         </div>

@@ -304,17 +304,23 @@ export default function TreeProfilePage() {
           </span>
           <span
             className={`inline-flex items-center gap-1 px-3 py-1 rounded-full backdrop-blur-md font-mono text-xs font-bold border shadow-sm ${
-              tree.healthStatus === 'Healthy'
+              tree.healthStatus === 'Thriving' || tree.healthStatus === 'Healthy'
                 ? 'bg-[#3A4320]/90 border-[#5D6A37] text-[#D2DCB4]'
-                : tree.healthStatus === 'Monitoring'
+                : tree.healthStatus === 'Stable / Fair' || tree.healthStatus === 'Monitoring'
                 ? 'bg-[#3A331A]/90 border-[#D99B26]/60 text-[#F5C26B]'
+                : tree.healthStatus === 'Dead / Mortality'
+                ? 'bg-[#2A2D24]/90 border-[#757575]/60 text-[#BDBDBD]'
                 : 'bg-[#431B1B]/90 border-[#E57373]/60 text-[#FFCDD2]'
             }`}
           >
             <span className="material-symbols-outlined text-[14px]">
-              {tree.healthStatus === 'Healthy' ? 'check_circle' : 'warning'}
+              {tree.healthStatus === 'Thriving' || tree.healthStatus === 'Healthy'
+                ? 'check_circle'
+                : tree.healthStatus === 'Dead / Mortality'
+                ? 'cancel'
+                : 'warning'}
             </span>
-            {tree.healthStatus}
+            {tree.healthStatus || 'Thriving'}
           </span>
         </div>
 
@@ -516,37 +522,45 @@ export default function TreeProfilePage() {
           <div className="flex flex-col gap-0.5">
             <div className="flex items-baseline gap-1">
               <span className="font-mono text-2xl font-bold text-[#A4B566] tracking-tight">
-                {tree.healthStatus === 'Healthy'
+                {tree.healthStatus === 'Thriving' || tree.healthStatus === 'Healthy'
                   ? '95%'
-                  : tree.healthStatus === 'Monitoring'
+                  : tree.healthStatus === 'Stable / Fair' || tree.healthStatus === 'Monitoring'
                   ? '75%'
+                  : tree.healthStatus === 'Dead / Mortality'
+                  ? '0%'
                   : '40%'}
               </span>
               <span className="font-mono text-xs text-[#BDCE8A]">Index</span>
             </div>
             <span className="font-mono text-[11px] text-[#CCD6B8]">
-              {tree.healthStatus === 'Healthy'
+              {tree.healthStatus === 'Thriving' || tree.healthStatus === 'Healthy'
                 ? 'Optimal chlorophyll vigor'
-                : tree.healthStatus === 'Monitoring'
+                : tree.healthStatus === 'Stable / Fair' || tree.healthStatus === 'Monitoring'
                 ? 'Field check recommended'
+                : tree.healthStatus === 'Dead / Mortality'
+                ? 'Specimen mortality recorded'
                 : 'Pest/hydration distress'}
             </span>
           </div>
           <div className="w-full bg-[#1D220D] rounded h-2 mt-1 overflow-hidden border border-[#4F5A2D]">
             <div
               className={`h-full rounded ${
-                tree.healthStatus === 'Healthy'
+                tree.healthStatus === 'Thriving' || tree.healthStatus === 'Healthy'
                   ? 'bg-[#A4B566]'
-                  : tree.healthStatus === 'Monitoring'
+                  : tree.healthStatus === 'Stable / Fair' || tree.healthStatus === 'Monitoring'
                   ? 'bg-[#F5C26B]'
+                  : tree.healthStatus === 'Dead / Mortality'
+                  ? 'bg-[#757575]'
                   : 'bg-[#FFCDD2]'
               }`}
               style={{
                 width:
-                  tree.healthStatus === 'Healthy'
+                  tree.healthStatus === 'Thriving' || tree.healthStatus === 'Healthy'
                     ? '95%'
-                    : tree.healthStatus === 'Monitoring'
+                    : tree.healthStatus === 'Stable / Fair' || tree.healthStatus === 'Monitoring'
                     ? '75%'
+                    : tree.healthStatus === 'Dead / Mortality'
+                    ? '0%'
                     : '40%',
               }}
             />

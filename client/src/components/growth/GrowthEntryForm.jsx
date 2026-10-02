@@ -49,7 +49,7 @@ export default function GrowthEntryForm({
     editingLog?.growthStage || targetTree?.currentStage || 'Seedling'
   );
   const [health, setHealth] = useState(
-    editingLog?.healthStatus || targetTree?.healthStatus || 'Healthy'
+    editingLog?.healthStatus || targetTree?.healthStatus || 'Thriving'
   );
   const [notes, setNotes] = useState(editingLog?.notes || '');
 
@@ -104,6 +104,13 @@ export default function GrowthEntryForm({
 
     if (!height || isNaN(parseFloat(height))) {
       setErrorMessage('Height measurement is required and must be a valid number.');
+      return;
+    }
+
+    if (!photoFile && !photoPreview) {
+      setErrorMessage(
+        'Observation Photo Mandatory: Visual photographic evidence is required for all observation logs.'
+      );
       return;
     }
 
@@ -353,9 +360,15 @@ export default function GrowthEntryForm({
 
           {/* Photo Upload Field */}
           <div>
-            <label className="block text-xs font-mono text-[#C2CE9F] uppercase mb-1 font-semibold">
-              Observation Photo (Field Verification)
-            </label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-mono text-[#C2CE9F] uppercase font-semibold">
+                Observation Photo (Field Verification) *
+              </label>
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#E57373]/20 border border-[#E57373]/50 text-[#FFCDD2] text-[10px] font-mono font-bold tracking-tight">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#E57373] animate-pulse"></span>
+                Proof Mandatory
+              </span>
+            </div>
             {photoPreview ? (
               <div className="relative rounded-xl overflow-hidden border border-[#525E31] h-36 bg-black">
                 <img

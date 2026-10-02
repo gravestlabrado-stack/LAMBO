@@ -40,12 +40,21 @@ const growthLogSchema = new mongoose.Schema(
     },
     healthStatus: {
       type: String,
-      enum: ['Healthy', 'Monitoring', 'Needs Attention'],
-      default: 'Healthy',
+      enum: [
+        'Thriving',
+        'Stable / Fair',
+        'Distressed / At Risk',
+        'Dead / Mortality',
+        // Legacy support TODO: will prolly remove
+        'Healthy',
+        'Monitoring',
+        'Needs Attention',
+      ],
+      default: 'Thriving',
     },
     photo: {
       type: String,
-      default: null,
+      required: [true, 'Visual photographic evidence is mandatory for observation logs'],
     },
     notes: {
       type: String,

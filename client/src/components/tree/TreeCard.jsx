@@ -11,12 +11,17 @@ export default function TreeCard({ tree, isOwner = false }) {
 
   const getHealthStyles = (status) => {
     switch (status) {
+      case 'Thriving':
       case 'Healthy':
         return 'bg-[#3A4320] border-[#5D6A37] text-[#D2DCB4]';
+      case 'Stable / Fair':
       case 'Monitoring':
         return 'bg-[#3A331A] border-[#D99B26]/60 text-[#F5C26B]';
+      case 'Distressed / At Risk':
       case 'Needs Attention':
         return 'bg-[#431B1B] border-[#E57373]/60 text-[#FFCDD2]';
+      case 'Dead / Mortality':
+        return 'bg-[#2A2D24] border-[#757575]/60 text-[#BDBDBD]';
       default:
         return 'bg-[#1D230E] border-[#525E31] text-[#D8DFC8]';
     }

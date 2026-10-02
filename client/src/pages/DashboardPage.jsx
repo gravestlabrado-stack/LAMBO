@@ -13,20 +13,42 @@ export default function DashboardPage() {
 
   // Use API-sourced stats when available, otherwise compute from tree list
   const totalTrees = stats?.totalTrees ?? trees.length;
-  const healthyCount = stats?.breakdown?.healthy ?? trees.filter((t) => t.healthStatus === 'Healthy').length;
-  const monitoringCount = stats?.breakdown?.monitoring ?? trees.filter((t) => t.healthStatus === 'Monitoring').length;
-  const attentionCount = stats?.breakdown?.needsAttention ?? trees.filter((t) => t.healthStatus === 'Needs Attention').length;
+  const thrivingCount =
+    stats?.breakdown?.thriving ??
+    trees.filter((t) => t.healthStatus === 'Thriving' || t.healthStatus === 'Healthy').length;
+  const fairCount =
+    stats?.breakdown?.fair ??
+    trees.filter((t) => t.healthStatus === 'Stable / Fair' || t.healthStatus === 'Monitoring').length;
+  const distressedCount =
+    stats?.breakdown?.distressed ??
+    trees.filter((t) => t.healthStatus === 'Distressed / At Risk' || t.healthStatus === 'Needs Attention').length;
+  const mortalityCount =
+    stats?.breakdown?.mortality ??
+    trees.filter((t) => t.healthStatus === 'Dead / Mortality' || t.status === 'dead').length;
 
-  const healthyPct = totalTrees > 0 ? Math.round((healthyCount / totalTrees) * 100) : 0;
-  const monitoringPct = totalTrees > 0 ? Math.round((monitoringCount / totalTrees) * 100) : 0;
-  const attentionPct = totalTrees > 0 ? Math.round((attentionCount / totalTrees) * 100) : 0;
+  const healthyPct = totalTrees > 0 ? Math.round((thrivingCount / totalTrees) * 100) : 0;
+  const fairPct = totalTrees > 0 ? Math.round((fairCount / totalTrees) * 100) : 0;
+  const distressedPct = totalTrees > 0 ? Math.round((distressedCount / totalTrees) * 100) : 0;
+  const mortalityPct = totalTrees > 0 ? Math.round((mortalityCount / totalTrees) * 100) : 0;
+  const survivalPct =
+    stats?.survivalRate ??
+    (totalTrees > 0 ? Math.round(((totalTrees - mortalityCount) / totalTrees) * 100) : 100);
 
   const totalLogs = stats?.totalLogs ?? 0;
 
   const filteredTrees = trees.filter((tree) => {
-    if (activeFilter === 'Healthy') return tree.healthStatus === 'Healthy';
-    if (activeFilter === 'Monitoring') return tree.healthStatus === 'Monitoring';
-    if (activeFilter === 'Needing Care') return tree.healthStatus === 'Needs Attention';
+    if (activeFilter === 'Thriving' || activeFilter === 'Healthy') {
+      return tree.healthStatus === 'Thriving' || tree.healthStatus === 'Healthy';
+    }
+    if (activeFilter === 'Stable / Fair' || activeFilter === 'Monitoring') {
+      return tree.healthStatus === 'Stable / Fair' || tree.healthStatus === 'Monitoring';
+    }
+    if (activeFilter === 'Distressed' || activeFilter === 'Needing Care') {
+      return tree.healthStatus === 'Distressed / At Risk' || tree.healthStatus === 'Needs Attention';
+    }
+    if (activeFilter === 'Mortality' || activeFilter === 'Dead') {
+      return tree.healthStatus === 'Dead / Mortality' || tree.status === 'dead';
+    }
     return true;
   });
 
@@ -51,8 +73,45 @@ export default function DashboardPage() {
           <span className="font-medium text-[#F0F3E8]">{user?.course || 'Student Observer'}</span>
           <span className="w-1 h-1 rounded-full bg-[#8B9B4C]"></span>
           <span className="text-[#F0F3E8]">{user?.rollNumber}</span>
+          {(user?.role === 'officer' || String(user?.rollNumber).trim() === '9260572') && (
+            <>
+              <span className="w-1 h-1 rounded-full bg-[#E5A93C]"></span>
+              <span className="text-[#F5D061] font-mono text-[11px] font-bold">🎖️ OFFICER</span>
+            </>
+          )}
         </div>
       </div>
+
+      {/* NSTP Officer Command Hub Launch Card (for Officers) */}
+      {(user?.role === 'officer' || String(user?.rollNumber).trim() === '9260572') && (
+        <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-[#2A3515] to-[#1C230E] text-[#F0F3E8] p-5 shadow-xl border-2 border-[#8B9B4C]">
+          <div className="flex items-start justify-between gap-4 relative z-10">
+            <div className="space-y-1.5 flex-1">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#151C08] border border-[#8B9B4C] text-[#C2CE9F] font-mono text-[11px] font-bold uppercase tracking-wider">
+                <span className="w-2 h-2 rounded-full bg-[#A4B566] animate-ping"></span>
+                Officer Command Active
+              </div>
+              <h3 className="font-display font-bold text-lg text-[#F0F3E8]">
+                Cadet Compliance & Inspection Portal
+              </h3>
+              <p className="text-xs text-[#D8DFC8] leading-relaxed max-w-md">
+                Monitor student field observations, audit mandatory photo evidence, review overdue cadets, and export university grading spreadsheets.
+              </p>
+              <button
+                onClick={() => navigate('/officer/dashboard')}
+                className="mt-2 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#8B9B4C] hover:bg-[#A4B566] text-[#161C0B] font-mono text-xs font-bold uppercase tracking-wider shadow-md transition-all active:scale-95 cursor-pointer"
+              >
+                <Icon name="shield" className="w-4 h-4 text-[#161C0B]" />
+                Launch Officer Hub & Cadet Roster
+                <Icon name="arrow_forward" className="w-3.5 h-3.5 text-[#161C0B]" />
+              </button>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-[#37441B] border border-[#8B9B4C] flex items-center justify-center shrink-0 shadow-inner">
+              <span className="text-2xl">🎖️</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Fast Action Banner: Register New Tree */}
       <div className="relative overflow-hidden rounded-xl bg-[#1D230E] text-[#F0F3E8] p-5 shadow-lg border border-[#5D6A37]">
@@ -188,61 +247,92 @@ export default function DashboardPage() {
                   strokeLinecap="round"
                   strokeWidth="4.5"
                 ></circle>
-                {/* Monitoring */}
+                {/* Thriving */}
                 <circle
                   cx="18"
                   cy="18"
                   fill="none"
                   r="14"
-                  stroke="#6B7D3B"
-                  strokeDasharray={`${monitoringPct * 0.88} 100`}
+                  stroke="#A4B566"
+                  strokeDasharray={`${healthyPct * 0.88} 100`}
+                  strokeDashoffset="0"
+                  strokeLinecap="round"
+                  strokeWidth="4.5"
+                ></circle>
+                {/* Stable / Fair */}
+                <circle
+                  cx="18"
+                  cy="18"
+                  fill="none"
+                  r="14"
+                  stroke="#D99B26"
+                  strokeDasharray={`${fairPct * 0.88} 100`}
                   strokeDashoffset={`-${healthyPct * 0.88}`}
                   strokeLinecap="round"
                   strokeWidth="4.5"
                 ></circle>
-                {/* Intervention / Needs Attention */}
+                {/* Distressed */}
                 <circle
                   cx="18"
                   cy="18"
                   fill="none"
                   r="14"
                   stroke="#E57373"
-                  strokeDasharray={`${attentionPct * 0.88} 100`}
-                  strokeDashoffset={`-${(healthyPct + monitoringPct) * 0.88}`}
+                  strokeDasharray={`${distressedPct * 0.88} 100`}
+                  strokeDashoffset={`-${(healthyPct + fairPct) * 0.88}`}
+                  strokeLinecap="round"
+                  strokeWidth="4.5"
+                ></circle>
+                {/* Mortality */}
+                <circle
+                  cx="18"
+                  cy="18"
+                  fill="none"
+                  r="14"
+                  stroke="#757575"
+                  strokeDasharray={`${mortalityPct * 0.88} 100`}
+                  strokeDashoffset={`-${(healthyPct + fairPct + distressedPct) * 0.88}`}
                   strokeLinecap="round"
                   strokeWidth="4.5"
                 ></circle>
               </svg>
               <div className="absolute flex flex-col items-center justify-center">
                 <span className="font-headline-sm text-headline-sm text-[#F0F3E8] font-bold">
-                  {healthyPct}%
+                  {survivalPct}%
                 </span>
-                <span className="font-label-sm text-label-sm text-[#C2CE9F] font-semibold">Good</span>
+                <span className="font-label-sm text-label-sm text-[#C2CE9F] font-semibold">Surviving</span>
               </div>
             </div>
 
             {/* Legend breakdown */}
-            <div className="flex flex-col justify-center gap-2 flex-1">
+            <div className="flex flex-col justify-center gap-1.5 flex-1">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="w-2.5 h-2.5 rounded-full bg-[#A4B566] shrink-0"></span>
-                  <span className="font-body-sm text-body-sm text-[#F0F3E8] truncate">Healthy</span>
+                  <span className="font-body-sm text-body-sm text-[#F0F3E8] truncate">Thriving</span>
                 </div>
-                <span className="font-label-md text-label-md text-[#F0F3E8] font-semibold">{healthyCount}</span>
+                <span className="font-label-md text-label-md text-[#F0F3E8] font-semibold">{thrivingCount}</span>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#6B7D3B] shrink-0"></span>
-                  <span className="font-body-sm text-body-sm text-[#F0F3E8] truncate">Monitoring</span>
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#D99B26] shrink-0"></span>
+                  <span className="font-body-sm text-body-sm text-[#F0F3E8] truncate">Stable / Fair</span>
                 </div>
-                <span className="font-label-md text-label-md text-[#F0F3E8] font-semibold">{monitoringCount}</span>
+                <span className="font-label-md text-label-md text-[#F0F3E8] font-semibold">{fairCount}</span>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="w-2.5 h-2.5 rounded-full bg-[#E57373] shrink-0"></span>
-                  <span className="font-body-sm text-body-sm text-[#F0F3E8] truncate">Intervention</span>
+                  <span className="font-body-sm text-body-sm text-[#F0F3E8] truncate">Distressed</span>
                 </div>
-                <span className="font-label-md text-label-md text-[#F0F3E8] font-semibold">{attentionCount}</span>
+                <span className="font-label-md text-label-md text-[#F0F3E8] font-semibold">{distressedCount}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#757575] shrink-0"></span>
+                  <span className="font-body-sm text-body-sm text-[#F0F3E8] truncate">Dead / Mortality</span>
+                </div>
+                <span className="font-label-md text-label-md text-[#AAB596] font-semibold">{mortalityCount}</span>
               </div>
             </div>
           </div>
@@ -264,8 +354,8 @@ export default function DashboardPage() {
 
         {/* Filter Chips Row */}
         {trees.length > 0 && (
-          <div className="flex items-center gap-2 overflow-x-auto pb-1">
-            {['All', 'Healthy', 'Monitoring', 'Needing Care'].map((filter) => (
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+            {['All', 'Thriving', 'Stable / Fair', 'Distressed', 'Mortality'].map((filter) => (
               <button
                 key={filter}
                 onClick={() => setActiveFilter(filter)}
