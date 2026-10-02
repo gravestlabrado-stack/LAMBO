@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { formatDate } from '../../utils/formatters';
+import Icon from '../common/Icon';
 
 export default function GrowthChart({ logs = [], initialTree = null }) {
   const [timeframe, setTimeframe] = useState('All Time');
@@ -141,9 +142,7 @@ export default function GrowthChart({ logs = [], initialTree = null }) {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
         <div>
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-[20px] text-[#A4B566]">
-              ssid_chart
-            </span>
+            <Icon name="ssid_chart" className="w-5 h-5 text-[#A4B566]" />
             <h3 className="font-headline-sm text-headline-sm text-[#F0F3E8] font-bold">
               Morphometric Progression Curves
             </h3>
@@ -174,7 +173,7 @@ export default function GrowthChart({ logs = [], initialTree = null }) {
 
       {chartData.length === 0 ? (
         <div className="h-44 bg-[#1D230E] rounded-xl border border-[#3E4723] flex flex-col items-center justify-center p-6 text-center space-y-2">
-          <span className="material-symbols-outlined text-3xl text-[#525E31]">query_stats</span>
+          <Icon name="query_stats" className="w-8 h-8 text-[#525E31]" />
           <p className="font-mono text-xs text-[#CCD6B8]">
             No growth observation logs available for this timeframe.
           </p>
@@ -309,9 +308,7 @@ export default function GrowthChart({ logs = [], initialTree = null }) {
           {activePoint && (
             <div className="p-3 rounded-xl bg-[#1D230E] border border-[#525E31] flex items-center justify-between animate-in fade-in">
               <div className="flex items-center gap-3">
-                <span className="material-symbols-outlined text-[#8B9B4C] text-[20px]">
-                  info
-                </span>
+                <Icon name="info" className="text-[#8B9B4C] w-5 h-5" />
                 <div>
                   <span className="font-mono text-xs font-bold text-[#F0F3E8]">
                     {activePoint.formattedDate} • {activePoint.stage}
@@ -328,7 +325,7 @@ export default function GrowthChart({ logs = [], initialTree = null }) {
                 onClick={() => setActivePoint(null)}
                 className="text-[#AAB596] hover:text-[#F0F3E8] p-1"
               >
-                <span className="material-symbols-outlined text-[16px]">close</span>
+                <Icon name="close" className="w-4 h-4" />
               </button>
             </div>
           )}

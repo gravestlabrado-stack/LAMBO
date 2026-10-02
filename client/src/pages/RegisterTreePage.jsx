@@ -6,6 +6,7 @@ import LocationPickerMap from '../components/map/LocationPickerMap';
 import QRCodeDisplay from '../components/tree/QRCodeDisplay';
 import zoneService from '../services/zoneService';
 import { compressImage } from '../utils/imageCompressor';
+import Icon from '../components/common/Icon';
 
 export default function RegisterTreePage() {
   const navigate = useNavigate();
@@ -223,13 +224,13 @@ export default function RegisterTreePage() {
           </p>
         </div>
         <div className="w-11 h-11 rounded-2xl bg-[#30371A] border border-[#525E31] flex items-center justify-center text-[#A4B566] shrink-0 shadow-sm">
-          <span className="material-symbols-outlined text-[24px]">add_task</span>
+          <Icon name="add_task" className="w-6 h-6" />
         </div>
       </div>
 
       {submitError && (
         <div className="p-4 rounded-xl bg-[#431B1B]/80 border border-[#E57373]/60 text-[#FFCDD2] text-xs font-mono flex items-center gap-2.5 animate-in fade-in">
-          <span className="material-symbols-outlined text-[20px] text-[#E57373]">error</span>
+          <Icon name="error" className="w-5 h-5 text-[#E57373]" />
           <span>{submitError}</span>
         </div>
       )}
@@ -239,9 +240,7 @@ export default function RegisterTreePage() {
         <section className="bg-[#30371A] rounded-2xl p-5 shadow-sm border border-[#525E31] space-y-4">
           <div className="flex items-center justify-between border-b border-[#4F5A2D] pb-3">
             <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-[#A4B566] text-[22px]">
-                pin_drop
-              </span>
+              <Icon name="pin_drop" className="text-[#A4B566] w-5 h-5" />
               <h3 className="font-headline-sm text-headline-sm text-[#F0F3E8] font-bold">
                 Geospatial Location &amp; Sector
               </h3>
@@ -275,7 +274,7 @@ export default function RegisterTreePage() {
                   onClick={() => setShowAddZoneInput(true)}
                   className="text-xs font-mono text-[#A4B566] hover:underline flex items-center gap-1"
                 >
-                  <span className="material-symbols-outlined text-[15px]">add_circle</span>
+                  <Icon name="add_circle" className="w-3.5 h-3.5" />
                   Add New Sector
                 </button>
               )}
@@ -337,9 +336,10 @@ export default function RegisterTreePage() {
                   ))
                 )}
               </select>
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#A4B566] material-symbols-outlined text-[20px]">
-                arrow_drop_down
-              </span>
+              <Icon
+                name="arrow_drop_down"
+                className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#A4B566] w-5 h-5"
+              />
             </div>
           </div>
         </section>
@@ -347,9 +347,7 @@ export default function RegisterTreePage() {
         {/* SECTION 2: Botanical Species & Specimen ID */}
         <section className="bg-[#30371A] rounded-2xl p-5 shadow-sm border border-[#525E31] space-y-4">
           <div className="flex items-center gap-2 border-b border-[#4F5A2D] pb-3">
-            <span className="material-symbols-outlined text-[#A4B566] text-[22px]">
-              eco
-            </span>
+            <Icon name="eco" className="text-[#A4B566] w-5 h-5" />
             <h3 className="font-headline-sm text-headline-sm text-[#F0F3E8] font-bold">
               Botanical Species &amp; Identification
             </h3>
@@ -378,7 +376,7 @@ export default function RegisterTreePage() {
                     }`}
                   >
                     {isSelected && (
-                      <span className="material-symbols-outlined text-[14px]">check</span>
+                      <Icon name="check" className="w-3.5 h-3.5" />
                     )}
                     {preset.split(' (')[0]}
                   </button>
@@ -419,9 +417,7 @@ export default function RegisterTreePage() {
         {/* SECTION 3: Wildling Photo & Status */}
         <section className="bg-[#30371A] rounded-2xl p-5 shadow-sm border border-[#525E31] space-y-4">
           <div className="flex items-center gap-2 border-b border-[#4F5A2D] pb-3">
-            <span className="material-symbols-outlined text-[#A4B566] text-[22px]">
-              photo_camera
-            </span>
+            <Icon name="photo_camera" className="text-[#A4B566] w-5 h-5" />
             <h3 className="font-headline-sm text-headline-sm text-[#F0F3E8] font-bold">
               Field Photo &amp; Health Assessment
             </h3>
@@ -442,7 +438,7 @@ export default function RegisterTreePage() {
                   className="absolute top-1.5 right-1.5 w-7 h-7 rounded-full bg-black/75 text-[#FFCDD2] flex items-center justify-center hover:bg-black transition-colors"
                   title="Remove photo"
                 >
-                  <span className="material-symbols-outlined text-[16px]">close</span>
+                  <Icon name="close" className="w-4 h-4" />
                 </button>
               </div>
             ) : (
@@ -452,9 +448,10 @@ export default function RegisterTreePage() {
                   onClick={() => cameraInputRef.current?.click()}
                   className="w-full sm:w-32 h-28 rounded-xl border-2 border-dashed border-[#525E31] hover:border-[#8B9B4C] flex flex-col items-center justify-center gap-1 text-[#AAB596] hover:text-[#F0F3E8] cursor-pointer bg-[#262C14] hover:bg-[#30371A] active:scale-95 transition-all shrink-0 group"
                 >
-                  <span className="material-symbols-outlined text-2xl text-[#A4B566] group-hover:scale-110 transition-transform">
-                    photo_camera
-                  </span>
+                  <Icon
+                    name="photo_camera"
+                    className="w-6 h-6 text-[#A4B566] group-hover:scale-110 transition-transform"
+                  />
                   <span className="text-xs font-mono font-bold text-[#F0F3E8]">Take Photo</span>
                   <span className="text-[10px] font-mono text-[#CCD6B8]">Direct Camera</span>
                 </button>
@@ -464,9 +461,10 @@ export default function RegisterTreePage() {
                   onClick={() => galleryInputRef.current?.click()}
                   className="w-full sm:w-32 h-28 rounded-xl border-2 border-dashed border-[#525E31] hover:border-[#8B9B4C] flex flex-col items-center justify-center gap-1 text-[#AAB596] hover:text-[#F0F3E8] cursor-pointer bg-[#262C14] hover:bg-[#30371A] active:scale-95 transition-all shrink-0 group"
                 >
-                  <span className="material-symbols-outlined text-2xl text-[#8B9B4C] group-hover:scale-110 transition-transform">
-                    photo_library
-                  </span>
+                  <Icon
+                    name="photo_library"
+                    className="w-6 h-6 text-[#8B9B4C] group-hover:scale-110 transition-transform"
+                  />
                   <span className="text-xs font-mono font-bold text-[#F0F3E8]">Choose File</span>
                   <span className="text-[10px] font-mono text-[#CCD6B8]">Gallery / Storage</span>
                 </button>
@@ -489,7 +487,7 @@ export default function RegisterTreePage() {
                     onClick={() => cameraInputRef.current?.click()}
                     className="h-8 px-3 rounded-lg bg-[#30371A] hover:bg-[#3D4721] border border-[#525E31] text-[11px] font-mono text-[#D8DFC8] inline-flex items-center gap-1 active:scale-95 transition-all"
                   >
-                    <span className="material-symbols-outlined text-[14px] text-[#A4B566]">photo_camera</span>
+                    <Icon name="photo_camera" className="w-3.5 h-3.5 text-[#A4B566]" />
                     Retake Camera
                   </button>
                   <button
@@ -497,7 +495,7 @@ export default function RegisterTreePage() {
                     onClick={() => galleryInputRef.current?.click()}
                     className="h-8 px-3 rounded-lg bg-[#30371A] hover:bg-[#3D4721] border border-[#525E31] text-[11px] font-mono text-[#D8DFC8] inline-flex items-center gap-1 active:scale-95 transition-all"
                   >
-                    <span className="material-symbols-outlined text-[14px] text-[#8B9B4C]">photo_library</span>
+                    <Icon name="photo_library" className="w-3.5 h-3.5 text-[#8B9B4C]" />
                     From Gallery
                   </button>
                 </div>
@@ -576,9 +574,7 @@ export default function RegisterTreePage() {
         {/* SECTION 4: Baseline Morphometrics */}
         <section className="bg-[#30371A] rounded-2xl p-5 shadow-sm border border-[#525E31] space-y-4">
           <div className="flex items-center gap-2 border-b border-[#4F5A2D] pb-3">
-            <span className="material-symbols-outlined text-[#A4B566] text-[22px]">
-              straighten
-            </span>
+            <Icon name="straighten" className="text-[#A4B566] w-5 h-5" />
             <h3 className="font-headline-sm text-headline-sm text-[#F0F3E8] font-bold">
               Baseline Measurements
             </h3>
@@ -611,7 +607,7 @@ export default function RegisterTreePage() {
                   className="w-8 h-8 rounded-lg bg-[#30371A] border border-[#525E31] text-[#D8DFC8] flex items-center justify-center hover:bg-[#3D4721] active:scale-95 transition-all"
                   title="Decrease height (-5)"
                 >
-                  <span className="material-symbols-outlined text-[16px]">remove</span>
+                  <Icon name="remove" className="w-4 h-4" />
                 </button>
                 <button
                   type="button"
@@ -619,7 +615,7 @@ export default function RegisterTreePage() {
                   className="w-8 h-8 rounded-lg bg-[#30371A] border border-[#525E31] text-[#D8DFC8] flex items-center justify-center hover:bg-[#3D4721] active:scale-95 transition-all"
                   title="Increase height (+5)"
                 >
-                  <span className="material-symbols-outlined text-[16px]">add</span>
+                  <Icon name="add" className="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -650,7 +646,7 @@ export default function RegisterTreePage() {
                   className="w-8 h-8 rounded-lg bg-[#30371A] border border-[#525E31] text-[#D8DFC8] flex items-center justify-center hover:bg-[#3D4721] active:scale-95 transition-all"
                   title="Decrease stem DBH (-1)"
                 >
-                  <span className="material-symbols-outlined text-[16px]">remove</span>
+                  <Icon name="remove" className="w-4 h-4" />
                 </button>
                 <button
                   type="button"
@@ -658,7 +654,7 @@ export default function RegisterTreePage() {
                   className="w-8 h-8 rounded-lg bg-[#30371A] border border-[#525E31] text-[#D8DFC8] flex items-center justify-center hover:bg-[#3D4721] active:scale-95 transition-all"
                   title="Increase stem DBH (+1)"
                 >
-                  <span className="material-symbols-outlined text-[16px]">add</span>
+                  <Icon name="add" className="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -689,7 +685,7 @@ export default function RegisterTreePage() {
                   className="w-8 h-8 rounded-lg bg-[#30371A] border border-[#525E31] text-[#D8DFC8] flex items-center justify-center hover:bg-[#3D4721] active:scale-95 transition-all"
                   title="Decrease leaf count (-1)"
                 >
-                  <span className="material-symbols-outlined text-[16px]">remove</span>
+                  <Icon name="remove" className="w-4 h-4" />
                 </button>
                 <button
                   type="button"
@@ -697,7 +693,7 @@ export default function RegisterTreePage() {
                   className="w-8 h-8 rounded-lg bg-[#30371A] border border-[#525E31] text-[#D8DFC8] flex items-center justify-center hover:bg-[#3D4721] active:scale-95 transition-all"
                   title="Increase leaf count (+1)"
                 >
-                  <span className="material-symbols-outlined text-[16px]">add</span>
+                  <Icon name="add" className="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -731,7 +727,7 @@ export default function RegisterTreePage() {
             </>
           ) : (
             <>
-              <span className="material-symbols-outlined text-[24px]">app_registration</span>
+              <Icon name="app_registration" className="w-6 h-6" />
               <span>Enroll Plant / Tree &amp; Generate QR Tag</span>
             </>
           )}

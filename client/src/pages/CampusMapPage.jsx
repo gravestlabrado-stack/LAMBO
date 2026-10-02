@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import Icon from '../components/common/Icon';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -301,7 +302,7 @@ export default function CampusMapPage() {
                 : 'text-[#D8DFC8] hover:text-[#F0F3E8] hover:bg-[#30371A]'
             }`}
           >
-            <span className="material-symbols-outlined text-[17px]">public</span>
+            <Icon name="public" className="text-[17px]" />
             <span>All Campus ({allTrees.length})</span>
           </button>
 
@@ -314,7 +315,7 @@ export default function CampusMapPage() {
                 : 'text-[#D8DFC8] hover:text-[#F0F3E8] hover:bg-[#30371A]'
             }`}
           >
-            <span className="material-symbols-outlined text-[17px]">person</span>
+            <Icon name="person" className="text-[17px]" />
             <span>My Plants &amp; Trees ({myTreesCount})</span>
           </button>
         </div>
@@ -324,7 +325,7 @@ export default function CampusMapPage() {
       {locationError && (
         <div className="p-3 rounded-xl bg-[#431B1B]/85 border border-[#E57373]/60 text-xs font-mono text-[#FFCDD2] flex items-center justify-between gap-3 animate-in fade-in">
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-[18px] text-[#E57373]">warning</span>
+            <Icon name="warning" className="text-[18px] text-[#E57373]" />
             <span>{locationError}</span>
           </div>
           <button
@@ -332,7 +333,7 @@ export default function CampusMapPage() {
             onClick={() => setLocationError('')}
             className="text-[#FFCDD2] hover:text-white"
           >
-            <span className="material-symbols-outlined text-[16px]">close</span>
+            <Icon name="close" className="text-[16px]" />
           </button>
         </div>
       )}
@@ -376,7 +377,7 @@ export default function CampusMapPage() {
             className="h-9 px-3 rounded-xl bg-[#262C14] hover:bg-[#30371A] border border-[#525E31] text-[#C2CE9F] text-xs font-mono font-semibold flex items-center gap-1.5 transition-colors shadow-sm"
             title="Center map on CTU Barili Campus"
           >
-            <span className="material-symbols-outlined text-[16px] text-[#A4B566]">school</span>
+            <Icon name="school" className="text-[16px] text-[#A4B566]" />
             <span>CTU Barili</span>
           </button>
 
@@ -395,7 +396,7 @@ export default function CampusMapPage() {
               </>
             ) : (
               <>
-                <span className="material-symbols-outlined text-[16px]">my_location</span>
+                <Icon name="my_location" className="text-[16px]" />
                 <span>Find My Location</span>
               </>
             )}
@@ -450,7 +451,7 @@ export default function CampusMapPage() {
                 <Popup>
                   <div className="p-1 font-mono text-xs text-[#1D230E]">
                     <strong className="text-[#4285F4] flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[14px]">my_location</span>
+                      <Icon name="my_location" className="text-[14px]" />
                       You are here
                     </strong>
                     <span className="text-[11px] block mt-0.5">

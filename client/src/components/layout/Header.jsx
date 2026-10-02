@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import Icon from '../common/Icon';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
@@ -322,9 +323,7 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
                     title={`${offlineCount} offline log(s) stored locally. Click to sync with server.`}
                     className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#D99B26]/30 border border-[#D99B26] text-[#F5C26B] font-mono text-[10px] font-bold animate-pulse hover:bg-[#D99B26]/40 transition-colors"
                   >
-                    <span className="material-symbols-outlined text-[13px]">
-                      {isSyncingOffline ? 'sync' : 'cloud_upload'}
-                    </span>
+                    <Icon name={isSyncingOffline ? 'sync' : 'cloud_upload'} className="text-[13px]" />
                     <span>{isSyncingOffline ? 'Syncing...' : `${offlineCount} Offline`}</span>
                   </button>
                   <div className="w-[1px] h-4 bg-[#525E31]/80" />
@@ -345,7 +344,7 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
                 title="Care Reminders"
                 className="relative w-8 h-8 rounded-full flex items-center justify-center text-[#D8DFC8] hover:text-[#F0F3E8] hover:bg-[#38411F] transition-all"
               >
-                <span className="material-symbols-outlined text-[19px]">notifications</span>
+                <Icon name="notifications" className="text-[19px]" />
                 {pendingCount > 0 && (
                   <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-[#D99B26] text-[#1D230E] font-mono text-[10px] font-bold flex items-center justify-center shadow-sm">
                     {pendingCount}
@@ -361,7 +360,7 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
                 title="Global Campus Specimen Map"
                 className="w-8 h-8 rounded-full flex items-center justify-center text-[#D8DFC8] hover:text-[#A4B566] hover:bg-[#38411F] transition-all"
               >
-                <span className="material-symbols-outlined text-[19px]">map</span>
+                <Icon name="map" className="text-[19px]" />
               </button>
 
               {/* Install App Quick Button - ONLY visible if app is NOT installed */}
@@ -374,7 +373,7 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
                     aria-label="Install App"
                     className="w-8 h-8 rounded-full flex items-center justify-center text-[#D8DFC8] hover:text-[#A4B566] hover:bg-[#38411F] transition-all"
                   >
-                    <span className="material-symbols-outlined text-[18px]">install_mobile</span>
+                    <Icon name="install_mobile" className="text-[18px]" />
                   </button>
                   <div className="w-[1px] h-4 bg-[#525E31]/80" />
                 </>
@@ -448,7 +447,7 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
                           </span>
                         )}
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                          <span className="material-symbols-outlined text-white text-[16px]">edit</span>
+                          <Icon name="edit" className="text-white text-[16px]" />
                         </div>
                       </div>
                       {String(user?.rollNumber).trim() === '9260572' && (
@@ -471,9 +470,7 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
                       )}
                       {(user?.role === 'officer' || String(user?.rollNumber).trim() === '9260572') && (
                         <div className="mt-1.5 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#D99B26]/20 border border-[#F5C26B]/80 text-[#F5C26B] font-mono text-[10px] font-bold uppercase tracking-wider select-none shadow-[0_0_8px_rgba(245,194,107,0.25)]">
-                          <span className="material-symbols-outlined text-[14px] text-[#F5C26B]">
-                            military_tech
-                          </span>
+                          <Icon name="military_tech" className="text-[14px] text-[#F5C26B]" />
                           <span>NSTP Officer</span>
                         </div>
                       )}
@@ -516,9 +513,7 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
                         }}
                         className="w-full px-3 py-2.5 rounded-xl text-left text-xs font-mono font-bold text-[#F5C26B] bg-[#30371A] hover:bg-[#3D4721] border border-[#D99B26]/50 transition-colors flex items-center gap-2.5 group shadow-sm"
                       >
-                        <span className="material-symbols-outlined text-[18px] text-[#F5C26B] group-hover:scale-110 transition-transform">
-                          military_tech
-                        </span>
+                        <Icon name="military_tech" className="text-[18px] text-[#F5C26B] group-hover:scale-110 transition-transform" />
                         <span>Officer Command Portal</span>
                       </button>
                     )}
@@ -532,9 +527,7 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
                       }}
                       className="w-full px-3 py-2.5 rounded-xl text-left text-xs font-mono font-medium text-[#D8DFC8] hover:bg-[#30371A] hover:text-[#F0F3E8] transition-colors flex items-center gap-2.5 group"
                     >
-                      <span className="material-symbols-outlined text-[18px] text-[#A4B566] group-hover:scale-110 transition-transform">
-                        map
-                      </span>
+                      <Icon name="map" className="text-[18px] text-[#A4B566] group-hover:scale-110 transition-transform" />
                       Global Campus Map
                     </button>
 
@@ -544,9 +537,7 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
                       onClick={handleOpenEditProfile}
                       className="w-full px-3 py-2.5 rounded-xl text-left text-xs font-mono font-medium text-[#D8DFC8] hover:bg-[#30371A] hover:text-[#F0F3E8] transition-colors flex items-center gap-2.5 group"
                     >
-                      <span className="material-symbols-outlined text-[18px] text-[#A4B566] group-hover:scale-110 transition-transform">
-                        manage_accounts
-                      </span>
+                      <Icon name="manage_accounts" className="text-[18px] text-[#A4B566] group-hover:scale-110 transition-transform" />
                       Edit Profile & Photo
                     </button>
 
@@ -560,9 +551,7 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
                         }}
                         className="w-full px-3 py-2.5 rounded-xl text-left text-xs font-mono font-medium text-[#D8DFC8] hover:bg-[#30371A] hover:text-[#F0F3E8] transition-colors flex items-center gap-2.5"
                       >
-                        <span className="material-symbols-outlined text-[18px] text-[#A4B566]">
-                          install_mobile
-                        </span>
+                        <Icon name="install_mobile" className="text-[18px] text-[#A4B566]" />
                         Install PWA App
                       </button>
                     )}
@@ -576,7 +565,7 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
                       }}
                       className="w-full px-3 py-2.5 rounded-xl text-left text-xs font-mono font-bold text-[#E57373] hover:bg-[#431B1B]/80 hover:text-[#FFCDD2] transition-colors flex items-center gap-2.5"
                     >
-                      <span className="material-symbols-outlined text-[18px]">logout</span>
+                      <Icon name="logout" className="text-[18px]" />
                       Sign Out / Logout
                     </button>
                   </div>
@@ -594,7 +583,7 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-[#4F5A2D] pb-3">
               <div className="flex items-center gap-2.5">
-                <span className="material-symbols-outlined text-[#A4B566] text-[24px]">manage_accounts</span>
+                <Icon name="manage_accounts" className="text-[#A4B566] text-[24px]" />
                 <div>
                   <h3 className="font-display font-bold text-base text-[#F0F3E8]">
                     Edit Student Profile
@@ -609,20 +598,20 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
                 onClick={() => setShowEditProfile(false)}
                 className="w-8 h-8 rounded-full bg-[#30371A] border border-[#525E31] text-[#AAB596] flex items-center justify-center hover:text-[#F0F3E8] transition-colors"
               >
-                <span className="material-symbols-outlined text-[18px]">close</span>
+                <Icon name="close" className="text-[18px]" />
               </button>
             </div>
 
             {/* Error & Success Feedback */}
             {profileError && (
               <div className="p-3 rounded-xl bg-[#431B1B]/80 border border-[#E57373]/50 text-[#FFCDD2] text-xs font-mono flex items-center gap-2">
-                <span className="material-symbols-outlined text-[18px] text-[#E57373]">error</span>
+                <Icon name="error" className="text-[18px] text-[#E57373]" />
                 <span>{profileError}</span>
               </div>
             )}
             {profileSuccess && (
               <div className="p-3 rounded-xl bg-[#1D331A]/80 border border-[#A4B566]/60 text-[#C5E1A5] text-xs font-mono flex items-center gap-2">
-                <span className="material-symbols-outlined text-[18px] text-[#A4B566]">check_circle</span>
+                <Icon name="check_circle" className="text-[18px] text-[#A4B566]" />
                 <span>{profileSuccess}</span>
               </div>
             )}
@@ -646,7 +635,7 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
                     </span>
                   )}
                   <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-white transition-opacity">
-                    <span className="material-symbols-outlined text-[20px]">photo_camera</span>
+                    <Icon name="photo_camera" className="text-[20px]" />
                     <span className="text-[9px] font-mono">Change</span>
                   </div>
                 </div>
@@ -664,7 +653,7 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
                     onClick={() => fileInputRef.current?.click()}
                     className="px-3 py-1.5 rounded-lg bg-[#30371A] hover:bg-[#3D4721] border border-[#525E31] text-xs font-mono text-[#F0F3E8] flex items-center gap-1.5 transition-colors"
                   >
-                    <span className="material-symbols-outlined text-[16px] text-[#A4B566]">upload</span>
+                    <Icon name="upload" className="text-[16px] text-[#A4B566]" />
                     {avatarPreview ? 'Choose Different Photo' : 'Upload Profile Photo'}
                   </button>
                   <p className="font-mono text-[10px] text-[#AAB596]">
@@ -695,7 +684,7 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
                     Student / Roll Number
                   </label>
                   <span className="text-[10px] font-mono text-[#8B9B4C] flex items-center gap-1">
-                    <span className="material-symbols-outlined text-[12px]">lock</span>
+                    <Icon name="lock" className="text-[12px]" />
                     Permanent ID
                   </span>
                 </div>
@@ -728,9 +717,7 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
                   onClick={() => setShowPasswordFields(!showPasswordFields)}
                   className="text-xs font-mono text-[#A4B566] hover:underline flex items-center gap-1 py-1"
                 >
-                  <span className="material-symbols-outlined text-[16px]">
-                    {showPasswordFields ? 'expand_less' : 'expand_more'}
-                  </span>
+                  <Icon name={showPasswordFields ? 'expand_less' : 'expand_more'} className="text-[16px]" />
                   {showPasswordFields ? 'Hide Password Change' : 'Change Password (Optional)'}
                 </button>
 
@@ -778,7 +765,7 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
                     </>
                   ) : (
                     <>
-                      <span className="material-symbols-outlined text-[16px]">save</span>
+                      <Icon name="save" className="text-[16px]" />
                       <span>Save Changes</span>
                     </>
                   )}
@@ -804,7 +791,7 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
           <div className="w-full max-w-sm rounded-2xl bg-[#262C14] border border-[#5D6A37] p-4 shadow-2xl space-y-3 animate-drawer-enter">
             <div className="flex items-center justify-between border-b border-[#4F5A2D] pb-3">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[#A4B566]">event_available</span>
+                <Icon name="event_available" className="text-[#A4B566]" />
                 <div>
                   <h3 className="font-headline-sm text-headline-sm text-[#F0F3E8] font-bold">
                     Care Reminders
@@ -819,7 +806,7 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
                 onClick={() => setShowReminders(false)}
                 className="w-7 h-7 rounded-full bg-[#30371A] border border-[#525E31] text-[#AAB596] flex items-center justify-center hover:text-[#F0F3E8]"
               >
-                <span className="material-symbols-outlined text-[16px]">close</span>
+                <Icon name="close" className="text-[16px]" />
               </button>
             </div>
 
@@ -828,9 +815,7 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
               <div className="p-3 rounded-xl bg-[#1D230E] border border-[#525E31] space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-[#A4B566] text-[18px]">
-                      {pushPermission === 'granted' ? 'notifications_active' : 'notifications_paused'}
-                    </span>
+                    <Icon name={pushPermission === 'granted' ? 'notifications_active' : 'notifications_paused'} className="text-[#A4B566] text-[18px]" />
                     <span className="font-mono text-xs font-bold text-[#F0F3E8]">
                       Device Push Alerts
                     </span>
@@ -854,7 +839,7 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
                       disabled={isSubscribingPush}
                       className="flex-1 h-8 rounded-lg bg-[#8B9B4C] hover:bg-[#9EAF6D] text-[#1F240F] font-mono text-xs font-bold flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
                     >
-                      <span className="material-symbols-outlined text-[14px]">add_alert</span>
+                      <Icon name="add_alert" className="text-[14px]" />
                       <span>{isSubscribingPush ? 'Enabling...' : 'Enable Push Alerts'}</span>
                     </button>
                   ) : (
@@ -864,7 +849,7 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
                       title="Send a test notification only to this device"
                       className="flex-1 h-8 rounded-lg bg-[#30371A] hover:bg-[#3D4721] border border-[#525E31] text-[#A4B566] font-mono text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
                     >
-                      <span className="material-symbols-outlined text-[14px]">send</span>
+                      <Icon name="send" className="text-[14px]" />
                       <span>Test This Device</span>
                     </button>
                   )}
@@ -903,13 +888,7 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
                         onClick={() => toggleReminder(remId)}
                         className="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer"
                       >
-                        <span
-                          className={`material-symbols-outlined text-[20px] ${
-                            rem.completed ? 'text-[#A4B566]' : 'text-[#AAB596]'
-                          }`}
-                        >
-                          {rem.completed ? 'check_circle' : 'radio_button_unchecked'}
-                        </span>
+                        <Icon name={rem.completed ? 'check_circle' : 'radio_button_unchecked'} className={`text-[20px] ${ rem.completed ? 'text-[#A4B566]' : 'text-[#AAB596]' }`} />
                         <div className="min-w-0">
                           <span
                             className={`font-body-md text-body-md font-semibold truncate block ${
@@ -941,7 +920,7 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
                             className="text-[#AAB596] hover:text-[#E57373] p-1 transition-colors"
                             title="Delete task"
                           >
-                            <span className="material-symbols-outlined text-[16px]">delete</span>
+                            <Icon name="delete" className="text-[16px]" />
                           </button>
                         )}
                       </div>
@@ -1060,7 +1039,7 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
                 onClick={() => setShowNewReminderInput(true)}
                 className="w-full py-2 rounded-xl bg-[#30371A] border border-[#525E31] text-[#D8DFC8] hover:text-[#F0F3E8] hover:border-[#8B9B4C] font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors"
               >
-                <span className="material-symbols-outlined text-[16px]">add</span>
+                <Icon name="add" className="text-[16px]" />
                 Add New Care Task
               </button>
             )}

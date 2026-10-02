@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import treeService from '../services/treeService';
 import TreeCard from '../components/tree/TreeCard';
 import { GROWTH_STAGES, HEALTH_STATUSES } from '../utils/constants';
+import Icon from '../components/common/Icon';
 
 export default function TreeListPage() {
   const { user } = useAuth();
@@ -108,14 +109,14 @@ export default function TreeListPage() {
             className="h-10 px-3.5 rounded-full bg-[#30371A] hover:bg-[#3D4721] text-[#A4B566] border border-[#525E31] font-mono text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-sm active:scale-95 transition-all"
             title="Switch to Campus GPS Map"
           >
-            <span className="material-symbols-outlined text-[18px]">map</span>
+            <Icon name="map" className="w-4.5 h-4.5" />
             <span>Map View</span>
           </Link>
           <Link
             to="/register-tree"
             className="h-10 px-4 rounded-full bg-[#8B9B4C] hover:bg-[#9EAF6D] text-[#1F240F] font-mono text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-md active:scale-95 transition-all shrink-0"
           >
-            <span className="material-symbols-outlined text-[18px]">add_circle</span>
+            <Icon name="add_circle" className="w-4.5 h-4.5" />
             <span>Register</span>
           </Link>
         </div>
@@ -132,7 +133,7 @@ export default function TreeListPage() {
               : 'text-[#CCD6B8] hover:text-[#F0F3E8]'
           }`}
         >
-          <span className="material-symbols-outlined text-[16px]">public</span>
+          <Icon name="public" className="w-4 h-4" />
           <span>All Campus Plants ({trees.length})</span>
         </button>
         <button
@@ -144,16 +145,14 @@ export default function TreeListPage() {
               : 'text-[#CCD6B8] hover:text-[#F0F3E8]'
           }`}
         >
-          <span className="material-symbols-outlined text-[16px]">person</span>
+          <Icon name="person" className="w-4 h-4" />
           <span>My Specimens ({myTreesCount})</span>
         </button>
       </div>
 
       {/* Search Input Bar */}
       <div className="relative flex items-center">
-        <span className="material-symbols-outlined absolute left-3.5 text-[#AAB596] text-[20px]">
-          search
-        </span>
+        <Icon name="search" className="absolute left-3.5 text-[#AAB596] w-5 h-5" />
         <input
           type="text"
           placeholder="Search by ID (#LMB-...), species, nickname, or campus sector..."
@@ -166,7 +165,7 @@ export default function TreeListPage() {
             onClick={() => setSearchTerm('')}
             className="absolute right-3 text-[#AAB596] hover:text-[#F0F3E8] p-1"
           >
-            <span className="material-symbols-outlined text-[18px]">cancel</span>
+            <Icon name="cancel" className="w-4.5 h-4.5" />
           </button>
         )}
       </div>
@@ -244,7 +243,7 @@ export default function TreeListPage() {
       {error && (
         <div className="rounded-xl bg-[#431B1B] border border-[#E57373]/60 p-4 flex items-center justify-between text-xs text-[#FFCDD2]">
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-[18px]">error</span>
+            <Icon name="error" className="w-4.5 h-4.5" />
             <span>{error}</span>
           </div>
           <button
@@ -295,7 +294,7 @@ export default function TreeListPage() {
         /* Empty State */
         <div className="bg-[#262C14] border border-[#4F5A2D] rounded-2xl p-10 text-center space-y-3">
           <div className="w-14 h-14 mx-auto rounded-full bg-[#1D230E] border border-[#525E31] flex items-center justify-center text-[#8B9B4C]">
-            <span className="material-symbols-outlined text-3xl">park</span>
+            <Icon name="park" className="w-8 h-8" />
           </div>
           <div>
             <h3 className="font-display font-bold text-base text-[#F0F3E8]">
@@ -328,7 +327,7 @@ export default function TreeListPage() {
                 to="/register-tree"
                 className="h-10 px-5 rounded-xl bg-[#8B9B4C] hover:bg-[#9EAF6D] text-[#1F240F] font-mono text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-md"
               >
-                <span className="material-symbols-outlined text-[18px]">add_circle</span>
+                <Icon name="add_circle" className="w-4.5 h-4.5" />
                 <span>Register First Specimen</span>
               </Link>
             )}

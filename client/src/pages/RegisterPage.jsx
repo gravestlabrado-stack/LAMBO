@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import Icon from '../components/common/Icon';
 
 // Preliminary degree programs (can be expanded once final departmental list is provided)
 const COURSE_PRESETS = [
@@ -84,7 +85,7 @@ export default function RegisterPage() {
 
         {error && (
           <div className="rounded-xl bg-[#431B1B] border border-[#E57373] text-[#FFCDD2] p-3 text-xs mb-4 flex items-center gap-2 font-mono">
-            <span className="material-symbols-outlined text-[18px]">error</span>
+            <Icon name="error" className="text-[#FFCDD2] w-4.5 h-4.5" />
             {error}
           </div>
         )}
@@ -187,9 +188,10 @@ export default function RegisterPage() {
               onClick={() => setShowStaffSection(!showStaffSection)}
               className="text-xs font-mono text-[#F5C26B] hover:text-[#FFD54F] transition-colors flex items-center gap-1.5 focus:outline-none"
             >
-              <span className="material-symbols-outlined text-[16px]">
-                {showStaffSection ? 'expand_less' : 'military_tech'}
-              </span>
+              <Icon
+                name={showStaffSection ? 'expand_less' : 'military_tech'}
+                className="w-4 h-4"
+              />
               <span>
                 {showStaffSection
                   ? 'Hide Officer Clearance Code'
@@ -221,9 +223,7 @@ export default function RegisterPage() {
             disabled={loading}
             className="w-full h-12 rounded-xl bg-[#8B9B4C] hover:bg-[#9EAF6D] active:scale-[0.98] transition-all text-[#1F240F] font-mono text-sm font-bold uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 mt-2"
           >
-            <span className="material-symbols-outlined text-[20px]">
-              person_add
-            </span>
+            <Icon name="person_add" className="w-5 h-5" />
             {loading ? 'Registering...' : 'Complete Registration'}
           </button>
         </form>
@@ -233,7 +233,7 @@ export default function RegisterPage() {
             to="/login"
             className="text-xs text-[#AAB596] hover:text-[#A4B566] transition-colors inline-flex items-center gap-1 font-mono"
           >
-            <span className="material-symbols-outlined text-[14px]">arrow_back</span>
+            <Icon name="arrow_back" className="w-3.5 h-3.5" />
             Already enrolled? Return to login
           </Link>
         </div>

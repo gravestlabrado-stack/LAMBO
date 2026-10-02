@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-lea
 import L from 'leaflet';
 import { CAMPUS_COORDINATES } from '../../utils/constants';
 import { getCurrentCoordinates } from '../../utils/geolocation';
+import Icon from '../common/Icon';
 
 // Custom Tactical Pin Icon using Material Symbols & SVG
 const createPinIcon = () =>
@@ -128,7 +129,7 @@ export default function LocationPickerMap({
       {/* Map Header & GPS Controls */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 min-w-0">
-          <span className="material-symbols-outlined text-[16px] text-[#A4B566]">pin_drop</span>
+          <Icon name="pin_drop" className="w-4 h-4 text-[#A4B566]" />
           <span className="font-mono text-xs text-[#D8DFC8] truncate">
             {position[0].toFixed(5)}° N, {position[1].toFixed(5)}° E
           </span>
@@ -146,7 +147,7 @@ export default function LocationPickerMap({
             className="h-8 px-2.5 rounded-lg bg-[#262C14] hover:bg-[#30371A] border border-[#525E31] text-[#C2CE9F] text-xs font-mono flex items-center gap-1 transition-all"
             title="Reset to CTU Barili Campus center"
           >
-            <span className="material-symbols-outlined text-[14px]">school</span>
+            <Icon name="school" className="w-3.5 h-3.5" />
             <span>CTU Barili</span>
           </button>
 
@@ -164,7 +165,7 @@ export default function LocationPickerMap({
               </>
             ) : (
               <>
-                <span className="material-symbols-outlined text-[15px]">my_location</span>
+                <Icon name="my_location" className="w-3.5 h-3.5" />
                 <span>Use My GPS</span>
               </>
             )}
@@ -174,7 +175,7 @@ export default function LocationPickerMap({
 
       {gpsError && (
         <div className="p-2.5 rounded-lg bg-[#431B1B]/80 border border-[#E57373]/50 text-[11px] font-mono text-[#FFCDD2] flex items-start gap-2">
-          <span className="material-symbols-outlined text-[15px] text-[#E57373] shrink-0 mt-0.5">warning</span>
+          <Icon name="warning" className="w-4 h-4 text-[#E57373] shrink-0 mt-0.5" />
           <span>{gpsError}</span>
         </div>
       )}

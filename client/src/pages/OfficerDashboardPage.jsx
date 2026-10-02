@@ -204,9 +204,7 @@ export default function OfficerDashboardPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#1D230E] border border-[#525E31] text-[#F5C26B] font-mono text-xs font-bold uppercase tracking-wider mb-2">
-              <span className="material-symbols-outlined text-[16px] text-[#F5C26B]">
-                military_tech
-              </span>
+              <Icon name="military_tech" className="w-4 h-4 text-[#F5C26B]" />
               NSTP Officer Command
             </div>
             <h1 className="font-display font-bold text-2xl text-[#F0F3E8] tracking-tight">
@@ -224,9 +222,7 @@ export default function OfficerDashboardPage() {
               disabled={isExporting || roster.length === 0}
               className="h-11 px-4 rounded-xl bg-[#8B9B4C] hover:bg-[#9EAF6D] active:scale-95 transition-all text-[#1F240F] font-mono text-xs font-bold uppercase tracking-wider shadow-md flex items-center gap-2 disabled:opacity-50"
             >
-              <span className="material-symbols-outlined text-[18px]">
-                download_for_offline
-              </span>
+              <Icon name="download_for_offline" className="w-4.5 h-4.5" />
               {isExporting ? 'Exporting...' : 'Export Excel (.xlsx)'}
             </button>
           </div>
@@ -238,7 +234,7 @@ export default function OfficerDashboardPage() {
 
       {error && (
         <div className="rounded-xl bg-[#431B1B] border border-[#E57373] text-[#FFCDD2] p-4 text-xs font-mono flex items-center gap-2.5">
-          <span className="material-symbols-outlined text-[20px]">error</span>
+          <Icon name="error" className="w-5 h-5" />
           <span>{error}</span>
         </div>
       )}
@@ -249,9 +245,7 @@ export default function OfficerDashboardPage() {
         <div className="rounded-2xl bg-[#30371A] border border-[#525E31] p-4 shadow-sm space-y-1">
           <div className="flex items-center justify-between text-[#C2CE9F] font-mono text-xs">
             <span>Cadets Enrolled</span>
-            <span className="material-symbols-outlined text-[18px] text-[#A4B566]">
-              groups
-            </span>
+            <Icon name="groups" className="w-4.5 h-4.5 text-[#A4B566]" />
           </div>
           <div className="font-display font-bold text-2xl text-[#F0F3E8]">
             {loading ? '—' : stats?.totalCadets ?? roster.length}
@@ -265,9 +259,7 @@ export default function OfficerDashboardPage() {
         <div className="rounded-2xl bg-[#30371A] border border-[#525E31] p-4 shadow-sm space-y-1">
           <div className="flex items-center justify-between text-[#C2CE9F] font-mono text-xs">
             <span>Weekly Compliance</span>
-            <span className="material-symbols-outlined text-[18px] text-[#A4B566]">
-              fact_check
-            </span>
+            <Icon name="fact_check" className="w-4.5 h-4.5 text-[#A4B566]" />
           </div>
           <div className="font-display font-bold text-2xl text-[#F0F3E8]">
             {loading ? '—' : `${stats?.activeRate ?? 0}%`}
@@ -281,9 +273,7 @@ export default function OfficerDashboardPage() {
         <div className="rounded-2xl bg-[#30371A] border border-[#525E31] p-4 shadow-sm space-y-1">
           <div className="flex items-center justify-between text-[#C2CE9F] font-mono text-xs">
             <span>Monitored Trees</span>
-            <span className="material-symbols-outlined text-[18px] text-[#A4B566]">
-              forest
-            </span>
+            <Icon name="forest" className="w-4.5 h-4.5 text-[#A4B566]" />
           </div>
           <div className="font-display font-bold text-2xl text-[#F0F3E8]">
             {loading ? '—' : stats?.totalTrees ?? 0}
@@ -297,9 +287,7 @@ export default function OfficerDashboardPage() {
         <div className="rounded-2xl bg-[#30371A] border border-[#525E31] p-4 shadow-sm space-y-1">
           <div className="flex items-center justify-between text-[#C2CE9F] font-mono text-xs">
             <span>Survival Rate</span>
-            <span className="material-symbols-outlined text-[18px] text-[#A4B566]">
-              vital_signs
-            </span>
+            <Icon name="vital_signs" className="w-4.5 h-4.5 text-[#A4B566]" />
           </div>
           <div className="font-display font-bold text-2xl text-[#F0F3E8]">
             {loading ? '—' : `${stats?.campusSurvivalRate ?? 100}%`}
@@ -315,9 +303,7 @@ export default function OfficerDashboardPage() {
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           {/* Search Box */}
           <div className="relative flex-1 max-w-md">
-            <span className="material-symbols-outlined absolute left-3 top-3 text-[#AAB596] text-[18px]">
-              search
-            </span>
+            <Icon name="search" className="absolute left-3 top-3 text-[#AAB596] w-4.5 h-4.5" />
             <input
               type="text"
               placeholder="Search by cadet name, roll number, or course..."
@@ -331,7 +317,7 @@ export default function OfficerDashboardPage() {
                 onClick={() => setSearchQuery('')}
                 className="absolute right-3 top-3 text-[#AAB596] hover:text-[#F0F3E8]"
               >
-                <span className="material-symbols-outlined text-[16px]">close</span>
+                <Icon name="close" className="w-4 h-4" />
               </button>
             )}
           </div>
@@ -398,9 +384,7 @@ export default function OfficerDashboardPage() {
                 <tr>
                   <td colSpan={9} className="py-12 text-center text-[#AAB596]">
                     <div className="flex flex-col items-center justify-center gap-2">
-                      <span className="material-symbols-outlined animate-spin text-2xl text-[#A4B566]">
-                        progress_activity
-                      </span>
+                      <Icon name="progress_activity" className="animate-spin text-2xl text-[#A4B566]" />
                       <span>Loading cadet compliance roster...</span>
                     </div>
                   </td>
@@ -409,9 +393,7 @@ export default function OfficerDashboardPage() {
                 <tr>
                   <td colSpan={9} className="py-12 text-center text-[#AAB596]">
                     <div className="flex flex-col items-center justify-center gap-2">
-                      <span className="material-symbols-outlined text-3xl text-[#525E31]">
-                        person_search
-                      </span>
+                      <Icon name="person_search" className="w-8 h-8 text-[#525E31]" />
                       <span>No cadets match the current search or compliance filter.</span>
                     </div>
                   </td>
@@ -434,9 +416,7 @@ export default function OfficerDashboardPage() {
                               className="w-full h-full object-cover"
                             />
                           ) : (
-                            <span className="material-symbols-outlined text-[18px]">
-                              person
-                            </span>
+                            <Icon name="person" className="w-4.5 h-4.5" />
                           )}
                         </div>
                         <div className="truncate">
@@ -520,9 +500,7 @@ export default function OfficerDashboardPage() {
                         }}
                         className="h-8 px-2.5 rounded-lg bg-[#30371A] hover:bg-[#3D4721] border border-[#525E31] text-[#A4B566] text-xs font-bold inline-flex items-center gap-1 active:scale-95 transition-all cursor-pointer"
                       >
-                        <span className="material-symbols-outlined text-[16px]">
-                          visibility
-                        </span>
+                        <Icon name="visibility" className="w-4 h-4" />
                         <span>Inspect</span>
                       </button>
                     </td>
@@ -549,9 +527,7 @@ export default function OfficerDashboardPage() {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <span className="material-symbols-outlined text-2xl">
-                      person
-                    </span>
+                    <Icon name="person" className="w-6 h-6" />
                   )}
                 </div>
                 <div className="min-w-0 flex-1 space-y-1.5">
@@ -583,15 +559,13 @@ export default function OfficerDashboardPage() {
                 onClick={handleCloseInspection}
                 className="w-9 h-9 rounded-full bg-[#30371A] hover:bg-[#3D4721] border border-[#525E31] text-[#AAB596] hover:text-[#F0F3E8] flex items-center justify-center transition-colors shrink-0 cursor-pointer"
               >
-                <span className="material-symbols-outlined text-[20px]">close</span>
+                <Icon name="close" className="w-5 h-5" />
               </button>
             </div>
 
             {loadingDetails ? (
               <div className="py-16 text-center text-[#AAB596] flex flex-col items-center justify-center gap-3">
-                <span className="material-symbols-outlined animate-spin text-3xl text-[#A4B566]">
-                  progress_activity
-                </span>
+                <Icon name="progress_activity" className="animate-spin w-8 h-8 text-[#A4B566]" />
                 <span className="font-mono text-xs">
                   Loading field telemetry & observation photographs...
                 </span>
@@ -629,9 +603,7 @@ export default function OfficerDashboardPage() {
                 {/* Section 1: Assigned Wildlings */}
                 <div className="space-y-2.5">
                   <h4 className="font-mono text-xs text-[#C2CE9F] uppercase tracking-wider font-bold flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-[16px] text-[#A4B566]">
-                      park
-                    </span>
+                    <Icon name="park" className="w-4 h-4 text-[#A4B566]" />
                     Registered Wildlings ({cadetDetails.trees.length})
                   </h4>
 
@@ -660,9 +632,7 @@ export default function OfficerDashboardPage() {
                                 />
                               ) : (
                                 <div className="w-full h-full flex items-center justify-center text-[#525E31]">
-                                  <span className="material-symbols-outlined text-[18px]">
-                                    park
-                                  </span>
+                                  <Icon name="park" className="w-4.5 h-4.5" />
                                 </div>
                               )}
                             </div>
@@ -696,9 +666,7 @@ export default function OfficerDashboardPage() {
                 {/* Section 2: Photo Audit Feed */}
                 <div className="space-y-2.5">
                   <h4 className="font-mono text-xs text-[#C2CE9F] uppercase tracking-wider font-bold flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-[16px] text-[#A4B566]">
-                      photo_library
-                    </span>
+                    <Icon name="photo_library" className="w-4 h-4 text-[#A4B566]" />
                     Photographic Observation Audit ({cadetDetails.logs.length})
                   </h4>
 
@@ -767,7 +735,7 @@ export default function OfficerDashboardPage() {
                 onClick={() => setSelectedPhotoModal(null)}
                 className="w-7 h-7 rounded-full bg-[#1D230E] text-[#AAB596] flex items-center justify-center hover:text-[#F0F3E8]"
               >
-                <span className="material-symbols-outlined text-[18px]">close</span>
+                <Icon name="close" className="w-4.5 h-4.5" />
               </button>
             </div>
 

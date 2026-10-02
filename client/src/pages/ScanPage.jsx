@@ -7,6 +7,7 @@ import treeService from '../services/treeService';
 import { useAuth } from '../hooks/useAuth';
 import { useTrees } from '../context/TreeContext';
 import { canUserLogTree } from '../utils/permissions';
+import Icon from '../components/common/Icon';
 
 /**
  * Extract clean Tree ID from decoded QR string, URL, or JSON payload
@@ -132,7 +133,7 @@ export default function ScanPage() {
                 : 'text-[#CCD6B8] hover:text-[#F0F3E8]'
             }`}
           >
-            <span className="material-symbols-outlined text-[16px]">qr_code_scanner</span>
+            <Icon name="qr_code_scanner" className="w-4 h-4" />
             <span>Camera</span>
           </button>
           <button
@@ -144,7 +145,7 @@ export default function ScanPage() {
                 : 'text-[#CCD6B8] hover:text-[#F0F3E8]'
             }`}
           >
-            <span className="material-symbols-outlined text-[16px]">pin</span>
+            <Icon name="pin" className="w-4 h-4" />
             <span>Manual Tag Entry</span>
           </button>
         </div>
@@ -154,7 +155,7 @@ export default function ScanPage() {
       {searchError && (
         <div className="rounded-xl bg-[#431B1B] border border-[#E57373]/60 p-3 text-xs text-[#FFCDD2] flex items-center justify-between gap-2 animate-in fade-in">
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-[18px]">error</span>
+            <Icon name="error" className="w-4.5 h-4.5" />
             <span>{searchError}</span>
           </div>
           <button
@@ -162,7 +163,7 @@ export default function ScanPage() {
             onClick={() => setSearchError('')}
             className="text-[#FFCDD2] hover:text-white"
           >
-            <span className="material-symbols-outlined text-[16px]">close</span>
+            <Icon name="close" className="w-4 h-4" />
           </button>
         </div>
       )}
@@ -176,7 +177,7 @@ export default function ScanPage() {
             fallback={(err, reset) => (
               <div className="relative w-full aspect-[4/5] max-h-[460px] rounded-2xl overflow-hidden bg-[#14180A] border border-[#5D6A37] shadow-2xl flex flex-col items-center justify-center p-6 text-center space-y-3">
                 <div className="w-14 h-14 rounded-full bg-[#1D230E] border border-[#5D6A37] flex items-center justify-center text-[#A4B566]">
-                  <span className="material-symbols-outlined text-3xl">photo_camera</span>
+                  <Icon name="photo_camera" className="w-8 h-8" />
                 </div>
                 <div className="space-y-1">
                   <h4 className="font-headline-sm text-sm font-bold text-[#F0F3E8]">
@@ -216,7 +217,7 @@ export default function ScanPage() {
         /* Manual ID Search Mode */
         <div className="p-6 rounded-2xl bg-[#262C14] border border-[#4F5A2D] shadow-lg space-y-4">
           <div className="text-center max-w-sm mx-auto space-y-1">
-            <span className="material-symbols-outlined text-4xl text-[#A4B566]">pin</span>
+            <Icon name="pin" className="w-10 h-10 text-[#A4B566] mx-auto" />
             <h3 className="font-headline-sm text-headline-sm text-[#F0F3E8] font-bold">
               Direct Specimen ID Lookup
             </h3>
@@ -239,7 +240,7 @@ export default function ScanPage() {
               disabled={isSearching}
               className="w-full h-12 rounded-xl bg-[#8B9B4C] hover:bg-[#9EAF6D] disabled:opacity-50 text-[#1F240F] font-mono text-xs font-bold uppercase tracking-wider shadow-md flex items-center justify-center gap-2 transition-all active:scale-95"
             >
-              <span className="material-symbols-outlined text-[18px]">search</span>
+              <Icon name="search" className="w-4.5 h-4.5" />
               <span>{isSearching ? 'Searching Database...' : 'Retrieve Telemetry Record'}</span>
             </button>
           </form>
@@ -252,7 +253,7 @@ export default function ScanPage() {
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-12 h-12 rounded-xl bg-[#1D230E] border border-[#525E31] flex items-center justify-center text-[#8B9B4C] shrink-0 shadow-inner">
-                <span className="material-symbols-outlined text-[28px]">park</span>
+                <Icon name="park" className="w-7 h-7" />
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
@@ -320,7 +321,7 @@ export default function ScanPage() {
               onClick={() => navigate(`/trees/${detectedSpecimen.treeId}`)}
               className="h-11 rounded-xl bg-[#8B9B4C] hover:bg-[#9EAF6D] text-[#1F240F] font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all"
             >
-              <span className="material-symbols-outlined text-[16px]">assignment_turned_in</span>
+              <Icon name="assignment_turned_in" className="w-4 h-4" />
               <span>Open Profile</span>
             </button>
 
@@ -330,7 +331,7 @@ export default function ScanPage() {
                 onClick={() => setShowLogModal(true)}
                 className="h-11 rounded-xl bg-[#30371A] hover:bg-[#3D4721] text-[#A4B566] border border-[#525E31] font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 active:scale-95 transition-all"
               >
-                <span className="material-symbols-outlined text-[16px]">straighten</span>
+                <Icon name="straighten" className="w-4 h-4" />
                 <span>Log Growth</span>
               </button>
             ) : (
@@ -340,7 +341,7 @@ export default function ScanPage() {
                 title="Growth logging is restricted to the specimen caretaker or field supervisor"
                 className="h-11 rounded-xl bg-[#1D230E] text-[#697549] border border-[#3A431F] font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-not-allowed opacity-75"
               >
-                <span className="material-symbols-outlined text-[16px]">lock</span>
+                <Icon name="lock" className="w-4 h-4" />
                 <span>Owner Only</span>
               </button>
             )}
@@ -352,7 +353,7 @@ export default function ScanPage() {
               onClick={() => navigate(`/map?focus=${detectedSpecimen.treeId}`)}
               className="font-mono text-xs text-[#CCD6B8] hover:text-[#F0F3E8] flex items-center gap-1"
             >
-              <span className="material-symbols-outlined text-[16px] text-[#A4B566]">pin_drop</span>
+              <Icon name="pin_drop" className="w-4 h-4 text-[#A4B566]" />
               <span>View on Campus Map</span>
             </button>
 
@@ -361,7 +362,7 @@ export default function ScanPage() {
               onClick={() => setDetectedSpecimen(null)}
               className="font-mono text-xs text-[#AAB596] hover:text-[#FFCDD2] flex items-center gap-1"
             >
-              <span className="material-symbols-outlined text-[16px]">close</span>
+              <Icon name="close" className="w-4 h-4" />
               <span>Scan Next Tag</span>
             </button>
           </div>

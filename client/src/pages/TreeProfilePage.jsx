@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import Icon from '../components/common/Icon';
 import { createPortal } from 'react-dom';
 import { useParams, Link } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
@@ -207,7 +208,7 @@ export default function TreeProfilePage() {
     return (
       <div className="bg-[#262C14] border border-[#4F5A2D] rounded-2xl p-10 text-center space-y-3 my-8">
         <div className="w-14 h-14 mx-auto rounded-full bg-[#431B1B] border border-[#E57373]/50 flex items-center justify-center text-[#FFCDD2]">
-          <span className="material-symbols-outlined text-3xl">error</span>
+          <Icon name="error" className="text-3xl" />
         </div>
         <h3 className="font-display font-bold text-base text-[#F0F3E8]">
           Specimen Record Not Found
@@ -220,7 +221,7 @@ export default function TreeProfilePage() {
             to="/trees"
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#8B9B4C] text-[#1F240F] font-mono text-xs font-bold uppercase tracking-wider shadow-md"
           >
-            <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+            <Icon name="arrow_back" className="text-[16px]" />
             Return to Registry
           </Link>
         </div>
@@ -240,7 +241,7 @@ export default function TreeProfilePage() {
           to="/trees"
           className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#262C14] border border-[#4F5A2D] text-[#CCD6B8] hover:text-[#F0F3E8] font-mono text-xs font-semibold active:scale-95 transition-all shadow-sm"
         >
-          <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+          <Icon name="arrow_back" className="text-[16px]" />
           <span>Registry</span>
         </Link>
 
@@ -251,7 +252,7 @@ export default function TreeProfilePage() {
             className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-[#30371A] border border-[#525E31] text-[#A4B566] hover:bg-[#3D4721] font-mono text-xs font-bold active:scale-95 transition-all"
             title="Generate weatherproof QR tag"
           >
-            <span className="material-symbols-outlined text-[16px]">qr_code</span>
+            <Icon name="qr_code" className="text-[16px]" />
             <span className="hidden xs:inline">QR Tag</span>
           </button>
           <Link
@@ -259,7 +260,7 @@ export default function TreeProfilePage() {
             className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-[#30371A] border border-[#525E31] text-[#CCD6B8] hover:text-[#F0F3E8] font-mono text-xs font-semibold active:scale-95 transition-all"
             title="View on Campus Map"
           >
-            <span className="material-symbols-outlined text-[16px]">pin_drop</span>
+            <Icon name="pin_drop" className="text-[16px]" />
             <span className="hidden xs:inline">Campus Map</span>
           </Link>
           <Link
@@ -267,7 +268,7 @@ export default function TreeProfilePage() {
             className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-full bg-[#8B9B4C] text-[#1F240F] font-mono text-xs font-bold uppercase tracking-wider shadow-sm active:scale-95 transition-all"
             title="View Growth Logs & Progression Curves"
           >
-            <span className="material-symbols-outlined text-[16px]">query_stats</span>
+            <Icon name="query_stats" className="text-[16px]" />
             <span>Logs</span>
           </Link>
         </div>
@@ -283,7 +284,7 @@ export default function TreeProfilePage() {
           />
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center text-[#525E31] bg-gradient-to-b from-[#262C14] to-[#1D230E] p-6 text-center">
-            <span className="material-symbols-outlined text-6xl text-[#8B9B4C]/40">park</span>
+            <Icon name="park" className="text-6xl text-[#8B9B4C]/40" />
             <span className="font-mono text-xs text-[#CCD6B8] mt-2">
               No field photograph attached yet
             </span>
@@ -313,13 +314,11 @@ export default function TreeProfilePage() {
                 : 'bg-[#431B1B]/90 border-[#E57373]/60 text-[#FFCDD2]'
             }`}
           >
-            <span className="material-symbols-outlined text-[14px]">
-              {tree.healthStatus === 'Thriving' || tree.healthStatus === 'Healthy'
+            <Icon name={tree.healthStatus === 'Thriving' || tree.healthStatus === 'Healthy'
                 ? 'check_circle'
                 : tree.healthStatus === 'Dead / Mortality'
                 ? 'cancel'
-                : 'warning'}
-            </span>
+                : 'warning'} className="text-[14px]" />
             {tree.healthStatus || 'Thriving'}
           </span>
         </div>
@@ -336,12 +335,7 @@ export default function TreeProfilePage() {
                 : 'bg-[#1D230E]/80 text-[#A4B566] hover:text-[#F0F3E8] border-[#4F5A2D]'
             }`}
           >
-            <span
-              className="material-symbols-outlined text-[20px]"
-              style={{ fontVariationSettings: isBookmarked ? "'FILL' 1" : "'FILL' 0" }}
-            >
-              favorite
-            </span>
+            <Icon name="favorite" className="text-[20px]" style={{ fontVariationSettings: isBookmarked ? "'FILL' 1" : "'FILL' 0" }} />
           </button>
         </div>
       </div>
@@ -364,7 +358,7 @@ export default function TreeProfilePage() {
 
         <div className="flex flex-col gap-2 pt-1 text-[#CCD6B8] font-body-sm text-xs sm:text-sm">
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-[18px] text-[#A4B566]">location_on</span>
+            <Icon name="location_on" className="text-[18px] text-[#A4B566]" />
             <span className="truncate font-mono">
               {tree.location || 'CTU Barili Campus'}
               {tree.coordinates?.lat && tree.coordinates?.lng && (
@@ -376,7 +370,7 @@ export default function TreeProfilePage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-[18px] text-[#A4B566]">calendar_month</span>
+            <Icon name="calendar_month" className="text-[18px] text-[#A4B566]" />
             <span>
               Registered {formatDate(tree.datePlanted || tree.createdAt)}{' '}
               <span className="text-[#A4B566] font-medium font-mono">
@@ -387,7 +381,7 @@ export default function TreeProfilePage() {
 
           {owner && (
             <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-[18px] text-[#A4B566]">shield_person</span>
+              <Icon name="shield_person" className="text-[18px] text-[#A4B566]" />
               <span>
                 Caretaker / Student:{' '}
                 <span className="text-[#F0F3E8] font-semibold">
@@ -410,7 +404,7 @@ export default function TreeProfilePage() {
       {/* Vital Telemetry Section Header */}
       <div className="flex items-center justify-between pt-1">
         <div className="flex items-center gap-2">
-          <span className="material-symbols-outlined text-[22px] text-[#A4B566]">monitoring</span>
+          <Icon name="monitoring" className="text-[22px] text-[#A4B566]" />
           <h3 className="font-label-lg text-label-lg text-[#F0F3DE] font-bold uppercase tracking-wider">
             Vital Telemetry
           </h3>
@@ -428,7 +422,7 @@ export default function TreeProfilePage() {
             <span className="font-label-md text-label-md text-[#C5C8BC] uppercase tracking-wider">
               Total Height
             </span>
-            <span className="material-symbols-outlined text-[18px] text-[#A6B768]">height</span>
+            <Icon name="height" className="text-[18px] text-[#A6B768]" />
           </div>
           <div className="flex flex-col gap-0.5">
             <div className="flex items-baseline gap-1">
@@ -438,7 +432,7 @@ export default function TreeProfilePage() {
               <span className="font-mono text-xs text-[#A6B768] font-semibold">cm</span>
             </div>
             <div className="flex items-center gap-1 font-mono text-[11px] text-[#BDCE8A] font-semibold">
-              <span className="material-symbols-outlined text-[14px]">arrow_upward</span>
+              <Icon name="arrow_upward" className="text-[14px]" />
               <span>
                 {parseFloat(heightGain) >= 0 ? `+${heightGain}cm gain` : `${heightGain}cm`}
               </span>
@@ -464,9 +458,7 @@ export default function TreeProfilePage() {
             <span className="font-label-md text-label-md text-[#C5C8BC] uppercase tracking-wider">
               Trunk DBH
             </span>
-            <span className="material-symbols-outlined text-[18px] text-[#A6B768]">
-              radio_button_checked
-            </span>
+            <Icon name="radio_button_checked" className="text-[18px] text-[#A6B768]" />
           </div>
           <div className="flex flex-col gap-0.5">
             <div className="flex items-baseline gap-1">
@@ -493,7 +485,7 @@ export default function TreeProfilePage() {
             <span className="font-label-md text-label-md text-[#C5C8BC] uppercase tracking-wider">
               Foliage &amp; Yield
             </span>
-            <span className="material-symbols-outlined text-[18px] text-[#A6B768]">energy_savings_leaf</span>
+            <Icon name="energy_savings_leaf" className="text-[18px] text-[#A6B768]" />
           </div>
           <div className="flex flex-col gap-0.5">
             <div className="flex items-baseline gap-1">
@@ -517,7 +509,7 @@ export default function TreeProfilePage() {
             <span className="font-label-md text-label-md text-[#C5C8BC] uppercase tracking-wider">
               Health Vigor
             </span>
-            <span className="material-symbols-outlined text-[18px] text-[#A6B768]">favorite</span>
+            <Icon name="favorite" className="text-[18px] text-[#A6B768]" />
           </div>
           <div className="flex flex-col gap-0.5">
             <div className="flex items-baseline gap-1">
@@ -572,9 +564,7 @@ export default function TreeProfilePage() {
       <div className="flex flex-col p-5 rounded-2xl bg-[#262C14] shadow-md border border-[#4F5A2D] space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-[20px] text-[#A4B566]">
-              assignment_turned_in
-            </span>
+            <Icon name="assignment_turned_in" className="text-[20px] text-[#A4B566]" />
             <h3 className="font-label-lg text-label-lg text-[#F0F3DE] font-bold uppercase tracking-wider">
               Latest Field Inspection
             </h3>
@@ -618,9 +608,7 @@ export default function TreeProfilePage() {
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-[20px] text-[#A4B566]">
-              photo_library
-            </span>
+            <Icon name="photo_library" className="text-[20px] text-[#A4B566]" />
             <h3 className="font-label-lg text-label-lg text-[#F0F3DE] font-bold uppercase tracking-wider">
               Photo Archive ({photoArchive.length})
             </h3>
@@ -631,7 +619,7 @@ export default function TreeProfilePage() {
               className="font-mono text-xs text-[#A4B566] font-semibold flex items-center gap-0.5 hover:text-[#E1E6BC]"
             >
               <span>View Fullscreen</span>
-              <span className="material-symbols-outlined text-[16px]">chevron_right</span>
+              <Icon name="chevron_right" className="text-[16px]" />
             </button>
           )}
         </div>
@@ -677,12 +665,12 @@ export default function TreeProfilePage() {
             onClick={() => setShowLogModal(true)}
             className="w-full h-12 rounded-xl bg-[#8B9B4C] hover:bg-[#9EAF6D] text-[#1F240F] font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] transition-all"
           >
-            <span className="material-symbols-outlined text-[18px]">add_circle</span>
+            <Icon name="add_circle" className="text-[18px]" />
             <span>Add New Growth Entry</span>
           </button>
         ) : (
           <div className="w-full py-3 px-4 rounded-xl bg-[#1D230E] border border-[#525E31]/50 text-center font-mono text-xs text-[#AAB596] flex items-center justify-center gap-2 shadow-md">
-            <span className="material-symbols-outlined text-[16px] text-[#8B9B4C]">lock</span>
+            <Icon name="lock" className="text-[16px] text-[#8B9B4C]" />
             <span>Growth audit logs restricted to specimen caretaker</span>
           </div>
         )}
@@ -692,7 +680,7 @@ export default function TreeProfilePage() {
             to={`/trees/${tree.treeId}/logs`}
             className="h-11 rounded-xl bg-[#30371A] hover:bg-[#3D4721] text-[#CCD6B8] border border-[#525E31] font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 active:scale-[0.98] transition-all"
           >
-            <span className="material-symbols-outlined text-[18px] text-[#A4B566]">query_stats</span>
+            <Icon name="query_stats" className="text-[18px] text-[#A4B566]" />
             <span>Growth Curves</span>
           </Link>
 
@@ -701,7 +689,7 @@ export default function TreeProfilePage() {
             onClick={() => setShowQRModal(true)}
             className="h-11 rounded-xl bg-[#30371A] hover:bg-[#3D4721] text-[#CCD6B8] border border-[#525E31] font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 active:scale-[0.98] transition-all"
           >
-            <span className="material-symbols-outlined text-[18px] text-[#A4B566]">qr_code</span>
+            <Icon name="qr_code" className="text-[18px] text-[#A4B566]" />
             <span>Print QR Tag</span>
           </button>
         </div>
@@ -711,7 +699,7 @@ export default function TreeProfilePage() {
           onClick={handleOpenReminderModal}
           className="w-full h-11 rounded-xl bg-[#30371A] hover:bg-[#3D4721] text-[#CCD6B8] border border-[#525E31] font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 active:scale-[0.98] transition-all"
         >
-          <span className="material-symbols-outlined text-[18px] text-[#A4B566]">alarm_add</span>
+          <Icon name="alarm_add" className="text-[18px] text-[#A4B566]" />
           <span>Schedule Care Reminder</span>
         </button>
       </div>
@@ -735,7 +723,7 @@ export default function TreeProfilePage() {
           <div className="w-full max-w-sm rounded-2xl bg-[#262C14] border border-[#5D6A37] p-5 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between border-b border-[#4F5A2D] pb-3">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[#A4B566]">alarm_add</span>
+                <Icon name="alarm_add" className="text-[#A4B566]" />
                 <h3 className="font-display font-bold text-sm text-[#F0F3E8]">
                   Schedule Care Task
                 </h3>
@@ -745,13 +733,13 @@ export default function TreeProfilePage() {
                 onClick={() => setShowReminderModal(false)}
                 className="w-7 h-7 rounded-full bg-[#1D230E] border border-[#525E31] text-[#AAB596] flex items-center justify-center hover:text-[#F0F3E8]"
               >
-                <span className="material-symbols-outlined text-[16px]">close</span>
+                <Icon name="close" className="text-[16px]" />
               </button>
             </div>
 
             {remSuccess && (
               <div className="p-2.5 rounded-xl bg-[#1D331A] border border-[#A4B566]/60 text-[#C5E1A5] text-xs font-mono flex items-center gap-2">
-                <span className="material-symbols-outlined text-[16px]">check_circle</span>
+                <Icon name="check_circle" className="text-[16px]" />
                 <span>{remSuccess}</span>
               </div>
             )}
@@ -829,7 +817,7 @@ export default function TreeProfilePage() {
                   disabled={remSaving}
                   className="flex-1 h-10 rounded-xl bg-[#8B9B4C] hover:bg-[#9EAF6D] text-[#1F240F] font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 disabled:opacity-50 transition-colors"
                 >
-                  <span className="material-symbols-outlined text-[16px]">save</span>
+                  <Icon name="save" className="text-[16px]" />
                   <span>{remSaving ? 'Scheduling...' : 'Save Task'}</span>
                 </button>
                 <button
@@ -859,7 +847,7 @@ export default function TreeProfilePage() {
                 onClick={() => setShowQRModal(false)}
                 className="w-7 h-7 rounded-full bg-[#1D230E] text-[#AAB596] hover:text-[#F0F3E8] flex items-center justify-center border border-[#4F5A2D]"
               >
-                <span className="material-symbols-outlined text-[16px]">close</span>
+                <Icon name="close" className="text-[16px]" />
               </button>
             </div>
 
@@ -894,14 +882,12 @@ export default function TreeProfilePage() {
               >
                 {isDownloadingQR ? (
                   <>
-                    <span className="material-symbols-outlined text-[16px] animate-spin">
-                      progress_activity
-                    </span>
+                    <Icon name="progress_activity" className="text-[16px] animate-spin" />
                     <span>Saving...</span>
                   </>
                 ) : (
                   <>
-                    <span className="material-symbols-outlined text-[16px]">download</span>
+                    <Icon name="download" className="text-[16px]" />
                     <span>Download PNG</span>
                   </>
                 )}
@@ -911,7 +897,7 @@ export default function TreeProfilePage() {
                 onClick={() => window.print()}
                 className="px-4 h-11 rounded-xl bg-[#30371A] hover:bg-[#3D4721] border border-[#525E31] text-[#F0F3E8] font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1 transition-colors active:scale-95"
               >
-                <span className="material-symbols-outlined text-[16px]">print</span>
+                <Icon name="print" className="text-[16px]" />
                 <span>Print</span>
               </button>
             </div>
@@ -919,13 +905,13 @@ export default function TreeProfilePage() {
             {/* Real-time Download Feedback Banner */}
             {qrDownloadNotice === 'downloading' && (
               <div className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-[#38411F] border border-[#5D6A37] text-xs font-mono text-[#D8DFC8] animate-in fade-in zoom-in-95">
-                <span className="material-symbols-outlined text-[16px] text-[#A4B566] animate-spin">progress_activity</span>
+                <Icon name="progress_activity" className="text-[16px] text-[#A4B566] animate-spin" />
                 <span>Generating high-res PNG tag... download starting</span>
               </div>
             )}
             {qrDownloadNotice === 'success' && (
               <div className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-[#2D3F1E] border border-[#7A9330] text-xs font-mono text-[#E4F5A6] animate-in fade-in zoom-in-95">
-                <span className="material-symbols-outlined text-[16px] text-[#A4B566]">check_circle</span>
+                <Icon name="check_circle" className="text-[16px] text-[#A4B566]" />
                 <span>Tag downloaded! Check your downloads.</span>
               </div>
             )}
@@ -954,7 +940,7 @@ export default function TreeProfilePage() {
               className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/70 text-white flex items-center justify-center border border-white/30 hover:bg-black/90 active:scale-95 transition-all"
               title="Close photo"
             >
-              <span className="material-symbols-outlined text-[18px]">close</span>
+              <Icon name="close" className="text-[18px]" />
             </button>
           </div>
         </div>,

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { formatDate } from '../../utils/formatters';
 import { canUserEditOrDeleteLog } from '../../utils/permissions';
+import Icon from '../common/Icon';
 
 export default function GrowthTimeline({
   logs = [],
@@ -16,9 +17,7 @@ export default function GrowthTimeline({
   if (!logs || logs.length === 0) {
     return (
       <div className="bg-[#262C14] border border-[#4F5A2D] rounded-2xl p-8 text-center space-y-2">
-        <span className="material-symbols-outlined text-3xl text-[#525E31]">
-          history_toggle_off
-        </span>
+        <Icon name="history_toggle_off" className="w-8 h-8 text-[#525E31]" />
         <h4 className="font-display font-bold text-sm text-[#F0F3E8]">
           No Field Growth Audits Recorded
         </h4>
@@ -39,9 +38,7 @@ export default function GrowthTimeline({
       {/* Timeline Section Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="material-symbols-outlined text-[20px] text-[#A4B566]">
-            event_note
-          </span>
+          <Icon name="event_note" className="w-5 h-5 text-[#A4B566]" />
           <h3 className="font-headline-sm text-headline-sm text-[#F0F3E8] font-bold">
             Field Observation Ledger
           </h3>
@@ -118,7 +115,7 @@ export default function GrowthTimeline({
                       className="text-[#AAB596] hover:text-[#A4B566] p-1 transition-colors rounded-lg hover:bg-[#30371A]"
                       title="Edit this observation log"
                     >
-                      <span className="material-symbols-outlined text-[16px]">edit</span>
+                      <Icon name="edit" className="w-4 h-4" />
                     </button>
                   )}
                   {onDeleteLog && canModify && (
@@ -132,7 +129,7 @@ export default function GrowthTimeline({
                       className="text-[#AAB596] hover:text-[#FFCDD2] p-1 transition-colors rounded-lg hover:bg-[#30371A]"
                       title="Delete this observation"
                     >
-                      <span className="material-symbols-outlined text-[16px]">delete</span>
+                      <Icon name="delete" className="w-4 h-4" />
                     </button>
                   )}
                 </div>
@@ -228,9 +225,7 @@ export default function GrowthTimeline({
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                     />
                     <div className="absolute inset-0 bg-black/30 group-hover:bg-transparent transition-colors flex items-center justify-center">
-                      <span className="material-symbols-outlined text-[18px] text-white opacity-80 group-hover:opacity-100">
-                        zoom_in
-                      </span>
+                      <Icon name="zoom_in" className="w-5 h-5 text-white opacity-80 group-hover:opacity-100" />
                     </div>
                   </div>
                 )}
@@ -248,7 +243,7 @@ export default function GrowthTimeline({
 
                   {/* Auditor Info */}
                   <div className="flex items-center gap-1.5 text-mono text-[11px] text-[#A4B566]">
-                    <span className="material-symbols-outlined text-[14px]">shield_person</span>
+                    <Icon name="shield_person" className="w-3.5 h-3.5" />
                     <span>
                       Audited by{' '}
                       <span className="font-bold text-[#F0F3E8]">
@@ -285,7 +280,7 @@ export default function GrowthTimeline({
               className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/70 text-white flex items-center justify-center border border-white/30 hover:bg-black/90 active:scale-95 transition-all"
               title="Close photo"
             >
-              <span className="material-symbols-outlined text-[18px]">close</span>
+              <Icon name="close" className="w-4.5 h-4.5" />
             </button>
           </div>
         </div>,

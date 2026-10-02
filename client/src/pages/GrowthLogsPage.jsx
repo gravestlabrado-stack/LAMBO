@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import Icon from '../components/common/Icon';
 import { useParams, useSearchParams, Link } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 import { useAuth } from '../hooks/useAuth';
@@ -240,7 +241,7 @@ export default function GrowthLogsPage() {
             onClick={() => setShowLogModal(true)}
             className="h-10 px-3.5 rounded-full bg-[#8B9B4C] hover:bg-[#9EAF6D] text-[#1F240F] font-mono text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-md active:scale-95 transition-all"
           >
-            <span className="material-symbols-outlined text-[18px]">add_circle</span>
+            <Icon name="add_circle" className="text-[18px]" />
             <span>Record Entry</span>
           </button>
           <button
@@ -252,16 +253,12 @@ export default function GrowthLogsPage() {
           >
             {exporting ? (
               <>
-                <span className="material-symbols-outlined text-[18px] text-[#A4B566] animate-spin">
-                  progress_activity
-                </span>
+                <Icon name="progress_activity" className="text-[18px] text-[#A4B566] animate-spin" />
                 <span>Exporting...</span>
               </>
             ) : (
               <>
-                <span className="material-symbols-outlined text-[18px] text-[#A4B566]">
-                  download
-                </span>
+                <Icon name="download" className="text-[18px] text-[#A4B566]" />
                 <span>Excel Export</span>
               </>
             )}
@@ -272,19 +269,19 @@ export default function GrowthLogsPage() {
       {/* Real-time Download Feedback Banner */}
       {exportNotice === 'exporting' && (
         <div className="flex items-center gap-2.5 py-2.5 px-4 rounded-xl bg-[#38411F] border border-[#5D6A37] text-xs font-mono text-[#D8DFC8] shadow-md animate-in fade-in slide-in-from-top-1">
-          <span className="material-symbols-outlined text-[18px] text-[#A4B566] animate-spin">progress_activity</span>
+          <Icon name="progress_activity" className="text-[18px] text-[#A4B566] animate-spin" />
           <span>Preparing and compiling Excel (.xlsx) growth ledger... please wait</span>
         </div>
       )}
       {exportNotice === 'success' && (
         <div className="flex items-center gap-2.5 py-2.5 px-4 rounded-xl bg-[#2D3F1E] border border-[#7A9330] text-xs font-mono text-[#E4F5A6] shadow-md animate-in fade-in slide-in-from-top-1">
-          <span className="material-symbols-outlined text-[18px] text-[#A4B566]">check_circle</span>
+          <Icon name="check_circle" className="text-[18px] text-[#A4B566]" />
           <span>Spreadsheet download initiated! Check your downloads folder.</span>
         </div>
       )}
       {exportNotice === 'error' && (
         <div className="flex items-center gap-2.5 py-2.5 px-4 rounded-xl bg-[#4A1E1E] border border-[#8C3A3A] text-xs font-mono text-[#F5C6C6] shadow-md animate-in fade-in slide-in-from-top-1">
-          <span className="material-symbols-outlined text-[18px] text-[#FF8585]">error</span>
+          <Icon name="error" className="text-[18px] text-[#FF8585]" />
           <span>Failed to compile spreadsheet. Please try again.</span>
         </div>
       )}
@@ -293,7 +290,7 @@ export default function GrowthLogsPage() {
       <div className="p-4 sm:p-5 rounded-2xl bg-[#262C14] border border-[#4F5A2D] shadow-md space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-[20px] text-[#A4B566]">park</span>
+            <Icon name="park" className="text-[20px] text-[#A4B566]" />
             <label className="font-mono text-xs font-bold uppercase tracking-wider text-[#F0F3E8]">
               Active Specimen Focus:
             </label>
@@ -312,9 +309,7 @@ export default function GrowthLogsPage() {
                 </option>
               ))}
             </select>
-            <span className="material-symbols-outlined absolute right-2.5 top-2.5 text-[#A4B566] pointer-events-none text-[18px]">
-              expand_more
-            </span>
+            <Icon name="expand_more" className="absolute right-2.5 top-2.5 text-[#A4B566] pointer-events-none text-[18px]" />
           </div>
         </div>
 
@@ -337,7 +332,7 @@ export default function GrowthLogsPage() {
               className="font-mono text-xs text-[#A4B566] hover:text-[#F0F3E8] flex items-center gap-1 font-semibold"
             >
               <span>View Profile</span>
-              <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+              <Icon name="arrow_forward" className="text-[14px]" />
             </Link>
           </div>
         )}
@@ -351,9 +346,7 @@ export default function GrowthLogsPage() {
             <span className="font-mono text-xs uppercase font-semibold text-[#CCD6B8]">
               Height Gain
             </span>
-            <span className="material-symbols-outlined text-[18px] text-[#A4B566]">
-              arrow_upward_alt
-            </span>
+            <Icon name="arrow_upward_alt" className="text-[18px] text-[#A4B566]" />
           </div>
           <div className="mt-2">
             <div className="flex items-baseline gap-1">
@@ -374,9 +367,7 @@ export default function GrowthLogsPage() {
             <span className="font-mono text-xs uppercase font-semibold text-[#CCD6B8]">
               Trunk DBH
             </span>
-            <span className="material-symbols-outlined text-[18px] text-[#A4B566]">
-              radio_button_checked
-            </span>
+            <Icon name="radio_button_checked" className="text-[18px] text-[#A4B566]" />
           </div>
           <div className="mt-2">
             <div className="flex items-baseline gap-1">
@@ -397,9 +388,7 @@ export default function GrowthLogsPage() {
             <span className="font-mono text-xs uppercase font-semibold text-[#CCD6B8]">
               Monitoring Span
             </span>
-            <span className="material-symbols-outlined text-[18px] text-[#A4B566]">
-              history_toggle_off
-            </span>
+            <Icon name="history_toggle_off" className="text-[18px] text-[#A4B566]" />
           </div>
           <div className="mt-2">
             <div className="flex items-baseline gap-1">
@@ -420,9 +409,7 @@ export default function GrowthLogsPage() {
             <span className="font-mono text-xs uppercase font-semibold text-[#CCD6B8]">
               Field Audits
             </span>
-            <span className="material-symbols-outlined text-[18px] text-[#A4B566]">
-              verified
-            </span>
+            <Icon name="verified" className="text-[18px] text-[#A4B566]" />
           </div>
           <div className="mt-2">
             <div className="flex items-baseline gap-1">
@@ -473,12 +460,12 @@ export default function GrowthLogsPage() {
             }}
             className="w-full h-12 bg-[#8B9B4C] hover:bg-[#9EAF6D] text-[#1F240F] rounded-xl shadow-[0_8px_20px_rgba(0,0,0,0.5)] flex items-center justify-center gap-2 active:scale-[0.98] transition-transform font-mono text-xs font-bold uppercase tracking-wider border border-[#A4B566]"
           >
-            <span className="material-symbols-outlined text-[20px]">straighten</span>
+            <Icon name="straighten" className="text-[20px]" />
             <span>+ Record Measurement Entry</span>
           </button>
         ) : (
           <div className="w-full py-3 px-4 rounded-xl bg-[#1D230E] border border-[#525E31]/50 text-center font-mono text-xs text-[#AAB596] flex items-center justify-center gap-2 shadow-md">
-            <span className="material-symbols-outlined text-[16px] text-[#8B9B4C]">lock</span>
+            <Icon name="lock" className="text-[16px] text-[#8B9B4C]" />
             <span>Growth telemetry entries restricted to specimen caretaker</span>
           </div>
         )}

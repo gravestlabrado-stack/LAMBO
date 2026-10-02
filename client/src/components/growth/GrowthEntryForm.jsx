@@ -6,6 +6,7 @@ import { canUserLogTree, canUserEditOrDeleteLog } from '../../utils/permissions'
 import { GROWTH_STAGES, HEALTH_STATUSES } from '../../utils/constants';
 import { compressImage } from '../../utils/imageCompressor';
 import { enqueueOfflineLog } from '../../utils/offlineQueue';
+import Icon from '../common/Icon';
 
 export default function GrowthEntryForm({
   tree,
@@ -241,7 +242,7 @@ export default function GrowthEntryForm({
             className="w-8 h-8 rounded-full bg-[#1D230E] text-[#AAB596] hover:text-[#F0F3E8] flex items-center justify-center border border-[#4F5A2D] active:scale-95 transition-all"
             title="Close"
           >
-            <span className="material-symbols-outlined text-[18px]">close</span>
+            <Icon name="close" className="w-4.5 h-4.5" />
           </button>
         </div>
 
@@ -250,7 +251,7 @@ export default function GrowthEntryForm({
           {/* Permission Alert if not authorized */}
           {!isAuthorized && (
             <div className="rounded-xl bg-[#431B1B] border border-[#E57373]/60 p-3.5 text-xs text-[#FFCDD2] flex items-start gap-2.5">
-              <span className="material-symbols-outlined text-[20px] shrink-0 text-[#E57373]">lock</span>
+              <Icon name="lock" className="w-5 h-5 shrink-0 text-[#E57373]" />
               <div>
                 <span className="font-bold block uppercase font-mono text-[11px]">
                   Restricted Observation Access
@@ -265,7 +266,7 @@ export default function GrowthEntryForm({
           {/* Error Message */}
           {errorMessage && (
             <div className="rounded-xl bg-[#431B1B] border border-[#E57373]/60 p-3 text-xs text-[#FFCDD2] flex items-center gap-2">
-              <span className="material-symbols-outlined text-[18px] shrink-0">error</span>
+              <Icon name="error" className="w-4.5 h-4.5 shrink-0" />
               <span>{errorMessage}</span>
             </div>
           )}
@@ -274,7 +275,7 @@ export default function GrowthEntryForm({
           {targetTree ? (
             <div className="p-3 rounded-xl bg-[#1D230E] border border-[#4F5A2D] flex items-center justify-between">
               <div className="flex items-center gap-2.5 min-w-0">
-                <span className="material-symbols-outlined text-[#8B9B4C] text-[22px] shrink-0">park</span>
+                <Icon name="park" className="text-[#8B9B4C] w-5 h-5 shrink-0" />
                 <div className="min-w-0">
                   <span className="font-mono text-xs font-bold text-[#F0F3E8] block">
                     #{targetTree.treeId}
@@ -442,7 +443,7 @@ export default function GrowthEntryForm({
                   className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/70 text-[#FFCDD2] flex items-center justify-center backdrop-blur-md active:scale-95 transition-all"
                   title="Remove photo"
                 >
-                  <span className="material-symbols-outlined text-[18px]">close</span>
+                  <Icon name="close" className="w-4.5 h-4.5" />
                 </button>
               </div>
             ) : (
@@ -452,9 +453,10 @@ export default function GrowthEntryForm({
                   onClick={() => cameraInputRef.current?.click()}
                   className="border-2 border-dashed border-[#525E31] hover:border-[#8B9B4C] rounded-xl p-3.5 text-center cursor-pointer bg-[#1D230E] hover:bg-[#262C14] transition-all flex flex-col items-center justify-center gap-1 active:scale-95 group"
                 >
-                  <span className="material-symbols-outlined text-2xl text-[#A4B566] group-hover:scale-110 transition-transform">
-                    photo_camera
-                  </span>
+                  <Icon
+                    name="photo_camera"
+                    className="w-6 h-6 text-[#A4B566] group-hover:scale-110 transition-transform"
+                  />
                   <span className="font-mono text-xs font-bold text-[#F0F3E8]">Take Photo</span>
                   <span className="text-[10px] font-mono text-[#CCD6B8]">Direct Camera</span>
                 </button>
@@ -464,9 +466,10 @@ export default function GrowthEntryForm({
                   onClick={() => galleryInputRef.current?.click()}
                   className="border-2 border-dashed border-[#525E31] hover:border-[#8B9B4C] rounded-xl p-3.5 text-center cursor-pointer bg-[#1D230E] hover:bg-[#262C14] transition-all flex flex-col items-center justify-center gap-1 active:scale-95 group"
                 >
-                  <span className="material-symbols-outlined text-2xl text-[#8B9B4C] group-hover:scale-110 transition-transform">
-                    photo_library
-                  </span>
+                  <Icon
+                    name="photo_library"
+                    className="w-6 h-6 text-[#8B9B4C] group-hover:scale-110 transition-transform"
+                  />
                   <span className="font-mono text-xs font-bold text-[#F0F3E8]">Choose File</span>
                   <span className="text-[10px] font-mono text-[#CCD6B8]">Gallery / Storage</span>
                 </button>
@@ -521,12 +524,12 @@ export default function GrowthEntryForm({
             >
               {submitting ? (
                 <>
-                  <span className="material-symbols-outlined text-[18px] animate-spin">refresh</span>
+                  <Icon name="refresh" className="w-4.5 h-4.5 animate-spin" />
                   <span>Saving...</span>
                 </>
               ) : (
                 <>
-                  <span className="material-symbols-outlined text-[18px]">verified</span>
+                  <Icon name="verified" className="w-4.5 h-4.5" />
                   <span>{editingLog ? 'Update Audit' : 'Commit Audit Log'}</span>
                 </>
               )}
