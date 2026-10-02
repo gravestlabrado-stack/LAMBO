@@ -9,43 +9,117 @@ const TreeContext = createContext(null);
 
 export function TreeProvider({ children }) {
   const { token, isAuthenticated } = useAuth();
-  const [trees, setTrees] = useState([]);
+  const [trees, setTrees] = useState(() => {
+    try {
+      const cached = localStorage.getItem('lambo_cached_trees');
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [campusCatalog, setCampusCatalog] = useState(() => {
+    try {
+      const cached = localStorage.getItem('lambo_cached_campus_catalog');
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
   const [growthLogs, setGrowthLogs] = useState([]);
-  const [stats, setStats] = useState(null);
+  const [stats, setStats] = useState(() => {
+    try {
+      const cached = localStorage.getItem('lambo_cached_stats');
+      return cached ? JSON.parse(cached) : null;
+    } catch {
+      return null;
+    }
+  });
   const [reminders, setReminders] = useState([]);
   const [offlineCount, setOfflineCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // 1. Fetch trees from live API whenever authenticated
+  // 1. Fetch user trees from live API, with offline cache fallback
   const fetchTrees = useCallback(async () => {
     if (!isAuthenticated) return;
     setLoading(true);
     setError(null);
     try {
       const data = await treeService.getTrees();
-      setTrees(data.data || []);
+      const treeList = data.data || [];
+      setTrees(treeList);
+      try {
+        localStorage.setItem('lambo_cached_trees', JSON.stringify(treeList));
+      } catch (e) {
+        console.warn('[TreeContext] LocalStorage tree cache write failed:', e);
+      }
     } catch (err) {
-      console.error('[TreeContext] Failed to fetch trees:', err.message);
-      setError('Failed to load trees');
-      setTrees([]);
+      console.warn('[TreeContext] Network fetch failed, falling back to cached trees:', err.message);
+      try {
+        const cached = localStorage.getItem('lambo_cached_trees');
+        if (cached) {
+          setTrees(JSON.parse(cached));
+        } else {
+          setError('No cached trees available offline');
+        }
+      } catch {
+        setError('Failed to load trees');
+      }
     } finally {
       setLoading(false);
     }
   }, [isAuthenticated]);
 
-  // 2. Fetch dashboard stats from live API
+  // 2. Fetch entire campus specimen directory for offline QR lookups & map pins
+  const fetchCampusCatalog = useCallback(async () => {
+    if (!isAuthenticated) return;
+    try {
+      const res = await treeService.getTrees({ all: 'true', limit: 1000 });
+      const catalog = (res.data || []).map((t) => ({
+        _id: t._id,
+        treeId: t.treeId,
+        species: t.species,
+        nickname: t.nickname,
+        location: t.location,
+        coordinates: t.coordinates,
+        healthStatus: t.healthStatus,
+        currentStage: t.currentStage,
+        status: t.status,
+        owner: t.owner,
+      }));
+      setCampusCatalog(catalog);
+      try {
+        localStorage.setItem('lambo_cached_campus_catalog', JSON.stringify(catalog));
+      } catch {}
+    } catch (err) {
+      console.warn('[TreeContext] Offline or error fetching campus catalog, using cache:', err.message);
+      try {
+        const cached = localStorage.getItem('lambo_cached_campus_catalog');
+        if (cached) setCampusCatalog(JSON.parse(cached));
+      } catch {}
+    }
+  }, [isAuthenticated]);
+
+  // 3. Fetch dashboard stats from live API with offline cache fallback
   const fetchStats = useCallback(async () => {
     if (!isAuthenticated) return;
     try {
       const data = await treeService.getTreeStats();
-      setStats(data.data || null);
+      const statsData = data.data || null;
+      setStats(statsData);
+      try {
+        localStorage.setItem('lambo_cached_stats', JSON.stringify(statsData));
+      } catch {}
     } catch (err) {
-      console.error('[TreeContext] Failed to fetch stats:', err.message);
+      console.warn('[TreeContext] Failed to fetch live stats, using cache:', err.message);
+      try {
+        const cached = localStorage.getItem('lambo_cached_stats');
+        if (cached) setStats(JSON.parse(cached));
+      } catch {}
     }
   }, [isAuthenticated]);
 
-  // 3. Fetch growth logs from live API
+  // 4. Fetch growth logs from live API
   const fetchGrowthLogs = useCallback(async (treeId = null) => {
     if (!isAuthenticated) return;
     try {
@@ -102,18 +176,20 @@ export function TreeProvider({ children }) {
   useEffect(() => {
     if (isAuthenticated) {
       fetchTrees();
+      fetchCampusCatalog();
       fetchStats();
       fetchGrowthLogs();
       fetchReminders();
       refreshOfflineCount();
     } else {
       setTrees([]);
+      setCampusCatalog([]);
       setGrowthLogs([]);
       setStats(null);
       setReminders([]);
       setOfflineCount(0);
     }
-  }, [isAuthenticated, fetchTrees, fetchStats, fetchGrowthLogs, fetchReminders, refreshOfflineCount]);
+  }, [isAuthenticated, fetchTrees, fetchCampusCatalog, fetchStats, fetchGrowthLogs, fetchReminders, refreshOfflineCount]);
 
   // Listen for online status & offline queue changes
   useEffect(() => {
@@ -216,12 +292,20 @@ export function TreeProvider({ children }) {
   };
 
   const getTreeById = (treeId) => {
+    if (!treeId) return null;
+    const normalized = String(treeId).toLowerCase();
     return (
       trees.find(
         (t) =>
-          t.treeId?.toLowerCase() === String(treeId).toLowerCase() ||
+          t.treeId?.toLowerCase() === normalized ||
           t._id === treeId
-      ) || null
+      ) ||
+      campusCatalog.find(
+        (t) =>
+          t.treeId?.toLowerCase() === normalized ||
+          t._id === treeId
+      ) ||
+      null
     );
   };
 
@@ -296,6 +380,7 @@ export function TreeProvider({ children }) {
     <TreeContext.Provider
       value={{
         trees,
+        campusCatalog,
         growthLogs,
         stats,
         reminders,
@@ -311,6 +396,7 @@ export function TreeProvider({ children }) {
         deleteReminder,
         syncOffline,
         refreshTrees: fetchTrees,
+        refreshCampusCatalog: fetchCampusCatalog,
         refreshStats: fetchStats,
         refreshLogs: fetchGrowthLogs,
         refreshReminders: fetchReminders,

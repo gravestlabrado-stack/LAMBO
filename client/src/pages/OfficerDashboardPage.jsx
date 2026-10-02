@@ -342,7 +342,7 @@ export default function OfficerDashboardPage() {
         </div>
 
         {/* Filter Pills */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+        <div className="flex flex-wrap items-center gap-2">
           {['All', 'Active', 'Overdue', 'Delinquent', 'Unassigned'].map((f) => {
             const count =
               f === 'All'
@@ -382,15 +382,15 @@ export default function OfficerDashboardPage() {
           <table className="w-full text-left border-collapse font-mono text-xs">
             <thead>
               <tr className="bg-[#1D230E] border-b border-[#4F5A2D] text-[#C2CE9F] uppercase text-[11px] tracking-wider">
-                <th className="py-3 px-4">Cadet Profile</th>
-                <th className="py-3 px-3">Roll / ID Number</th>
-                <th className="py-3 px-3">Academic Program</th>
-                <th className="py-3 px-3">Contact</th>
-                <th className="py-3 px-3 text-center">Specimens</th>
-                <th className="py-3 px-3 text-center">Logs</th>
-                <th className="py-3 px-3">Last Observation</th>
-                <th className="py-3 px-3">Compliance</th>
-                <th className="py-3 px-4 text-right">Actions</th>
+                <th className="py-3 px-4 whitespace-nowrap min-w-[170px]">Cadet Profile</th>
+                <th className="py-3 px-3 whitespace-nowrap min-w-[130px]">Roll / ID Number</th>
+                <th className="py-3 px-3 whitespace-nowrap min-w-[160px]">Academic Program</th>
+                <th className="py-3 px-3 whitespace-nowrap min-w-[130px]">Contact</th>
+                <th className="py-3 px-3 text-center whitespace-nowrap">Specimens</th>
+                <th className="py-3 px-3 text-center whitespace-nowrap">Logs</th>
+                <th className="py-3 px-3 whitespace-nowrap min-w-[130px]">Last Observation</th>
+                <th className="py-3 px-3 whitespace-nowrap min-w-[120px]">Compliance</th>
+                <th className="py-3 px-4 text-right whitespace-nowrap min-w-[100px]">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#38411F]">
@@ -448,17 +448,17 @@ export default function OfficerDashboardPage() {
                     </td>
 
                     {/* Roll / ID Number */}
-                    <td className="py-3 px-3 text-[#D2DCB4] font-bold">
+                    <td className="py-3 px-3 text-[#D2DCB4] font-bold whitespace-nowrap">
                       {cadet.rollNumber}
                     </td>
 
                     {/* Course */}
-                    <td className="py-3 px-3 text-[#AAB596] truncate max-w-[150px]">
+                    <td className="py-3 px-3 text-[#AAB596] whitespace-nowrap">
                       {cadet.course || '—'}
                     </td>
 
                     {/* Phone */}
-                    <td className="py-3 px-3 text-[#CCD6B8]">
+                    <td className="py-3 px-3 text-[#CCD6B8] whitespace-nowrap">
                       {cadet.phone ? (
                         <a
                           href={`tel:${cadet.phone}`}
@@ -473,7 +473,7 @@ export default function OfficerDashboardPage() {
                     </td>
 
                     {/* Assigned Specimens */}
-                    <td className="py-3 px-3 text-center">
+                    <td className="py-3 px-3 text-center whitespace-nowrap">
                       <div className="inline-flex items-center gap-1 font-bold text-[#F0F3E8]">
                         <span>{cadet.aliveTrees}</span>
                         {cadet.deadTrees > 0 && (
@@ -485,12 +485,12 @@ export default function OfficerDashboardPage() {
                     </td>
 
                     {/* Logs Count */}
-                    <td className="py-3 px-3 text-center text-[#D8DFC8]">
+                    <td className="py-3 px-3 text-center text-[#D8DFC8] whitespace-nowrap">
                       {cadet.totalLogs}
                     </td>
 
                     {/* Last Observation */}
-                    <td className="py-3 px-3 text-[#AAB596]">
+                    <td className="py-3 px-3 text-[#AAB596] whitespace-nowrap">
                       {cadet.lastLogDate ? (
                         <div className="flex flex-col">
                           <span className="text-[#F0F3E8]">
@@ -506,19 +506,19 @@ export default function OfficerDashboardPage() {
                     </td>
 
                     {/* Compliance */}
-                    <td className="py-3 px-3">
+                    <td className="py-3 px-3 whitespace-nowrap">
                       {getComplianceBadge(cadet.complianceStatus)}
                     </td>
 
                     {/* Actions */}
-                    <td className="py-3 px-4 text-right">
+                    <td className="py-3 px-4 text-right whitespace-nowrap">
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleInspectCadet(cadet.id);
                         }}
-                        className="h-8 px-2.5 rounded-lg bg-[#30371A] hover:bg-[#3D4721] border border-[#525E31] text-[#A4B566] text-xs font-bold inline-flex items-center gap-1 active:scale-95 transition-all"
+                        className="h-8 px-2.5 rounded-lg bg-[#30371A] hover:bg-[#3D4721] border border-[#525E31] text-[#A4B566] text-xs font-bold inline-flex items-center gap-1 active:scale-95 transition-all cursor-pointer"
                       >
                         <span className="material-symbols-outlined text-[16px]">
                           visibility
@@ -537,11 +537,11 @@ export default function OfficerDashboardPage() {
       {/* CADET INSPECTION MODAL */}
       {selectedCadetId && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="w-full max-w-3xl rounded-2xl bg-[#262C14] border border-[#5D6A37] shadow-2xl p-5 sm:p-6 space-y-5 max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200">
+          <div className="w-full max-w-3xl rounded-2xl bg-[#262C14] border border-[#5D6A37] shadow-2xl p-4 sm:p-6 space-y-5 max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200">
             {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-[#4F5A2D] pb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-[#1D230E] border border-[#525E31] flex items-center justify-center text-[#A4B566] overflow-hidden">
+            <div className="flex items-start justify-between border-b border-[#4F5A2D] pb-4 gap-3">
+              <div className="flex items-start gap-3 min-w-0 flex-1">
+                <div className="w-12 h-12 rounded-2xl bg-[#1D230E] border border-[#525E31] flex items-center justify-center text-[#A4B566] overflow-hidden shrink-0 mt-0.5 shadow-md">
                   {cadetDetails?.cadet?.avatar ? (
                     <img
                       src={cadetDetails.cadet.avatar}
@@ -554,26 +554,25 @@ export default function OfficerDashboardPage() {
                     </span>
                   )}
                 </div>
-                <div>
-                  <h3 className="font-display font-bold text-lg text-[#F0F3E8]">
+                <div className="min-w-0 flex-1 space-y-1.5">
+                  <h3 className="font-display font-bold text-lg sm:text-xl text-[#F0F3E8] leading-tight">
                     {cadetDetails?.cadet?.name || 'Cadet Inspection'}
                   </h3>
-                  <div className="flex items-center gap-2 text-xs font-mono text-[#AAB596]">
-                    <span className="text-[#A4B566] font-bold">
+                  <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-xs font-mono">
+                    <span className="text-[#A4B566] font-bold bg-[#1D230E] px-2.5 py-0.5 rounded-md border border-[#525E31] whitespace-nowrap shadow-inner">
                       {cadetDetails?.cadet?.rollNumber}
                     </span>
-                    <span>•</span>
-                    <span>{cadetDetails?.cadet?.course || 'No Degree Program'}</span>
+                    <span className="text-[#D8DFC8] font-medium">
+                      {cadetDetails?.cadet?.course || 'No Degree Program'}
+                    </span>
                     {cadetDetails?.cadet?.phone && (
-                      <>
-                        <span>•</span>
-                        <a
-                          href={`tel:${cadetDetails.cadet.phone}`}
-                          className="text-[#D8DFC8] underline hover:text-[#A4B566]"
-                        >
-                          {cadetDetails.cadet.phone}
-                        </a>
-                      </>
+                      <a
+                        href={`tel:${cadetDetails.cadet.phone}`}
+                        className="text-[#AAB596] hover:text-[#A4B566] bg-[#1D230E]/60 px-2 py-0.5 rounded border border-[#3E4724] whitespace-nowrap inline-flex items-center gap-1 transition-colors"
+                      >
+                        <span>📞</span>
+                        <span>{cadetDetails.cadet.phone}</span>
+                      </a>
                     )}
                   </div>
                 </div>
@@ -582,7 +581,7 @@ export default function OfficerDashboardPage() {
               <button
                 type="button"
                 onClick={handleCloseInspection}
-                className="w-9 h-9 rounded-full bg-[#30371A] border border-[#525E31] text-[#AAB596] flex items-center justify-center hover:text-[#F0F3E8] transition-colors"
+                className="w-9 h-9 rounded-full bg-[#30371A] hover:bg-[#3D4721] border border-[#525E31] text-[#AAB596] hover:text-[#F0F3E8] flex items-center justify-center transition-colors shrink-0 cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[20px]">close</span>
               </button>

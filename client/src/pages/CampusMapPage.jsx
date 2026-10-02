@@ -4,6 +4,7 @@ import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from 'react-le
 import L from 'leaflet';
 import treeService from '../services/treeService';
 import { useAuth } from '../hooks/useAuth';
+import { useTrees } from '../context/TreeContext';
 import { CAMPUS_COORDINATES } from '../utils/constants';
 import { getCurrentCoordinates } from '../utils/geolocation';
 import MarkerClusterGroup from '../components/map/MarkerClusterGroup';
@@ -113,9 +114,17 @@ export default function CampusMapPage() {
   const [searchParams] = useSearchParams();
   const focusTreeId = searchParams.get('focus');
   const { user } = useAuth();
+  const { trees: userTrees, campusCatalog } = useTrees();
 
-  const [allTrees, setAllTrees] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [allTrees, setAllTrees] = useState(() => {
+    try {
+      const cached = localStorage.getItem('lambo_cached_all_trees') || localStorage.getItem('lambo_cached_campus_catalog');
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [loading, setLoading] = useState(allTrees.length === 0);
   const [scope, setScope] = useState('all'); // 'all' (Global Campus) | 'my' (My Plants/Trees)
   const [selectedHealth, setSelectedHealth] = useState('All');
 
@@ -130,14 +139,28 @@ export default function CampusMapPage() {
   // Default campus center coordinates: CTU Barili Campus (Cagay, Barili, Cebu)
   const defaultCenter = [CAMPUS_COORDINATES.lat, CAMPUS_COORDINATES.lng];
 
-  // Fetch all campus trees from backend API
+  // Fetch all campus trees from backend API with offline cache fallback
   const fetchMapTrees = async () => {
     try {
-      setLoading(true);
+      if (allTrees.length === 0) setLoading(true);
       const res = await treeService.getTrees({ all: 'true' });
-      setAllTrees(res.data || []);
+      const treeList = res.data || [];
+      setAllTrees(treeList);
+      try {
+        localStorage.setItem('lambo_cached_all_trees', JSON.stringify(treeList));
+      } catch {}
     } catch (err) {
-      console.error('[CampusMap] Error loading campus trees:', err);
+      console.warn('[CampusMap] Offline or error loading campus trees, falling back to cache:', err.message);
+      try {
+        const cached = localStorage.getItem('lambo_cached_all_trees') || localStorage.getItem('lambo_cached_campus_catalog');
+        if (cached) {
+          setAllTrees(JSON.parse(cached));
+        } else if (campusCatalog && campusCatalog.length > 0) {
+          setAllTrees(campusCatalog);
+        } else if (userTrees && userTrees.length > 0) {
+          setAllTrees(userTrees);
+        }
+      } catch (e) {}
     } finally {
       setLoading(false);
     }
@@ -315,8 +338,8 @@ export default function CampusMapPage() {
       )}
 
       {/* Health Status Filter Pills & Quick Location Buttons */}
-      <div className="flex flex-wrap items-center justify-between gap-2.5">
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+        <div className="flex flex-wrap items-center gap-2">
           {['All', 'Thriving', 'Stable / Fair', 'Distressed / At Risk', 'Dead / Mortality'].map((f) => {
             const count =
               f === 'All'

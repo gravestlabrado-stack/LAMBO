@@ -173,7 +173,7 @@ export default function TreeListPage() {
 
       {/* Health Status Filter Chips */}
       <div className="space-y-2">
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="font-mono text-[11px] text-[#AAB596] uppercase shrink-0 font-semibold mr-1">
             Health:
           </span>
@@ -206,7 +206,7 @@ export default function TreeListPage() {
         </div>
 
         {/* Growth Stage Filter Chips */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="font-mono text-[11px] text-[#AAB596] uppercase shrink-0 font-semibold mr-1">
             Stage:
           </span>

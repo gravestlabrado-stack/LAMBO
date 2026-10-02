@@ -4,6 +4,8 @@ import growthLogService from '../../services/growthLogService';
 import { useAuth } from '../../hooks/useAuth';
 import { canUserLogTree, canUserEditOrDeleteLog } from '../../utils/permissions';
 import { GROWTH_STAGES, HEALTH_STATUSES } from '../../utils/constants';
+import { compressImage } from '../../utils/imageCompressor';
+import { enqueueOfflineLog } from '../../utils/offlineQueue';
 
 export default function GrowthEntryForm({
   tree,
@@ -62,16 +64,23 @@ export default function GrowthEntryForm({
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  const handlePhotoSelect = (e) => {
+  const handlePhotoSelect = async (e) => {
     const file = e.target.files[0];
     if (file) {
       if (!file.type.startsWith('image/')) {
         setErrorMessage('Please select a valid image file (JPEG, PNG, WebP).');
         return;
       }
-      setPhotoFile(file);
-      setPhotoPreview(URL.createObjectURL(file));
       setErrorMessage('');
+      try {
+        const compressed = await compressImage(file, { maxWidth: 1280, maxHeight: 1280, quality: 0.8 });
+        setPhotoFile(compressed);
+        setPhotoPreview(URL.createObjectURL(compressed));
+      } catch (err) {
+        console.warn('[GrowthEntryForm] Compression fallback:', err);
+        setPhotoFile(file);
+        setPhotoPreview(URL.createObjectURL(file));
+      }
     }
   };
 
@@ -138,6 +147,29 @@ export default function GrowthEntryForm({
         formData.append('photo', photoFile);
       }
 
+      // If device is offline, enqueue directly into IndexedDB
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        console.log('[GrowthEntryForm] Offline mode active: storing observation in local queue...');
+        const offlineRecord = await enqueueOfflineLog({
+          tree: targetTree?._id || selectedTreeId,
+          treeId: targetTree?.treeId || selectedTreeId,
+          height: parseFloat(height),
+          stemDiameter: stemDiameter ? parseFloat(stemDiameter) : null,
+          leafCount: leafCount ? parseInt(leafCount, 10) : null,
+          fruitCount: fruitCount ? parseInt(fruitCount, 10) : null,
+          growthStage: stage,
+          healthStatus: health,
+          notes: notes.trim(),
+          photo: photoFile || photoPreview,
+          loggedAt: new Date().toISOString(),
+        });
+        if (onSuccess) {
+          onSuccess({ ...offlineRecord, isOffline: true });
+        }
+        onClose();
+        return;
+      }
+
       let res;
       if (editingLog?._id) {
         res = await growthLogService.updateLog(editingLog._id, formData);
@@ -151,6 +183,34 @@ export default function GrowthEntryForm({
       onClose();
     } catch (err) {
       console.error('[GrowthEntryForm] Submit failed:', err);
+
+      // If connection dropped during submit, save to offline IndexedDB queue
+      if (!navigator.onLine || err.message === 'Network Error' || !err.response) {
+        console.warn('[GrowthEntryForm] Network drop during submit, falling back to offline queue:', err.message);
+        try {
+          const offlineRecord = await enqueueOfflineLog({
+            tree: targetTree?._id || selectedTreeId,
+            treeId: targetTree?.treeId || selectedTreeId,
+            height: parseFloat(height),
+            stemDiameter: stemDiameter ? parseFloat(stemDiameter) : null,
+            leafCount: leafCount ? parseInt(leafCount, 10) : null,
+            fruitCount: fruitCount ? parseInt(fruitCount, 10) : null,
+            growthStage: stage,
+            healthStatus: health,
+            notes: notes.trim(),
+            photo: photoFile || photoPreview,
+            loggedAt: new Date().toISOString(),
+          });
+          if (onSuccess) {
+            onSuccess({ ...offlineRecord, isOffline: true });
+          }
+          onClose();
+          return;
+        } catch (queueErr) {
+          console.error('[GrowthEntryForm] Offline queue failed:', queueErr);
+        }
+      }
+
       const msg =
         err.response?.data?.message ||
         err.message ||

@@ -5,6 +5,7 @@ import GrowthEntryForm from '../components/growth/GrowthEntryForm';
 import ErrorBoundary from '../components/common/ErrorBoundary';
 import treeService from '../services/treeService';
 import { useAuth } from '../hooks/useAuth';
+import { useTrees } from '../context/TreeContext';
 import { canUserLogTree } from '../utils/permissions';
 
 /**
@@ -49,6 +50,7 @@ const extractTreeId = (raw) => {
 export default function ScanPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { getTreeById } = useTrees();
 
   const [activeTab, setActiveTab] = useState('camera'); // 'camera' | 'manual'
   const [manualId, setManualId] = useState('');
@@ -72,13 +74,23 @@ export default function ScanPage() {
       if (res.data) {
         setDetectedSpecimen(res.data);
       } else {
-        setSearchError(`Tree #${cleanId} not found in database.`);
+        const localTree = getTreeById(cleanId);
+        if (localTree) {
+          setDetectedSpecimen(localTree);
+        } else {
+          setSearchError(`Tree #${cleanId} not found in database.`);
+        }
       }
     } catch (err) {
-      console.warn('[ScanPage] Specimen lookup error:', err);
-      const msg =
-        err.response?.data?.message || `Specimen #${cleanId} not found in database.`;
-      setSearchError(msg);
+      console.warn('[ScanPage] Specimen lookup error, checking local cache:', err.message);
+      const localTree = getTreeById(cleanId);
+      if (localTree) {
+        setDetectedSpecimen(localTree);
+      } else {
+        const msg =
+          err.response?.data?.message || `Specimen #${cleanId} not found in offline catalog.`;
+        setSearchError(msg);
+      }
     } finally {
       setIsSearching(false);
     }

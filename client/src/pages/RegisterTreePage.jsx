@@ -5,6 +5,7 @@ import { SPECIES_PRESETS, GROWTH_STAGES, CAMPUS_COORDINATES } from '../utils/con
 import LocationPickerMap from '../components/map/LocationPickerMap';
 import QRCodeDisplay from '../components/tree/QRCodeDisplay';
 import zoneService from '../services/zoneService';
+import { compressImage } from '../utils/imageCompressor';
 
 export default function RegisterTreePage() {
   const navigate = useNavigate();
@@ -16,6 +17,7 @@ export default function RegisterTreePage() {
   const [nickname, setNickname] = useState('');
   const [healthStatus, setHealthStatus] = useState('Thriving');
   const [currentStage, setCurrentStage] = useState('Seedling');
+  const [isCompressingPhoto, setIsCompressingPhoto] = useState(false);
 
   // Forest Zone / Campus Sector from MongoDB
   const [zones, setZones] = useState([]);
@@ -99,7 +101,7 @@ export default function RegisterTreePage() {
     }
   };
 
-  const handlePhotoSelect = (e) => {
+  const handlePhotoSelect = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -108,14 +110,26 @@ export default function RegisterTreePage() {
       return;
     }
 
-    if (file.size > 10 * 1024 * 1024) {
-      setSubmitError('Photo size must be less than 10MB.');
+    if (file.size > 20 * 1024 * 1024) {
+      setSubmitError('Photo size must be less than 20MB.');
       return;
     }
 
-    setPhotoFile(file);
-    setPhotoPreview(URL.createObjectURL(file));
+    setIsCompressingPhoto(true);
     setSubmitError('');
+
+    try {
+      // Auto-compress high-resolution camera photo down to ~150-250KB JPEG
+      const compressed = await compressImage(file, { maxWidth: 1280, maxHeight: 1280, quality: 0.8 });
+      setPhotoFile(compressed);
+      setPhotoPreview(URL.createObjectURL(compressed));
+    } catch (err) {
+      console.warn('[RegisterTree] Image compression fallback:', err);
+      setPhotoFile(file);
+      setPhotoPreview(URL.createObjectURL(file));
+    } finally {
+      setIsCompressingPhoto(false);
+    }
   };
 
   const removePhoto = () => {
@@ -159,6 +173,7 @@ export default function RegisterTreePage() {
       formData.append('lat', coordinates.lat);
       formData.append('lng', coordinates.lng);
       formData.append('healthStatus', healthStatus);
+      formData.append('status', healthStatus === 'Dead / Mortality' ? 'dead' : 'alive');
       formData.append('currentStage', currentStage);
       formData.append('initialHeight', height === '' || isNaN(height) ? 0 : height);
       formData.append('initialStemDiameter', stemDiameter === '' || isNaN(stemDiameter) ? 0 : stemDiameter);
@@ -515,11 +530,12 @@ export default function RegisterTreePage() {
               <label className="block text-xs font-mono font-medium text-[#C2CE9F]">
                 Initial Health Status
               </label>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {[
                   { label: 'Thriving', val: 'Thriving', color: 'border-[#5D6A37] text-[#D2DCB4]' },
                   { label: 'Stable / Fair', val: 'Stable / Fair', color: 'border-[#D99B26]/60 text-[#F5C26B]' },
                   { label: 'Distressed', val: 'Distressed / At Risk', color: 'border-[#E57373]/60 text-[#FFCDD2]' },
+                  { label: 'Dead / Mortality', val: 'Dead / Mortality', color: 'border-[#4B5563] text-[#9CA3AF]' },
                 ].map((item) => (
                   <button
                     key={item.val}

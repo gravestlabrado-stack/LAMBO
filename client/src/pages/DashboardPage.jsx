@@ -354,12 +354,12 @@ export default function DashboardPage() {
 
         {/* Filter Chips Row */}
         {trees.length > 0 && (
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+          <div className="flex flex-wrap items-center gap-2">
             {['All', 'Thriving', 'Stable / Fair', 'Distressed', 'Mortality'].map((filter) => (
               <button
                 key={filter}
                 onClick={() => setActiveFilter(filter)}
-                className={`shrink-0 h-9 px-4 rounded-full font-label-md text-label-md font-bold flex items-center justify-center transition-all ${
+                className={`h-9 px-4 rounded-full font-label-md text-label-md font-bold flex items-center justify-center transition-all ${
                   activeFilter === filter
                     ? 'bg-[#8B9B4C] text-[#1F240F] shadow-sm'
                     : 'bg-[#30371A] text-[#D8DFC8] border border-[#525E31] hover:bg-[#38411F]'

@@ -63,6 +63,7 @@ export default function LocationPickerMap({
   lat = CAMPUS_COORDINATES.lat,
   lng = CAMPUS_COORDINATES.lng,
   onLocationChange,
+  autoLocate = true,
 }) {
   const [position, setPosition] = useState([lat, lng]);
   const [isLocating, setIsLocating] = useState(false);
@@ -76,6 +77,13 @@ export default function LocationPickerMap({
       setPosition([lat, lng]);
     }
   }, [lat, lng]);
+
+  // Auto-acquire real device GPS on mount
+  useEffect(() => {
+    if (autoLocate) {
+      handleGetCurrentLocation();
+    }
+  }, []);
 
   const handleMarkerDragEnd = (e) => {
     const marker = e.target;
