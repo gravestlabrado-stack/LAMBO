@@ -38,8 +38,17 @@ const register = async (req, res, next) => {
     }
 
     const officerKey = process.env.OFFICER_SIGNUP_KEY || 'NSTP2025'; // TODO: remove the default key and add a proper key in .env file
-    const isOfficer = Boolean(officerPasscode && officerPasscode.trim() === officerKey);
-    const assignedRole = isOfficer ? 'officer' : 'student';
+    let assignedRole = 'student';
+
+    if (officerPasscode && officerPasscode.trim()) {
+      if (officerPasscode.trim() !== officerKey) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid officer security passcode. Please verify your staff key or leave the field blank to enroll as a cadet.',
+        });
+      }
+      assignedRole = 'officer';
+    }
 
     // Create user
     const user = await User.create({
