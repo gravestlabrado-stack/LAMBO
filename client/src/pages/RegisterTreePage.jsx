@@ -209,7 +209,7 @@ export default function RegisterTreePage() {
   };
 
   return (
-    <div className="space-y-6 pb-12 max-w-3xl mx-auto">
+    <div className="space-y-6 pb-8 max-w-3xl mx-auto">
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -245,9 +245,6 @@ export default function RegisterTreePage() {
                 Geospatial Location &amp; Sector
               </h3>
             </div>
-            <span className="text-xs font-mono text-[#A4B566] bg-[#1D230E] px-2.5 py-1 rounded-full border border-[#525E31]">
-              Interactive GPS Pin
-            </span>
           </div>
 
           {/* Interactive Map Pin Placement */}
@@ -369,11 +366,10 @@ export default function RegisterTreePage() {
                       setSpecies(preset);
                       setCustomSpecies('');
                     }}
-                    className={`px-3 py-1.5 rounded-full font-mono text-xs flex items-center gap-1.5 transition-all active:scale-95 ${
-                      isSelected
-                        ? 'bg-[#8B9B4C] text-[#1F240F] font-bold shadow-md border border-[#A4B566]'
-                        : 'bg-[#1D230E] text-[#D8DFC8] border border-[#525E31] hover:bg-[#38411F]'
-                    }`}
+                    className={`px-3 py-1.5 rounded-full font-mono text-xs flex items-center gap-1.5 transition-all active:scale-95 ${isSelected
+                      ? 'bg-[#8B9B4C] text-[#1F240F] font-bold shadow-md border border-[#A4B566]'
+                      : 'bg-[#1D230E] text-[#D8DFC8] border border-[#525E31] hover:bg-[#38411F]'
+                      }`}
                   >
                     {isSelected && (
                       <Icon name="check" className="w-3.5 h-3.5" />
@@ -539,11 +535,10 @@ export default function RegisterTreePage() {
                     key={item.val}
                     type="button"
                     onClick={() => setHealthStatus(item.val)}
-                    className={`h-10 rounded-xl font-mono text-xs font-bold transition-all border ${
-                      healthStatus === item.val
-                        ? 'bg-[#1D230E] ring-2 ring-[#8B9B4C] shadow-sm ' + item.color
-                        : 'bg-[#1D230E]/60 border-[#525E31]/60 text-[#8B9B70] hover:bg-[#1D230E]'
-                    }`}
+                    className={`h-10 rounded-xl font-mono text-xs font-bold transition-all border ${healthStatus === item.val
+                      ? 'bg-[#1D230E] ring-2 ring-[#8B9B4C] shadow-sm ' + item.color
+                      : 'bg-[#1D230E]/60 border-[#525E31]/60 text-[#8B9B70] hover:bg-[#1D230E]'
+                      }`}
                   >
                     {item.label}
                   </button>
@@ -718,17 +713,17 @@ export default function RegisterTreePage() {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full h-14 rounded-2xl bg-[#8B9B4C] hover:bg-[#9EAF6D] active:scale-[0.98] transition-all text-[#1F240F] font-mono text-sm font-bold uppercase tracking-wider shadow-xl flex items-center justify-center gap-2.5 disabled:opacity-50"
+          className="w-full h-14 rounded-xl bg-gradient-to-r from-[#8B9B4C] via-[#9AB056] to-[#A4B566] hover:from-[#9BB057] hover:to-[#B4C674] active:scale-[0.98] active:brightness-95 transition-all text-[#161C0B] font-mono text-sm font-bold uppercase tracking-wider shadow-[0_4px_20px_rgba(139,155,76,0.3)] hover:shadow-[0_6px_28px_rgba(164,181,102,0.45)] border border-[#D2E29A]/50 flex items-center justify-center gap-2.5 disabled:opacity-50 cursor-pointer"
         >
           {isSubmitting ? (
             <>
-              <div className="w-5 h-5 border-2 border-[#1F240F] border-t-transparent rounded-full animate-spin" />
+              <div className="w-5 h-5 border-2 border-[#161C0B] border-t-transparent rounded-full animate-spin" />
               <span>Enrolling Specimen &amp; Uploading...</span>
             </>
           ) : (
             <>
-              <Icon name="app_registration" className="w-6 h-6" />
-              <span>Enroll Plant / Tree &amp; Generate QR Tag</span>
+              <Icon name="qr_code_2" className="w-5 h-5 text-[#161C0B]" />
+              <span>Enroll Specimen &amp; Generate QR</span>
             </>
           )}
         </button>

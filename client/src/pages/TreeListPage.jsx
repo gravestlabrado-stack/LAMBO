@@ -123,30 +123,30 @@ export default function TreeListPage() {
       </div>
 
       {/* Scope Selector: All Campus vs My Trees */}
-      <div className="flex items-center justify-between bg-[#1D230E] p-1 rounded-2xl border border-[#4F5A2D] shadow-inner">
+      <div className="flex items-center justify-between bg-[#1D230E] p-1.5 rounded-2xl border border-[#4F5A2D] shadow-inner gap-1.5">
         <button
           type="button"
           onClick={() => setScope('all')}
-          className={`flex-1 py-2 rounded-xl font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
+          className={`flex-1 py-2.5 px-3 rounded-xl font-mono text-xs font-bold uppercase transition-all flex items-center justify-center gap-2 cursor-pointer ${
             scope === 'all'
               ? 'bg-[#8B9B4C] text-[#1F240F] shadow-md'
-              : 'text-[#CCD6B8] hover:text-[#F0F3E8]'
+              : 'text-[#CCD6B8] hover:text-[#F0F3E8] hover:bg-[#283015]'
           }`}
         >
-          <Icon name="public" className="w-4 h-4" />
-          <span>All Campus Plants ({trees.length})</span>
+          <Icon name="public" className="w-4 h-4 shrink-0" />
+          <span className="truncate">All Campus ({trees.length})</span>
         </button>
         <button
           type="button"
           onClick={() => setScope('my')}
-          className={`flex-1 py-2 rounded-xl font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
+          className={`flex-1 py-2.5 px-3 rounded-xl font-mono text-xs font-bold uppercase transition-all flex items-center justify-center gap-2 cursor-pointer ${
             scope === 'my'
               ? 'bg-[#8B9B4C] text-[#1F240F] shadow-md'
-              : 'text-[#CCD6B8] hover:text-[#F0F3E8]'
+              : 'text-[#CCD6B8] hover:text-[#F0F3E8] hover:bg-[#283015]'
           }`}
         >
-          <Icon name="person" className="w-4 h-4" />
-          <span>My Specimens ({myTreesCount})</span>
+          <Icon name="person" className="w-4 h-4 shrink-0" />
+          <span className="truncate">My Specimens ({myTreesCount})</span>
         </button>
       </div>
 

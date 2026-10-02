@@ -68,16 +68,18 @@ export default function DashboardPage() {
             <Icon name="forest" className="w-5 h-5 text-[#A4B566]" />
           </span>
         </div>
-        <div className="inline-flex items-center gap-2 self-start px-3 py-1 rounded-full bg-[#1D230E] border border-[#525E31]/60 text-[#D8DFC8] font-label-md text-label-md">
-          <Icon name="eco" className="w-4 h-4 text-[#A4B566]" />
-          <span className="font-medium text-[#F0F3E8]">{user?.course || 'Student Observer'}</span>
-          <span className="w-1 h-1 rounded-full bg-[#8B9B4C]"></span>
-          <span className="text-[#F0F3E8]">{user?.rollNumber}</span>
+        <div className="flex flex-wrap items-center gap-2 pt-0.5">
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#242A13] border border-[#525E31] text-[#D8DFC8] text-xs font-mono">
+            <Icon name="eco" className="w-3.5 h-3.5 text-[#A4B566]" />
+            <span className="font-semibold text-[#F0F3E8]">{user?.course || 'Student Observer'}</span>
+          </div>
+          <span className="px-2.5 py-1 rounded-lg bg-[#1D230E] border border-[#525E31] text-[#A4B566] font-mono text-xs font-bold">
+            #{user?.rollNumber}
+          </span>
           {(user?.role === 'officer' || String(user?.rollNumber).trim() === '9260572') && (
-            <>
-              <span className="w-1 h-1 rounded-full bg-[#E5A93C]"></span>
-              <span className="text-[#F5D061] font-mono text-[11px] font-bold">🎖️ OFFICER</span>
-            </>
+            <span className="px-2.5 py-1 rounded-lg bg-[#302711] border border-[#D99B26]/60 text-[#F5C26B] font-mono text-xs font-bold flex items-center gap-1 shadow-sm">
+              <span>🎖️</span> OFFICER
+            </span>
           )}
         </div>
       </div>
@@ -232,10 +234,10 @@ export default function DashboardPage() {
 
           <div className="flex items-center gap-6">
             {/* SVG Donut Chart representing percentages */}
-            <div className="relative w-24 h-24 shrink-0 flex items-center justify-center">
+            <div className="relative w-28 h-28 shrink-0 flex items-center justify-center">
               <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                <circle className="stroke-[#1D230E]" cx="18" cy="18" fill="none" r="14" strokeWidth="4.5"></circle>
-                {/* Healthy */}
+                <circle className="stroke-[#1D230E]" cx="18" cy="18" fill="none" r="14" strokeWidth="3.5"></circle>
+                {/* Thriving / Healthy */}
                 <circle
                   cx="18"
                   cy="18"
@@ -245,19 +247,7 @@ export default function DashboardPage() {
                   strokeDasharray={`${healthyPct * 0.88} 100`}
                   strokeDashoffset="0"
                   strokeLinecap="round"
-                  strokeWidth="4.5"
-                ></circle>
-                {/* Thriving */}
-                <circle
-                  cx="18"
-                  cy="18"
-                  fill="none"
-                  r="14"
-                  stroke="#A4B566"
-                  strokeDasharray={`${healthyPct * 0.88} 100`}
-                  strokeDashoffset="0"
-                  strokeLinecap="round"
-                  strokeWidth="4.5"
+                  strokeWidth="3.5"
                 ></circle>
                 {/* Stable / Fair */}
                 <circle
@@ -269,7 +259,7 @@ export default function DashboardPage() {
                   strokeDasharray={`${fairPct * 0.88} 100`}
                   strokeDashoffset={`-${healthyPct * 0.88}`}
                   strokeLinecap="round"
-                  strokeWidth="4.5"
+                  strokeWidth="3.5"
                 ></circle>
                 {/* Distressed */}
                 <circle
@@ -281,7 +271,7 @@ export default function DashboardPage() {
                   strokeDasharray={`${distressedPct * 0.88} 100`}
                   strokeDashoffset={`-${(healthyPct + fairPct) * 0.88}`}
                   strokeLinecap="round"
-                  strokeWidth="4.5"
+                  strokeWidth="3.5"
                 ></circle>
                 {/* Mortality */}
                 <circle
@@ -293,14 +283,16 @@ export default function DashboardPage() {
                   strokeDasharray={`${mortalityPct * 0.88} 100`}
                   strokeDashoffset={`-${(healthyPct + fairPct + distressedPct) * 0.88}`}
                   strokeLinecap="round"
-                  strokeWidth="4.5"
+                  strokeWidth="3.5"
                 ></circle>
               </svg>
-              <div className="absolute flex flex-col items-center justify-center">
-                <span className="font-headline-sm text-headline-sm text-[#F0F3E8] font-bold">
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <span className="font-mono text-xl font-bold text-[#F0F3E8] leading-none">
                   {survivalPct}%
                 </span>
-                <span className="font-label-sm text-label-sm text-[#C2CE9F] font-semibold">Surviving</span>
+                <span className="text-[10px] font-mono uppercase tracking-wider text-[#A4B566] font-semibold mt-1">
+                  Surviving
+                </span>
               </div>
             </div>
 

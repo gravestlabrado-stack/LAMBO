@@ -161,6 +161,7 @@ const ICON_MAP = {
   progress_activity: Loader2,
   public: Globe,
   qr_code: QrCode,
+  qr_code_2: QrCode,
   qr_code_scanner: ScanLine,
   query_stats: TrendingUp,
   radar: Radio,

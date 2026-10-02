@@ -52,8 +52,8 @@ export default function RegisterPage() {
     } catch (err) {
       setError(
         err.response?.data?.message ||
-          err.message ||
-          'Registration failed. Please check your details.'
+        err.message ||
+        'Registration failed. Please check your details.'
       );
     } finally {
       setLoading(false);
@@ -186,26 +186,35 @@ export default function RegisterPage() {
             <button
               type="button"
               onClick={() => setShowStaffSection(!showStaffSection)}
-              className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-mono font-semibold transition-all flex items-center justify-between cursor-pointer ${
-                showStaffSection
-                  ? 'bg-[#332A14] border-[#F5C26B] text-[#F5C26B] shadow-md'
-                  : 'bg-[#242A13] hover:bg-[#2F3719] border-[#D99B26]/40 hover:border-[#D99B26] text-[#E8C274]'
-              }`}
+              className={`w-full h-11 px-3.5 rounded-xl border transition-all active:scale-[0.98] flex items-center justify-between cursor-pointer group ${showStaffSection
+                  ? 'bg-gradient-to-r from-[#332A14] to-[#252010] border-[#F5C26B] text-[#F5C26B] shadow-[0_2px_12px_rgba(245,194,107,0.2)]'
+                  : 'bg-[#242A13] hover:bg-[#2F3719] border-[#D99B26]/50 hover:border-[#F5C26B] text-[#E8C274] shadow-sm'
+                }`}
             >
-              <div className="flex items-center gap-2 min-w-0">
+              <div className="flex items-center gap-2.5">
                 <Icon
                   name="military_tech"
-                  className={`w-4 h-4 shrink-0 ${showStaffSection ? 'text-[#F5C26B]' : 'text-[#E8C274]'}`}
+                  className={`w-4 h-4 shrink-0 transition-colors ${showStaffSection ? 'text-[#F5C26B]' : 'text-[#D99B26]'
+                    }`}
                 />
-                <span className="font-bold">NSTP Officer / Staff?</span>
+                <span className="text-xs font-semibold tracking-normal text-[#F0F3E8] group-hover:text-[#F5C26B] transition-colors whitespace-nowrap">
+                  NSTP Officer / Staff?
+                </span>
               </div>
-              <span className={`px-2 py-0.5 rounded-md text-[10px] uppercase font-bold border transition-colors shrink-0 ml-2 ${
-                showStaffSection
-                  ? 'bg-[#F5C26B]/20 border-[#F5C26B] text-[#F5C26B]'
-                  : 'bg-[#1D230E] border-[#525E31] text-[#AAB596]'
-              }`}>
-                {showStaffSection ? 'Hide' : 'Enter Key'}
-              </span>
+
+              <div
+                className={`px-2 py-0.5 rounded-md text-[10px] font-mono font-bold uppercase tracking-wider border shrink-0 transition-all flex items-center gap-1 ${showStaffSection
+                    ? 'bg-[#F5C26B] text-[#1D230E] border-[#F5C26B]'
+                    : 'bg-[#1D230E] text-[#D99B26] border-[#D99B26]/40 group-hover:border-[#D99B26]'
+                  }`}
+              >
+                <span>{showStaffSection ? 'Hide' : 'Enter Key'}</span>
+                <Icon
+                  name="expand_more"
+                  className={`w-3.5 h-3.5 transition-transform duration-200 ${showStaffSection ? 'rotate-180' : ''
+                    }`}
+                />
+              </div>
             </button>
 
             {showStaffSection && (
