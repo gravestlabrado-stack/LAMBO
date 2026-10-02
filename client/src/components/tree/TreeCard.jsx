@@ -5,6 +5,7 @@ import Icon from '../common/Icon';
 
 export default function TreeCard({ tree, isOwner = false }) {
   const navigate = useNavigate();
+  const [imgError, setImgError] = React.useState(false);
 
   const photoUrl =
     tree.photos && tree.photos.length > 0 ? tree.photos[0].url : null;
@@ -38,11 +39,12 @@ export default function TreeCard({ tree, isOwner = false }) {
       <div className="flex items-center gap-3.5 min-w-0">
         {/* Specimen Photo Thumbnail */}
         <div className="relative w-16 h-16 rounded-xl bg-[#1D230E] overflow-hidden shrink-0 border border-[#525E31] shadow-inner flex items-center justify-center">
-          {photoUrl ? (
+          {photoUrl && !imgError ? (
             <img
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
               alt={tree.species}
               src={photoUrl}
+              onError={() => setImgError(true)}
             />
           ) : (
             <div className="flex flex-col items-center justify-center text-[#525E31] group-hover:text-[#8B9B4C] transition-colors">

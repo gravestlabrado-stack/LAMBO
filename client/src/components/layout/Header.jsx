@@ -277,25 +277,25 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
       <header className="fixed top-0 w-full z-50 pt-safe bg-[#1D230E]/95 backdrop-blur-xl border-b border-[#525E31]/40 shadow-[0_2px_12px_rgba(0,0,0,0.4)]">
         <div className="h-16 px-4 flex items-center justify-between gap-3 max-w-5xl mx-auto">
           {/* Brand & Page Info */}
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
             <img
               alt="LAMBO Logo"
               className="h-8 w-8 object-contain shrink-0 drop-shadow rounded-lg"
               src="/lambo-logo.svg"
             />
             <div className="flex flex-col min-w-0">
-              <span className="font-label-sm text-label-sm text-[#C2CE9F] uppercase tracking-wider truncate">
+              <span className="font-label-sm text-[10px] sm:text-label-sm text-[#C2CE9F] uppercase tracking-wider truncate">
                 {subtitle}
               </span>
-              <h1 className="font-headline-sm text-headline-sm text-[#F0F3E8] truncate font-bold">
+              <h1 className="font-headline-sm text-sm sm:text-headline-sm text-[#F0F3E8] truncate font-bold">
                 {title}
               </h1>
             </div>
           </div>
 
           {/* Unified Tactical Pill Toolbar */}
-          <div className="relative">
-            <div className="flex items-center bg-[#30371A]/90 border border-[#525E31] rounded-full p-1 pl-3 pr-1 gap-1.5 shadow-sm">
+          <div className="relative shrink-0">
+            <div className="flex items-center bg-[#30371A]/90 border border-[#525E31] rounded-full p-1 pl-2.5 sm:pl-3 pr-1 gap-1 sm:gap-1.5 shadow-sm">
               {/* Online / Offline Status Indicator */}
               <div
                 title={isOnline ? 'Network: Online' : 'Network: Offline'}
@@ -308,7 +308,7 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
                       : 'bg-[#E57373] shadow-[0_0_6px_#E57373] animate-pulse'
                   }`}
                 />
-                <span className="font-mono text-[11px] font-semibold text-[#D8DFC8] hidden xs:inline">
+                <span className="font-mono text-[11px] font-semibold text-[#D8DFC8] hidden md:inline">
                   {isOnline ? 'Online' : 'Offline'}
                 </span>
               </div>
@@ -352,18 +352,18 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
                 )}
               </button>
 
-              {/* Campus Map Quick Button */}
+              {/* Campus Map Quick Button (Visible on desktop/tablet; hidden on mobile to maximize title room) */}
               <button
                 type="button"
                 onClick={() => navigate('/map')}
                 aria-label="Campus Specimen Map"
                 title="Global Campus Specimen Map"
-                className="w-8 h-8 rounded-full flex items-center justify-center text-[#D8DFC8] hover:text-[#A4B566] hover:bg-[#38411F] transition-all"
+                className="hidden sm:flex w-8 h-8 rounded-full items-center justify-center text-[#D8DFC8] hover:text-[#A4B566] hover:bg-[#38411F] transition-all"
               >
                 <Icon name="map" className="text-[19px]" />
               </button>
 
-              {/* Install App Quick Button - ONLY visible if app is NOT installed */}
+              {/* Install App Quick Button - Visible on larger screens; mobile users install via Profile Menu */}
               {!isInstalled && (
                 <>
                   <button
@@ -371,11 +371,11 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
                     onClick={handleInstallClick}
                     title="Install LAMBO App on this device"
                     aria-label="Install App"
-                    className="w-8 h-8 rounded-full flex items-center justify-center text-[#D8DFC8] hover:text-[#A4B566] hover:bg-[#38411F] transition-all"
+                    className="hidden md:flex w-8 h-8 rounded-full items-center justify-center text-[#D8DFC8] hover:text-[#A4B566] hover:bg-[#38411F] transition-all"
                   >
                     <Icon name="install_mobile" className="text-[18px]" />
                   </button>
-                  <div className="w-[1px] h-4 bg-[#525E31]/80" />
+                  <div className="hidden md:block w-[1px] h-4 bg-[#525E31]/80" />
                 </>
               )}
 

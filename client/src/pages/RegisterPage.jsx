@@ -181,26 +181,35 @@ export default function RegisterPage() {
             />
           </div>
 
-          {/* Staff / Officer Passcode Accordion */}
+          {/* Staff / Officer Passcode Accordion Button */}
           <div className="pt-1">
             <button
               type="button"
               onClick={() => setShowStaffSection(!showStaffSection)}
-              className="text-xs font-mono text-[#F5C26B] hover:text-[#FFD54F] transition-colors flex items-center gap-1.5 focus:outline-none"
+              className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-mono font-semibold transition-all flex items-center justify-between cursor-pointer ${
+                showStaffSection
+                  ? 'bg-[#332A14] border-[#F5C26B] text-[#F5C26B] shadow-md'
+                  : 'bg-[#242A13] hover:bg-[#2F3719] border-[#D99B26]/40 hover:border-[#D99B26] text-[#E8C274]'
+              }`}
             >
-              <Icon
-                name={showStaffSection ? 'expand_less' : 'military_tech'}
-                className="w-4 h-4"
-              />
-              <span>
-                {showStaffSection
-                  ? 'Hide Officer Clearance Code'
-                  : 'Are you an NSTP Officer or Staff?'}
+              <div className="flex items-center gap-2 min-w-0">
+                <Icon
+                  name="military_tech"
+                  className={`w-4 h-4 shrink-0 ${showStaffSection ? 'text-[#F5C26B]' : 'text-[#E8C274]'}`}
+                />
+                <span className="font-bold">NSTP Officer / Staff?</span>
+              </div>
+              <span className={`px-2 py-0.5 rounded-md text-[10px] uppercase font-bold border transition-colors shrink-0 ml-2 ${
+                showStaffSection
+                  ? 'bg-[#F5C26B]/20 border-[#F5C26B] text-[#F5C26B]'
+                  : 'bg-[#1D230E] border-[#525E31] text-[#AAB596]'
+              }`}>
+                {showStaffSection ? 'Hide' : 'Enter Key'}
               </span>
             </button>
 
             {showStaffSection && (
-              <div className="mt-2 p-3 rounded-xl bg-[#1D230E] border border-[#D99B26]/50 space-y-1.5 animate-in fade-in">
+              <div className="mt-2.5 p-3 rounded-xl bg-[#1D230E] border border-[#D99B26]/50 space-y-1.5 animate-in fade-in">
                 <label className="block text-[11px] font-mono text-[#F5C26B] uppercase tracking-wider font-semibold">
                   Officer Security Passcode
                 </label>
