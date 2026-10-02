@@ -1,6 +1,6 @@
 {
   "name": "lambo-server",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Backend API for LAMBO - Landscape Analytics for Monitoring Botanical Observation",
   "main": "server.js",
   "scripts": {

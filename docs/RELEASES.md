@@ -41,6 +41,16 @@ All notable updates, enhancements, bug fixes, and architectural revisions for **
   - Added contact phone number field for field communication.
   - Modular schema architecture allowing instant expansion when final departmental fields are confirmed.
 
+- **Field Autonomy & Offline Resilience**:
+  - **Client-Side Image Compressor**: Integrated HTML5 Canvas compression pipeline (`imageCompressor.js`) dropping 5MB camera photos to ~180KB JPEG before upload, preventing upload bottlenecks and preserving server resources.
+  - **Two-Tier Specimen Caching**: Implemented Stale-While-Revalidate caching for cadet specimens and campus directory in `TreeContext`, enabling offline tree lookup and field logging in remote campus plots.
+  - **Offline Session Protection**: Client-side JWT expiry verification prevents token wipes and "Network Error" logouts when refreshing while disconnected.
+  - **100% Zero-External-CDN Architecture**: Self-hosted `@fontsource/chivo` and `@fontsource/jetbrains-mono` typography, bundled local Leaflet CSS, and converted all Material Symbols webfont glyphs to local zero-network Lucide SVGs.
+  - **PWA Service Worker v2**: Upgraded to Cache-First strategy with graceful offline navigation fallback and dev-mode isolation to protect Vite live HMR.
+
+- **Automated Demonstration Cohort**:
+  - Added `npm run seed:v2` script generating realistic NSTP Officer, student cadets, campus trees with GPS coordinates, and historical photo observation logs across all compliance tiers.
+
 - **v3 Gamification Foundation**:
   - Clean modular hooks prepared for v3 care streaks, observation badges, and leaderboard rankings without breaking database schemas.
 
