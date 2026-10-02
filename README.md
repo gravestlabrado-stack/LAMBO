@@ -1,8 +1,26 @@
 # 🌱 LAMBO
 
+[![Release](https://img.shields.io/badge/release-v1.0.0-8B9B4C.svg?style=flat-square&logo=github)](docs/RELEASES.md)
+[![Status](https://img.shields.io/badge/v2.0-in%20development-EAB308.svg?style=flat-square)](docs/v2_PLAN.md)
+[![License: MIT](https://img.shields.io/badge/License-MIT-A4B566.svg?style=flat-square)](LICENSE)
+[![PWA Ready](https://img.shields.io/badge/PWA-Offline%20Capable-525E31.svg?style=flat-square)](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps)
+
 **Landscape Analytics for Monitoring Botanical Observation**
 
-A student-centered web application for tracking and monitoring wildling seedlings and trees on campus. Built with a premium tactical army-green aesthetic, LAMBO helps students register, measure, photograph, and track the growth of their assigned wildlings throughout the school year.
+A student-centered progressive web application for tracking and monitoring wildling seedlings and trees on campus. Built with a premium tactical army-green aesthetic, LAMBO helps students register, measure, photograph, and track the growth of their assigned wildlings throughout the school year.
+
+---
+
+## 📚 Project Documentation
+
+All formal technical architecture, release notes, and operational guides are organized in the [`docs/`](./docs) directory:
+
+- 🚀 [**v2.0 Implementation Blueprint**](./docs/v2_PLAN.md) — Phased engineering plan for the Command & Inspection release.
+- 📖 [**Architecture in Plain English**](./docs/PLAIN_ENGLISH_GUIDE.md) — Non-technical guide for evaluators, teachers, and students.
+- 🏷️ [**GitHub Versioning & Tagging Guide**](./docs/GITHUB_WORKFLOW.md) — Step-by-step SemVer, Git tag, and GitHub Release manual.
+- 📋 [**Release Notes & Changelog**](./docs/RELEASES.md) — Detailed changelog for v1.0.0 and v2.0.0.
+- 🏛️ [**System Architecture & Engineering**](./docs/ARCHITECTURE.md) — Data models, RBAC, mandatory photo pipeline, and v3 gamification foundation.
+- 🎖️ [**NSTP Officer & Instructor Field Manual**](./docs/OFFICER_GUIDE.md) — Cadets inspection, photo verification, and Excel grade exporting.
 
 ---
 
@@ -50,6 +68,16 @@ A student-centered web application for tracking and monitoring wildling seedling
 
 ---
 
+## 🚀 Upcoming in v2.0 (Command & Inspection)
+
+- 🎖️ **NSTP Officer Command Dashboard**: Student roster, compliance tracking, overdue observation alerts, and cohort Excel grading exports.
+- 🌲 **Forestry Standard Vitality Classification**: `Thriving`, `Stable / Fair`, `Distressed / At Risk`, and `Dead / Mortality`.
+- 📷 **Mandatory Observation Photography**: Photographic evidence required for every growth entry with offline queue serialization.
+- 🎓 **Enhanced Cadet Enrollment**: Degree program dropdown list and contact telephone fields.
+- 🎮 **v3 Gamification Foundation**: Architectural event hooks for care streaks, badges, and leaderboards.
+
+---
+
 ## 🛠️ Tech Stack
 
 | Layer | Technology |
@@ -74,6 +102,12 @@ A student-centered web application for tracking and monitoring wildling seedling
 
 ```
 LAMBO/
+├── docs/            # Engineering, architecture & release documentation
+│   ├── v2_PLAN.md          # Phased engineering blueprint for v2
+│   ├── GITHUB_WORKFLOW.md  # Semantic versioning & GitHub release manual
+│   ├── RELEASES.md         # Release notes & version changelog
+│   ├── ARCHITECTURE.md     # Data schemas, RBAC, and gamification hooks
+│   └── OFFICER_GUIDE.md    # Guide for NSTP officers & instructors
 ├── client/          # React + Vite frontend
 │   ├── src/
 │   │   ├── components/   # Reusable UI components
@@ -92,7 +126,7 @@ LAMBO/
 │   │   └── config/       # DB & Cloudinary config
 │   └── ...
 ├── DESIGN/          # Design boards & design system (reference)
-├── plan.md          # Detailed implementation plan
+├── plan.md          # Original implementation plan
 ├── agents.md        # AI agent development instructions
 └── Idea.md          # Feature brainstorm & vision
 ```
