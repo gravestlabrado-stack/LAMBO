@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { formatDate } from '../../utils/formatters';
 import { canUserEditOrDeleteLog } from '../../utils/permissions';
@@ -14,7 +14,30 @@ export default function GrowthTimeline({
 }) {
   const [selectedPhoto, setSelectedPhoto] = useState(null);
 
-  if (!logs || logs.length === 0) {
+  // Sort latest first and strictly deduplicate
+  const sortedLogs = useMemo(() => {
+    if (!logs || logs.length === 0) return [];
+    const seenIds = new Set();
+    const seenSignatures = new Set();
+
+    return [...logs]
+      .filter((l) => {
+        if (!l) return false;
+        const id = String(l._id || l.id || '');
+        if (id && seenIds.has(id)) return false;
+        if (id) seenIds.add(id);
+
+        const timeKey = l.loggedAt ? Math.floor(new Date(l.loggedAt).getTime() / 30000) : '';
+        const sig = `${l.tree?._id || l.tree || ''}_${l.height}_${l.notes || ''}_${timeKey}`;
+        if (seenSignatures.has(sig)) return false;
+        seenSignatures.add(sig);
+
+        return true;
+      })
+      .sort((a, b) => new Date(b.loggedAt) - new Date(a.loggedAt));
+  }, [logs]);
+
+  if (!sortedLogs || sortedLogs.length === 0) {
     return (
       <div className="bg-[#262C14] border border-[#4F5A2D] rounded-2xl p-8 text-center space-y-2">
         <Icon name="history_toggle_off" className="w-8 h-8 text-[#525E31]" />
@@ -27,11 +50,6 @@ export default function GrowthTimeline({
       </div>
     );
   }
-
-  // Sort latest first
-  const sortedLogs = [...logs].sort(
-    (a, b) => new Date(b.loggedAt) - new Date(a.loggedAt)
-  );
 
   return (
     <div className="space-y-4">
@@ -76,16 +94,8 @@ export default function GrowthTimeline({
               className="relative flex flex-col bg-[#262C14] rounded-2xl p-4 sm:p-5 shadow-sm border border-[#4F5A2D] space-y-3 hover:border-[#8B9B4C]/80 transition-colors"
             >
               {/* Tactical Node Circle Indicator on Rail */}
-              <div
-                className={`absolute -left-[22px] top-5 w-4 h-4 rounded-full flex items-center justify-center ring-4 ring-[#1D230E] ${
-                  isLatest ? 'bg-[#A4B566] shadow-md' : 'bg-[#3E4724] border border-[#5D6A35]'
-                }`}
-              >
-                <div
-                  className={`w-1.5 h-1.5 rounded-full ${
-                    isLatest ? 'bg-[#1F240F]' : 'bg-[#A4B566]'
-                  }`}
-                />
+              <div className="absolute -left-[22px] top-5 w-4 h-4 rounded-full flex items-center justify-center ring-4 ring-[#1D230E] bg-[#3E4724] border border-[#5D6A35]">
+                <div className="w-1.5 h-1.5 rounded-full bg-[#A4B566]" />
               </div>
 
               {/* Card Header: Date & Time */}
@@ -94,11 +104,6 @@ export default function GrowthTimeline({
                   <span className="font-mono text-xs sm:text-sm text-[#F0F3E8] font-bold">
                     {formatDate(log.loggedAt, true)}
                   </span>
-                  {isLatest && (
-                    <span className="px-2 py-0.5 rounded-full bg-[#3D4621] border border-[#5A6732] text-[#A4B566] font-mono text-[10px] font-bold">
-                      Latest Audit
-                    </span>
-                  )}
                 </div>
 
                 <div className="flex items-center gap-1.5">

@@ -3,6 +3,7 @@ import treeService from '../services/treeService';
 import growthLogService from '../services/growthLogService';
 import reminderService from '../services/reminderService';
 import { enqueueOfflineLog, getOfflineLogs, syncOfflineQueue } from '../utils/offlineQueue';
+import { saveStoredTrees, getStoredTrees } from '../utils/offlineStorage';
 import { useAuth } from '../hooks/useAuth';
 
 const TreeContext = createContext(null);
@@ -39,6 +40,29 @@ export function TreeProvider({ children }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // Load IndexedDB stored trees on initial startup
+  useEffect(() => {
+    getStoredTrees().then((stored) => {
+      if (stored && stored.length > 0) {
+        setTrees((prev) => (prev.length === 0 ? stored : prev));
+        setCampusCatalog((prev) => (prev.length === 0 ? stored : prev));
+      }
+    }).catch(() => {});
+  }, []);
+
+  // Listen for optimistic offline log updates
+  useEffect(() => {
+    const handleTreeUpdated = (e) => {
+      const { tree } = e.detail || {};
+      if (tree && tree._id) {
+        setTrees((prev) => prev.map((t) => (t._id === tree._id ? tree : t)));
+        setCampusCatalog((prev) => prev.map((t) => (t._id === tree._id ? tree : t)));
+      }
+    };
+    window.addEventListener('lambo_tree_updated', handleTreeUpdated);
+    return () => window.removeEventListener('lambo_tree_updated', handleTreeUpdated);
+  }, []);
+
   // 1. Fetch user trees from live API, with offline cache fallback
   const fetchTrees = useCallback(async () => {
     if (!isAuthenticated) return;
@@ -48,6 +72,7 @@ export function TreeProvider({ children }) {
       const data = await treeService.getTrees();
       const treeList = data.data || [];
       setTrees(treeList);
+      saveStoredTrees(treeList);
       try {
         localStorage.setItem('lambo_cached_trees', JSON.stringify(treeList));
       } catch (e) {
@@ -56,11 +81,13 @@ export function TreeProvider({ children }) {
     } catch (err) {
       console.warn('[TreeContext] Network fetch failed, falling back to cached trees:', err.message);
       try {
-        const cached = localStorage.getItem('lambo_cached_trees');
-        if (cached) {
-          setTrees(JSON.parse(cached));
+        const stored = await getStoredTrees();
+        if (stored && stored.length > 0) {
+          setTrees(stored);
         } else {
-          setError('No cached trees available offline');
+          const cached = localStorage.getItem('lambo_cached_trees');
+          if (cached) setTrees(JSON.parse(cached));
+          else setError('No cached trees available offline');
         }
       } catch {
         setError('Failed to load trees');
@@ -75,27 +102,22 @@ export function TreeProvider({ children }) {
     if (!isAuthenticated) return;
     try {
       const res = await treeService.getTrees({ all: 'true', limit: 1000 });
-      const catalog = (res.data || []).map((t) => ({
-        _id: t._id,
-        treeId: t.treeId,
-        species: t.species,
-        nickname: t.nickname,
-        location: t.location,
-        coordinates: t.coordinates,
-        healthStatus: t.healthStatus,
-        currentStage: t.currentStage,
-        status: t.status,
-        owner: t.owner,
-      }));
+      const catalog = res.data || [];
       setCampusCatalog(catalog);
+      saveStoredTrees(catalog);
       try {
         localStorage.setItem('lambo_cached_campus_catalog', JSON.stringify(catalog));
       } catch {}
     } catch (err) {
       console.warn('[TreeContext] Offline or error fetching campus catalog, using cache:', err.message);
       try {
-        const cached = localStorage.getItem('lambo_cached_campus_catalog');
-        if (cached) setCampusCatalog(JSON.parse(cached));
+        const stored = await getStoredTrees();
+        if (stored && stored.length > 0) {
+          setCampusCatalog(stored);
+        } else {
+          const cached = localStorage.getItem('lambo_cached_campus_catalog');
+          if (cached) setCampusCatalog(JSON.parse(cached));
+        }
       } catch {}
     }
   }, [isAuthenticated]);

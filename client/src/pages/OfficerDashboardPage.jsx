@@ -6,6 +6,15 @@ import { useAuth } from '../hooks/useAuth';
 import officerService from '../services/officerService';
 import { formatDate, formatRelativeTime } from '../utils/formatters';
 import Icon from '../components/common/Icon';
+import {
+  getStoredOfficerRoster,
+  saveOfficerRoster,
+  getStoredOfficerStats,
+  saveOfficerStats,
+  getStoredCadetDetails,
+  saveCadetDetails,
+  notifyConnectionStatus,
+} from '../utils/offlineStorage';
 
 export default function OfficerDashboardPage() {
   const navigate = useNavigate();
@@ -15,10 +24,12 @@ export default function OfficerDashboardPage() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isOffline, setIsOffline] = useState(false);
 
   // Filters & Search
   const [searchQuery, setSearchQuery] = useState('');
   const [complianceFilter, setComplianceFilter] = useState('All');
+  const [roleFilter, setRoleFilter] = useState('all'); // 'all' | 'cadet' | 'officer'
 
   // Inspection Drawer / Modal State
   const [selectedCadetId, setSelectedCadetId] = useState(null);
@@ -34,6 +45,20 @@ export default function OfficerDashboardPage() {
     user?.role === 'officer' ||
     (user?.rollNumber && String(user.rollNumber).trim() === '9260572');
 
+  // Load cached roster immediately on mount
+  useEffect(() => {
+    if (!isOfficerAuthorized) return;
+    Promise.all([getStoredOfficerRoster(), getStoredOfficerStats()]).then(
+      ([cachedRoster, cachedStats]) => {
+        if (cachedRoster && cachedRoster.length > 0) {
+          setRoster(cachedRoster);
+          setStats(cachedStats);
+          setLoading(false);
+        }
+      }
+    ).catch(() => {});
+  }, [isOfficerAuthorized]);
+
   useEffect(() => {
     if (!isOfficerAuthorized) {
       navigate('/', { replace: true });
@@ -41,19 +66,41 @@ export default function OfficerDashboardPage() {
     }
 
     const fetchOfficerData = async () => {
-      setLoading(true);
+      setError('');
       try {
         const [rosterRes, statsRes] = await Promise.all([
           officerService.getRoster(),
           officerService.getStats(),
         ]);
-        setRoster(rosterRes.data || []);
-        setStats(statsRes.data || null);
+        const rosterData = rosterRes.data || [];
+        const statsData = statsRes.data || null;
+        setRoster(rosterData);
+        setStats(statsData);
+        setIsOffline(false);
+        notifyConnectionStatus('online');
+        saveOfficerRoster(rosterData);
+        saveOfficerStats(statsData);
       } catch (err) {
-        console.error('[OfficerDashboard] Error loading data:', err);
-        setError(
-          err.response?.data?.message || 'Failed to load officer telemetry data'
-        );
+        console.warn('[OfficerDashboard] Network error, reading from IndexedDB:', err);
+        setIsOffline(true);
+        notifyConnectionStatus('offline');
+        try {
+          const [cachedRoster, cachedStats] = await Promise.all([
+            getStoredOfficerRoster(),
+            getStoredOfficerStats(),
+          ]);
+          if (cachedRoster && cachedRoster.length > 0) {
+            setRoster(cachedRoster);
+            setStats(cachedStats);
+            setError('');
+          } else {
+            setError(
+              err.response?.data?.message || 'Unable to connect to server and no offline cache available.'
+            );
+          }
+        } catch {
+          setError('Failed to load officer telemetry data');
+        }
       } finally {
         setLoading(false);
       }
@@ -62,16 +109,51 @@ export default function OfficerDashboardPage() {
     fetchOfficerData();
   }, [isOfficerAuthorized, navigate]);
 
-  // Open cadet inspection modal
+  // Open cadet inspection modal with offline fallback
   const handleInspectCadet = async (cadetId) => {
     setSelectedCadetId(cadetId);
     setLoadingDetails(true);
     setCadetDetails(null);
+
+    // 1. Check local cache first
+    try {
+      const cached = await getStoredCadetDetails(cadetId);
+      if (cached) {
+        setCadetDetails(cached);
+        setLoadingDetails(false);
+      }
+    } catch {}
+
+    // 2. Fetch live if online
     try {
       const res = await officerService.getCadetDetails(cadetId);
-      setCadetDetails(res.data);
+      if (res.data) {
+        setCadetDetails(res.data);
+        saveCadetDetails(cadetId, res.data);
+      }
     } catch (err) {
-      console.error('[OfficerDashboard] Error loading cadet details:', err);
+      console.warn('[OfficerDashboard] Offline cadet inspect, synthesizing from roster:', err);
+      // If no cached details exist, synthesize from cadet's roster row so inspect always opens offline
+      setCadetDetails((prev) => {
+        if (prev) return prev;
+        const rosterCadet = roster.find((c) => c.id === cadetId);
+        if (!rosterCadet) return null;
+        return {
+          cadet: rosterCadet,
+          metrics: {
+            totalTrees: rosterCadet.totalTrees,
+            aliveTrees: rosterCadet.aliveTrees,
+            deadTrees: rosterCadet.deadTrees,
+            totalLogs: rosterCadet.totalLogs,
+            survivalRate:
+              rosterCadet.totalTrees > 0
+                ? Math.round((rosterCadet.aliveTrees / rosterCadet.totalTrees) * 100)
+                : 100,
+          },
+          trees: rosterCadet.specimens || [],
+          logs: [],
+        };
+      });
     } finally {
       setLoadingDetails(false);
     }
@@ -86,7 +168,12 @@ export default function OfficerDashboardPage() {
 
   // Filtered Roster
   const filteredRoster = useMemo(() => {
-    return roster.filter((cadet) => {
+    const list = roster.filter((cadet) => {
+      // 1. Role filter (all / cadet / officer)
+      if (roleFilter === 'cadet' && cadet.role === 'officer') return false;
+      if (roleFilter === 'officer' && cadet.role !== 'officer') return false;
+
+      // 2. Search query
       const q = searchQuery.toLowerCase().trim();
       const matchesSearch =
         !q ||
@@ -94,13 +181,24 @@ export default function OfficerDashboardPage() {
         cadet.rollNumber?.toLowerCase().includes(q) ||
         cadet.course?.toLowerCase().includes(q);
 
+      // 3. Compliance filter
       const matchesFilter =
         complianceFilter === 'All' ||
         cadet.complianceStatus === complianceFilter;
 
       return matchesSearch && matchesFilter;
     });
-  }, [roster, searchQuery, complianceFilter]);
+
+    // Pinned: Officers appear first with badges, then cadets alphabetically
+    return [...list].sort((a, b) => {
+      const aIsOfficer = a.role === 'officer' ? 1 : 0;
+      const bIsOfficer = b.role === 'officer' ? 1 : 0;
+      if (aIsOfficer !== bIsOfficer) {
+        return bIsOfficer - aIsOfficer;
+      }
+      return (a.name || '').localeCompare(b.name || '');
+    });
+  }, [roster, searchQuery, complianceFilter, roleFilter]);
 
   // Export Cohort Roster to Excel
   const handleExportExcel = () => {
@@ -241,17 +339,17 @@ export default function OfficerDashboardPage() {
 
       {/* Telemetry Overview Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {/* Total Cadets */}
+        {/* Total Personnel */}
         <div className="rounded-2xl bg-[#30371A] border border-[#525E31] p-4 shadow-sm space-y-1">
           <div className="flex items-center justify-between text-[#C2CE9F] font-mono text-xs">
-            <span>Cadets Enrolled</span>
+            <span>Personnel Enrolled</span>
             <Icon name="groups" className="w-4.5 h-4.5 text-[#A4B566]" />
           </div>
           <div className="font-display font-bold text-2xl text-[#F0F3E8]">
-            {loading ? '—' : stats?.totalCadets ?? roster.length}
+            {loading ? '—' : stats?.totalMembers ?? stats?.totalCadets ?? roster.length}
           </div>
           <span className="font-mono text-[11px] text-[#AAB596] block truncate">
-            {stats ? `${stats.activeCadets} active this week` : 'Enrolled students'}
+            {stats?.totalOfficers ? `${stats.totalOfficers} officers • ${stats.cadetsOnly || stats.totalCadets} cadets` : 'Enrolled personnel'}
           </span>
         </div>
 
@@ -306,7 +404,7 @@ export default function OfficerDashboardPage() {
             <Icon name="search" className="absolute left-3 top-3 text-[#AAB596] w-4.5 h-4.5" />
             <input
               type="text"
-              placeholder="Search by cadet name, roll number, or course..."
+              placeholder="Search by name, roll number, or course..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full h-11 bg-[#1D230E] border border-[#525E31] rounded-xl pl-9 pr-3 text-xs font-mono text-[#F0F3E8] focus:outline-none focus:border-[#A4B566] placeholder-[#6E7B54]"
@@ -323,42 +421,72 @@ export default function OfficerDashboardPage() {
           </div>
 
           <div className="text-xs font-mono text-[#AAB596] self-end sm:self-center">
-            Showing <span className="text-[#F0F3E8] font-bold">{filteredRoster.length}</span> of {roster.length} cadets
+            Showing <span className="text-[#F0F3E8] font-bold">{filteredRoster.length}</span> of {roster.length} personnel
           </div>
         </div>
 
-        {/* Filter Pills */}
-        <div className="flex flex-wrap items-center gap-2">
-          {['All', 'Active', 'Overdue', 'Delinquent', 'Unassigned'].map((f) => {
-            const count =
-              f === 'All'
-                ? roster.length
-                : roster.filter((c) => c.complianceStatus === f).length;
-
-            return (
+        {/* Role & Compliance Filter Controls */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1">
+          {/* Role Segmented Tabs */}
+          <div className="flex items-center gap-1 p-1 bg-[#1D230E] rounded-xl border border-[#4F5A2D] w-fit shrink-0">
+            {[
+              { id: 'all', label: 'All Personnel', count: roster.length },
+              { id: 'cadet', label: 'Cadets', count: roster.filter((c) => c.role !== 'officer').length },
+              { id: 'officer', label: 'Officers', count: roster.filter((c) => c.role === 'officer').length },
+            ].map((tab) => (
               <button
-                key={f}
+                key={tab.id}
                 type="button"
-                onClick={() => setComplianceFilter(f)}
-                className={`h-8 px-3 rounded-full font-mono text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
-                  complianceFilter === f
+                onClick={() => setRoleFilter(tab.id)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold uppercase transition-all flex items-center gap-1.5 cursor-pointer ${
+                  roleFilter === tab.id
                     ? 'bg-[#8B9B4C] text-[#1F240F] shadow-sm'
-                    : 'bg-[#262C14] text-[#CCD6B8] border border-[#4F5A2D] hover:bg-[#30371A]'
+                    : 'text-[#AAB596] hover:text-[#F0F3E8] hover:bg-[#283015]'
                 }`}
               >
-                <span>{f}</span>
-                <span
-                  className={`px-1.5 py-0.2 rounded-full text-[10px] ${
-                    complianceFilter === f
-                      ? 'bg-[#1F240F] text-[#8B9B4C]'
-                      : 'bg-[#1D230E] text-[#AAB596]'
-                  }`}
-                >
-                  {count}
+                <span>{tab.label}</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                  roleFilter === tab.id ? 'bg-[#1F240F] text-[#8B9B4C]' : 'bg-[#262C14] text-[#AAB596]'
+                }`}>
+                  {tab.count}
                 </span>
               </button>
-            );
-          })}
+            ))}
+          </div>
+
+          {/* Compliance Filter Pills */}
+          <div className="flex flex-wrap items-center gap-2">
+            {['All', 'Active', 'Overdue', 'Delinquent', 'Unassigned'].map((f) => {
+              const count =
+                f === 'All'
+                  ? roster.length
+                  : roster.filter((c) => c.complianceStatus === f).length;
+
+              return (
+                <button
+                  key={f}
+                  type="button"
+                  onClick={() => setComplianceFilter(f)}
+                  className={`h-8 px-3 rounded-full font-mono text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                    complianceFilter === f
+                      ? 'bg-[#8B9B4C] text-[#1F240F] shadow-sm'
+                      : 'bg-[#262C14] text-[#CCD6B8] border border-[#4F5A2D] hover:bg-[#30371A]'
+                  }`}
+                >
+                  <span>{f}</span>
+                  <span
+                    className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                      complianceFilter === f
+                        ? 'bg-[#1F240F] text-[#8B9B4C]'
+                        : 'bg-[#1D230E] text-[#AAB596]'
+                    }`}
+                  >
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -420,9 +548,16 @@ export default function OfficerDashboardPage() {
                           )}
                         </div>
                         <div className="truncate">
-                          <span className="font-display font-bold text-sm text-[#F0F3E8] block group-hover:text-[#A4B566] transition-colors">
-                            {cadet.name}
-                          </span>
+                          <div className="flex items-center gap-1.5 truncate">
+                            <span className="font-display font-bold text-sm text-[#F0F3E8] group-hover:text-[#A4B566] transition-colors truncate">
+                              {cadet.name}
+                            </span>
+                            {cadet.role === 'officer' && (
+                              <span className="px-1.5 py-0.2 rounded text-[9px] uppercase font-mono font-bold bg-[#F5C26B]/20 text-[#F5C26B] border border-[#F5C26B]/50 shrink-0">
+                                🎖️ Officer
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </td>
@@ -531,9 +666,16 @@ export default function OfficerDashboardPage() {
                   )}
                 </div>
                 <div className="min-w-0 flex-1 space-y-1.5">
-                  <h3 className="font-display font-bold text-lg sm:text-xl text-[#F0F3E8] leading-tight">
-                    {cadetDetails?.cadet?.name || 'Cadet Inspection'}
-                  </h3>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-display font-bold text-lg sm:text-xl text-[#F0F3E8] leading-tight">
+                      {cadetDetails?.cadet?.name || 'Personnel Inspection'}
+                    </h3>
+                    {cadetDetails?.cadet?.role === 'officer' && (
+                      <span className="px-2 py-0.5 rounded-md text-[10px] uppercase font-mono font-bold bg-[#F5C26B]/20 text-[#F5C26B] border border-[#F5C26B]/50 shrink-0">
+                        🎖️ Officer
+                      </span>
+                    )}
+                  </div>
                   <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-xs font-mono">
                     <span className="text-[#A4B566] font-bold bg-[#1D230E] px-2.5 py-0.5 rounded-md border border-[#525E31] whitespace-nowrap shadow-inner">
                       {cadetDetails?.cadet?.rollNumber}

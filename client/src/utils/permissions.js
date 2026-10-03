@@ -6,13 +6,14 @@ export const SUPERVISOR_ROLL_NUMBER = '9260572';
 
 export const isFieldSupervisor = (user) => {
   if (!user) return false;
+  if (user.role === 'officer') return true;
   const roll = typeof user === 'object' ? user.rollNumber : '';
   return String(roll || '').trim() === SUPERVISOR_ROLL_NUMBER;
 };
 
 export const canUserLogTree = (user, tree) => {
   if (!user || !tree) return false;
-  if (isFieldSupervisor(user)) return true;
+  if (isFieldSupervisor(user) || user.role === 'officer') return true;
 
   const ownerId = tree.owner?._id ? String(tree.owner._id) : String(tree.owner || '');
   const userId = typeof user === 'object'

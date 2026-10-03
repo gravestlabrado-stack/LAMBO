@@ -9,10 +9,19 @@ const GrowthLog = require('../models/GrowthLog');
  */
 const getCadetRoster = async (req, res, next) => {
   try {
-    const students = await User.find({ role: { $ne: 'officer' } })
+    const students = await User.find({})
       .select('-password')
-      .sort({ name: 1 })
       .lean();
+
+    // Prioritize officers at the top of the roster, followed by cadets
+    students.sort((a, b) => {
+      const aIsOfficer = a.role === 'officer' ? 1 : 0;
+      const bIsOfficer = b.role === 'officer' ? 1 : 0;
+      if (aIsOfficer !== bIsOfficer) {
+        return bIsOfficer - aIsOfficer;
+      }
+      return (a.name || '').localeCompare(b.name || '');
+    });
 
     const now = new Date();
 
@@ -55,6 +64,7 @@ const getCadetRoster = async (req, res, next) => {
           id: student._id,
           name: student.name,
           rollNumber: student.rollNumber,
+          role: student.role || 'student',
           course: student.course || 'Unspecified',
           phone: student.phone || '',
           avatar: student.avatar || '',
@@ -152,8 +162,10 @@ const getOfficerSummaryStats = async (req, res, next) => {
     const now = new Date();
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-    const [totalCadets, totalTrees, deadTrees, totalLogs, recentLogs] = await Promise.all([
+    const [totalUsers, totalCadets, totalOfficers, totalTrees, deadTrees, totalLogs, recentLogs] = await Promise.all([
+      User.countDocuments(),
       User.countDocuments({ role: { $ne: 'officer' } }),
+      User.countDocuments({ role: 'officer' }),
       Tree.countDocuments(),
       Tree.countDocuments({
         $or: [{ status: 'dead' }, { healthStatus: 'Dead / Mortality' }],
@@ -162,18 +174,21 @@ const getOfficerSummaryStats = async (req, res, next) => {
       GrowthLog.find({ loggedAt: { $gte: sevenDaysAgo } }).distinct('loggedBy'),
     ]);
 
-    const activeCadetCount = recentLogs.length;
+    const activeMemberCount = recentLogs.length;
     const livingTrees = totalTrees - deadTrees;
     const campusSurvivalRate =
       totalTrees > 0 ? Math.round((livingTrees / totalTrees) * 100) : 100;
     const activeRate =
-      totalCadets > 0 ? Math.round((activeCadetCount / totalCadets) * 100) : 0;
+      totalUsers > 0 ? Math.round((activeMemberCount / totalUsers) * 100) : 0;
 
     res.status(200).json({
       success: true,
       data: {
-        totalCadets,
-        activeCadets: activeCadetCount,
+        totalMembers: totalUsers,
+        totalCadets: totalUsers,
+        cadetsOnly: totalCadets,
+        totalOfficers,
+        activeCadets: activeMemberCount,
         activeRate,
         totalTrees,
         livingTrees,

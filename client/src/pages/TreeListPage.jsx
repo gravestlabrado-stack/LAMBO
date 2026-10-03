@@ -5,12 +5,14 @@ import treeService from '../services/treeService';
 import TreeCard from '../components/tree/TreeCard';
 import { GROWTH_STAGES, HEALTH_STATUSES } from '../utils/constants';
 import Icon from '../components/common/Icon';
+import { getStoredTrees, saveStoredTrees, notifyConnectionStatus } from '../utils/offlineStorage';
 
 export default function TreeListPage() {
   const { user } = useAuth();
   const [trees, setTrees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isOffline, setIsOffline] = useState(false);
 
   // Filters & State
   const [scope, setScope] = useState('all'); // 'all' | 'my'
@@ -18,16 +20,40 @@ export default function TreeListPage() {
   const [healthFilter, setHealthFilter] = useState('All');
   const [stageFilter, setStageFilter] = useState('All');
 
+  // Load cached trees immediately from IndexedDB
+  useEffect(() => {
+    getStoredTrees().then((cached) => {
+      if (cached && cached.length > 0) {
+        setTrees(cached);
+        setLoading(false);
+      }
+    }).catch(() => {});
+  }, []);
+
   const fetchTrees = async () => {
-    setLoading(true);
     setError(null);
     try {
       // Fetch all campus trees so the user can seamlessly switch between All and My trees
-      const res = await treeService.getTrees({ all: 'true', limit: 100 });
-      setTrees(res.data || []);
+      const res = await treeService.getTrees({ all: 'true', limit: 1000 });
+      const treeList = res.data || [];
+      setTrees(treeList);
+      setIsOffline(false);
+      notifyConnectionStatus('online');
+      saveStoredTrees(treeList);
     } catch (err) {
-      console.error('[TreeListPage] Error fetching trees:', err);
-      setError('Unable to load forestry specimens. Please check your network connection.');
+      console.warn('[TreeListPage] Network error, reading from IndexedDB:', err);
+      setIsOffline(true);
+      notifyConnectionStatus('offline');
+      try {
+        const cached = await getStoredTrees();
+        if (cached && cached.length > 0) {
+          setTrees(cached);
+        } else {
+          setError('Unable to load forestry specimens. Please check your network connection.');
+        }
+      } catch {
+        setError('Unable to load forestry specimens. Please check your network connection.');
+      }
     } finally {
       setLoading(false);
     }
@@ -238,6 +264,7 @@ export default function TreeListPage() {
           })}
         </div>
       </div>
+
 
       {/* Error Banner if any */}
       {error && (

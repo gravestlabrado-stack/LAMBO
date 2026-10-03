@@ -41,6 +41,8 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
   const [isSubscribingPush, setIsSubscribingPush] = useState(false);
   const [pushMessage, setPushMessage] = useState('');
   const [isSyncingOffline, setIsSyncingOffline] = useState(false);
+  const [isSavingDb, setIsSavingDb] = useState(false);
+  const [justSynced, setJustSynced] = useState(false);
 
   // Detect whether the PWA is installed / running standalone
   const [isInstalled, setIsInstalled] = useState(() => {
@@ -67,11 +69,43 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
   const fileInputRef = useRef(null);
 
   useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
+    const handleOnline = () => {
+      setIsOnline(true);
+      // Automatically attempt sync when network reconnects
+      if (typeof syncOffline === 'function') {
+        syncOffline().catch(() => {});
+      }
+    };
     const handleOffline = () => setIsOnline(false);
+
+    const handleConnectionStatus = (e) => {
+      const { status } = e.detail || {};
+      if (status === 'offline') setIsOnline(false);
+      if (status === 'online') setIsOnline(true);
+    };
+
+    const handleStorageActivity = (e) => {
+      const { action } = e.detail || {};
+      if (action === 'saving') {
+        setIsSavingDb(true);
+      } else if (action === 'saved') {
+        setTimeout(() => setIsSavingDb(false), 500);
+      }
+    };
+
+    const handleSyncedEvent = (e) => {
+      const { synced } = e.detail || {};
+      if (synced > 0) {
+        setJustSynced(true);
+        setTimeout(() => setJustSynced(false), 2500);
+      }
+    };
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
+    window.addEventListener('lambo_connection_status', handleConnectionStatus);
+    window.addEventListener('lambo_storage_activity', handleStorageActivity);
+    window.addEventListener('lambo_offline_synced', handleSyncedEvent);
 
     const handleBeforeInstall = (e) => {
       e.preventDefault();
@@ -104,13 +138,16 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('lambo_connection_status', handleConnectionStatus);
+      window.removeEventListener('lambo_storage_activity', handleStorageActivity);
+      window.removeEventListener('lambo_offline_synced', handleSyncedEvent);
       window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
       window.removeEventListener('appinstalled', handleAppInstalled);
       if (mediaQuery.removeEventListener) {
         mediaQuery.removeEventListener('change', handleDisplayChange);
       }
     };
-  }, []);
+  }, [syncOffline]);
 
   const handleInstallClick = async () => {
     if (deferredPrompt) {
@@ -236,12 +273,28 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
   };
 
   const handleManualSync = async () => {
+    if (isSyncingOffline) return;
     setIsSyncingOffline(true);
     try {
+      // 1. Verify server connectivity first via public health check
+      const pingRes = await fetch('/api/health', { cache: 'no-store' }).catch(() => null);
+      if (!pingRes || !pingRes.ok) {
+        setIsOnline(false);
+        return;
+      }
+      setIsOnline(true);
+
+      // 2. Perform offline queue sync
       const res = await syncOffline();
       if (res && res.synced > 0) {
-        alert(`Successfully synchronized ${res.synced} offline observation log(s)!`);
+        setJustSynced(true);
+        setTimeout(() => setJustSynced(false), 2500);
+      } else {
+        setJustSynced(true);
+        setTimeout(() => setJustSynced(false), 1800);
       }
+    } catch {
+      setIsOnline(false);
     } finally {
       setIsSyncingOffline(false);
     }
@@ -296,38 +349,77 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
           {/* Unified Tactical Pill Toolbar */}
           <div className="relative shrink-0">
             <div className="flex items-center bg-[#30371A]/90 border border-[#525E31] rounded-full p-1 pl-2.5 sm:pl-3 pr-1 gap-1 sm:gap-1.5 shadow-sm">
-              {/* Online / Offline Status Indicator */}
-              <div
-                title={isOnline ? 'Network: Online' : 'Network: Offline'}
-                className="flex items-center gap-1.5 pr-1 select-none"
-              >
-                <span
-                  className={`w-2 h-2 rounded-full ${
-                    isOnline
-                      ? 'bg-[#A4B566] shadow-[0_0_6px_#A4B566]'
-                      : 'bg-[#E57373] shadow-[0_0_6px_#E57373] animate-pulse'
-                  }`}
-                />
-                <span className="font-mono text-[11px] font-semibold text-[#D8DFC8] hidden md:inline">
-                  {isOnline ? 'Online' : 'Offline'}
-                </span>
-              </div>
-
-              {/* Offline Pending Queue Badge */}
-              {offlineCount > 0 && (
-                <>
+              {/* Dynamic Connection & Sync Hub */}
+              {isSavingDb ? (
+                /* State 1: Caching to IndexedDB Animation */
+                <div
+                  title="Writing botanical records to IndexedDB"
+                  className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#38411F] border border-[#8B9B4C]/70 text-[#E1E6BC] font-mono text-[10px] sm:text-[11px] animate-pulse select-none"
+                >
+                  <Icon name="progress_activity" className="text-[12px] text-[#A4B566] animate-spin" />
+                  <span className="font-semibold text-[#A4B566]">DB Active</span>
+                </div>
+              ) : isSyncingOffline ? (
+                /* State 2: Syncing with Server Animation */
+                <div
+                  title="Synchronizing offline observation records to campus database"
+                  className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#D99B26]/30 border border-[#D99B26] text-[#F5C26B] font-mono text-[10px] sm:text-[11px] shadow-sm select-none"
+                >
+                  <Icon name="sync" className="text-[13px] text-[#F5C26B] animate-spin" />
+                  <span className="font-bold">Syncing...</span>
+                </div>
+              ) : justSynced ? (
+                /* State 3: Just Synced Success Animation */
+                <div
+                  className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#2D3F1E] border border-[#7A9330] text-[#E4F5A6] font-mono text-[10px] sm:text-[11px] shadow-sm animate-in fade-in select-none"
+                >
+                  <Icon name="check_circle" className="text-[13px] text-[#A4B566]" />
+                  <span className="font-bold">Synced ✓</span>
+                </div>
+              ) : !isOnline ? (
+                /* State 4: Offline Mode with direct Retry Sync Action */
+                <div
+                  className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#3A1818] border border-[#8C3A3A] text-[#FFBDBD] font-mono text-[10px] sm:text-[11px] select-none"
+                >
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                  </span>
+                  <span className="font-bold tracking-tight">Offline</span>
+                  {offlineCount > 0 && (
+                    <span className="px-1 py-0.2 rounded bg-amber-500/30 text-amber-300 text-[9px] font-bold">
+                      {offlineCount}
+                    </span>
+                  )}
                   <button
                     type="button"
                     onClick={handleManualSync}
-                    disabled={!isOnline || isSyncingOffline}
-                    title={`${offlineCount} offline log(s) stored locally. Click to sync with server.`}
-                    className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#D99B26]/30 border border-[#D99B26] text-[#F5C26B] font-mono text-[10px] font-bold animate-pulse hover:bg-[#D99B26]/40 transition-colors"
+                    title="Tap to retry connection & sync records"
+                    aria-label="Retry connection and sync records"
+                    className="ml-0.5 p-1 rounded-full bg-red-950/80 hover:bg-red-900/90 border border-red-700/60 text-red-200 hover:text-white flex items-center justify-center active:scale-90 transition-all"
                   >
-                    <Icon name={isSyncingOffline ? 'sync' : 'cloud_upload'} className="text-[13px]" />
-                    <span>{isSyncingOffline ? 'Syncing...' : `${offlineCount} Offline`}</span>
+                    <Icon name="sync" className="text-[11px] text-red-200 hover:text-white" />
                   </button>
-                  <div className="w-[1px] h-4 bg-[#525E31]/80" />
-                </>
+                </div>
+              ) : (
+                /* State 5: Online Normal State */
+                <button
+                  type="button"
+                  onClick={handleManualSync}
+                  title="Network online. Tap to check sync."
+                  className="flex items-center gap-1.5 pr-1 select-none hover:opacity-90 active:scale-95 transition-all"
+                >
+                  <span className="w-2 h-2 rounded-full bg-[#A4B566] shadow-[0_0_8px_#A4B566]" />
+                  <span className="font-mono text-[11px] font-semibold text-[#D8DFC8] hidden md:inline">
+                    Online
+                  </span>
+                  {offlineCount > 0 && (
+                    <span className="flex items-center gap-1 px-1.5 py-0.2 rounded-full bg-amber-500/20 border border-amber-500 text-amber-300 font-mono text-[10px] font-bold animate-pulse">
+                      <Icon name="cloud_upload" className="text-[12px]" />
+                      <span>{offlineCount}</span>
+                    </span>
+                  )}
+                </button>
               )}
 
               {/* Divider */}
