@@ -31,7 +31,6 @@ export default function GrowthLogsPage() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isOffline, setIsOffline] = useState(typeof navigator !== 'undefined' && !navigator.onLine);
 
   // Modals
   const [showLogModal, setShowLogModal] = useState(false);
@@ -364,6 +363,12 @@ export default function GrowthLogsPage() {
         <div className="flex items-center gap-2.5 py-2.5 px-4 rounded-xl bg-[#38411F] border border-[#5D6A37] text-xs font-mono text-[#D8DFC8] shadow-md animate-in fade-in slide-in-from-top-1">
           <Icon name="progress_activity" className="text-[18px] text-[#A4B566] animate-spin" />
           <span>Preparing and compiling Excel (.xlsx) growth ledger... please wait</span>
+        </div>
+      )}
+      {error && (
+        <div className="flex items-center gap-2.5 py-2.5 px-4 rounded-xl bg-[#4A1E1E] border border-[#8C3A3A] text-xs font-mono text-[#F5C6C6] shadow-md animate-in fade-in slide-in-from-top-1">
+          <Icon name="error" className="text-[18px] text-[#FF8585]" />
+          <span>{error}</span>
         </div>
       )}
       {exportNotice === 'success' && (

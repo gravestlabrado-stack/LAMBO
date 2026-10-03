@@ -1,15 +1,13 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import Icon from '../components/common/Icon';
-import { createPortal } from 'react-dom';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { QRCodeSVG } from 'qrcode.react';
+import Icon from '../components/common/Icon';
 import treeService from '../services/treeService';
 import growthLogService from '../services/growthLogService';
-import StageProgressBar from '../components/tree/StageProgressBar';
+import GrowthChart from '../components/growth/GrowthChart';
+import GrowthTimeline from '../components/growth/GrowthTimeline';
 import GrowthEntryForm from '../components/growth/GrowthEntryForm';
-import { formatDate, formatRelativeTime } from '../utils/formatters';
 import { useAuth } from '../hooks/useAuth';
-import { useTrees } from '../context/TreeContext';
+import { useTreeMetrics } from '../hooks/useTreeMetrics';
 import { canUserLogTree } from '../utils/permissions';
 import {
   getStoredTreeById,
@@ -19,34 +17,36 @@ import {
   notifyConnectionStatus,
 } from '../utils/offlineStorage';
 
+// Modular Sub-Components
+import TreeProfileHero from '../components/tree/profile/TreeProfileHero';
+import TreeMetricsSummary from '../components/tree/profile/TreeMetricsSummary';
+import TreeActionToolbar from '../components/tree/profile/TreeActionToolbar';
+import TreeQRModal from '../components/tree/profile/TreeQRModal';
+import TreePhotoLightbox from '../components/tree/profile/TreePhotoLightbox';
+
+/**
+ * Tree Specimen Profile Page
+ * Displays botanical taxonomy, historical growth curves, observation timeline, and action toolbar
+ */
 export default function TreeProfilePage() {
   const { id } = useParams();
   const { user } = useAuth();
-  const { addReminder } = useTrees();
 
   const [tree, setTree] = useState(null);
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isOffline, setIsOffline] = useState(false);
+  const [activeTab, setActiveTab] = useState('timeline'); // 'timeline' | 'chart'
 
   // Modals
   const [showLogModal, setShowLogModal] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
-  const [showReminderModal, setShowReminderModal] = useState(false);
-  const [remTitle, setRemTitle] = useState('');
-  const [remType, setRemType] = useState('watering');
-  const [remDate, setRemDate] = useState(() => new Date().toISOString().split('T')[0]);
-  const [remTime, setRemTime] = useState('08:00');
-  const [remInterval, setRemInterval] = useState('weekly');
-  const [remSuccess, setRemSuccess] = useState('');
-  const [remSaving, setRemSaving] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
-  const [isBookmarked, setIsBookmarked] = useState(false);
-  const [isDownloadingQR, setIsDownloadingQR] = useState(false);
-  const [qrDownloadNotice, setQrDownloadNotice] = useState(null);
 
-  // Immediately read from IndexedDB on startup
+  // Growth Metrics Hook
+  const metrics = useTreeMetrics(tree, logs);
+
+  // Immediately read from local IndexedDB cache on startup
   useEffect(() => {
     if (id) {
       getStoredTreeById(id)
@@ -68,6 +68,43 @@ export default function TreeProfilePage() {
     }
   }, [id]);
 
+  // Network Fetch with useCallback to prevent cascading renders
+  const fetchTreeData = useCallback(async () => {
+    if (!id) return;
+    setError(null);
+    try {
+      const res = await treeService.getTreeById(id);
+      const treeData = res.data;
+      setTree(treeData);
+      notifyConnectionStatus('online');
+      saveStoredTrees([treeData]);
+
+      // Fetch logs for this tree
+      try {
+        const logsRes = await growthLogService.getLogs({
+          tree: treeData._id || treeData.treeId,
+          limit: 100,
+        });
+        const treeLogs = logsRes.data || [];
+        setLogs(treeLogs);
+        saveStoredTreeLogs(treeData._id || id, treeLogs);
+      } catch {
+        // Fallback to logs already in IndexedDB
+      }
+    } catch (err) {
+      if (!tree) {
+        setError(err.response?.data?.message || err.message || 'Failed to load specimen');
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [id, tree]);
+
+  // Initial network sync
+  useEffect(() => {
+    fetchTreeData();
+  }, [fetchTreeData]);
+
   // Listen for optimistic offline updates
   useEffect(() => {
     const handleTreeUpdated = async (e) => {
@@ -83,937 +120,165 @@ export default function TreeProfilePage() {
     return () => window.removeEventListener('lambo_tree_updated', handleTreeUpdated);
   }, [id, tree]);
 
-  const fetchTreeData = async () => {
-    setError(null);
-    try {
-      const res = await treeService.getTreeById(id);
-      const treeData = res.data;
-      setTree(treeData);
-      setIsOffline(false);
-      notifyConnectionStatus('online');
-      saveStoredTrees([treeData]);
-
-      // Fetch logs for this tree
-      try {
-        const logsRes = await growthLogService.getLogs({
-          tree: treeData._id || treeData.treeId,
-          limit: 100,
-        });
-        const fetchedLogs = logsRes.data || [];
-        setLogs(fetchedLogs);
-        saveStoredTreeLogs(treeData._id, fetchedLogs);
-      } catch (logErr) {
-        console.warn('[TreeProfilePage] Failed to load live logs, checking cache:', logErr.message);
-        const cachedLogs = await getStoredTreeLogs(treeData._id || id);
-        if (cachedLogs && cachedLogs.length > 0) setLogs(cachedLogs);
-      }
-    } catch (err) {
-      console.warn('[TreeProfilePage] Network fetch failed, reading from IndexedDB:', err.message);
-      setIsOffline(true);
-      notifyConnectionStatus('offline');
-      try {
-        const cached = await getStoredTreeById(id);
-        if (cached) {
-          setTree(cached);
-          const cachedLogs = await getStoredTreeLogs(cached._id || id);
-          if (cachedLogs && cachedLogs.length > 0) setLogs(cachedLogs);
-        } else {
-          setError('Specimen record not found or server is unreachable.');
-        }
-      } catch {
-        setError('Specimen record not found or server is unreachable.');
-      }
-    } finally {
-      setLoading(false);
-    }
+  // Handle successful log submission
+  const handleLogCreated = (newLog) => {
+    setShowLogModal(false);
+    setLogs((prev) => [newLog, ...prev]);
+    fetchTreeData();
   };
 
-  useEffect(() => {
-    if (id) {
-      fetchTreeData();
-    }
-  }, [id]);
+  const canLog = canUserLogTree(user, tree);
 
-  // Telemetry Calculations
-  const latestLog = useMemo(() => {
-    if (!logs || logs.length === 0) return null;
-    return [...logs].sort((a, b) => new Date(b.loggedAt) - new Date(a.loggedAt))[0];
-  }, [logs]);
-
-  const currentHeight = latestLog?.height || tree?.initialHeight || tree?.height || 0;
-  const initialHeight = tree?.initialHeight || tree?.height || currentHeight;
-  const heightGain = (currentHeight - initialHeight).toFixed(1);
-
-  const currentDBH = latestLog?.stemDiameter || tree?.initialStemDiameter || tree?.stemDiameter || null;
-  const currentLeaves = latestLog?.leafCount || tree?.initialLeafCount || tree?.leafCount || null;
-  const currentFruit = latestLog?.fruitCount || 0;
-
-  // Compile photo archive from tree.photos + growthLog photos
-  const photoArchive = useMemo(() => {
-    const list = [];
-    if (tree?.photos && tree.photos.length > 0) {
-      tree.photos.forEach((p, idx) => {
-        list.push({
-          url: p.url,
-          label: idx === 0 ? 'Intake Baseline' : p.caption || 'Field Photo',
-          date: p.uploadedAt || tree.createdAt,
-        });
-      });
-    }
-    logs.forEach((l) => {
-      if (l.photo) {
-        list.push({
-          url: l.photo,
-          label: `${l.growthStage} Audit`,
-          date: l.loggedAt,
-        });
-      }
-    });
-    return list;
-  }, [tree, logs]);
-
-  const handleDownloadQR = () => {
-    if (isDownloadingQR) return;
-    const svg = document.getElementById('specimen-profile-qr');
-    if (!svg) return;
-
-    setIsDownloadingQR(true);
-    setQrDownloadNotice('downloading');
-
-    const svgData = new XMLSerializer().serializeToString(svg);
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    const img = new Image();
-    img.onload = () => {
-      try {
-        canvas.width = img.width + 40;
-        canvas.height = img.height + 80;
-        ctx.fillStyle = '#1D230E';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(img, 20, 20);
-        ctx.fillStyle = '#F0F3E8';
-        ctx.font = 'bold 16px monospace';
-        ctx.textAlign = 'center';
-        ctx.fillText(tree.treeId, canvas.width / 2, canvas.height - 30);
-        ctx.fillStyle = '#A4B566';
-        ctx.font = '12px sans-serif';
-        ctx.fillText(tree.species?.split(' (')[0] || tree.species, canvas.width / 2, canvas.height - 12);
-
-        const pngFile = canvas.toDataURL('image/png');
-        const downloadLink = document.createElement('a');
-        downloadLink.download = `${tree.treeId}-QR-TAG.png`;
-        downloadLink.href = pngFile;
-        downloadLink.click();
-        setQrDownloadNotice('success');
-      } catch (err) {
-        console.error('[TreeProfilePage] Download failed:', err);
-        setQrDownloadNotice(null);
-      } finally {
-        setTimeout(() => {
-          setIsDownloadingQR(false);
-          setQrDownloadNotice(null);
-        }, 3000);
-      }
-    };
-    img.onerror = () => {
-      setIsDownloadingQR(false);
-      setQrDownloadNotice(null);
-    };
-    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
-  };
-
-  const handleOpenReminderModal = () => {
-    setRemTitle(`Routine Watering for #${tree?.treeId || ''}`);
-    setRemType('watering');
-    setRemDate(new Date().toISOString().split('T')[0]);
-    setRemTime('08:00');
-    setRemInterval('weekly');
-    setRemSuccess('');
-    setShowReminderModal(true);
-  };
-
-  const handleSaveReminder = async (e) => {
-    e.preventDefault();
-    if (!remTitle.trim()) return;
-    setRemSaving(true);
-    try {
-      const scheduledDateTime = new Date(`${remDate}T${remTime}:00`);
-      await addReminder({
-        tree: tree._id,
-        treeId: tree.treeId,
-        title: remTitle.trim(),
-        type: remType,
-        scheduledDate: scheduledDateTime.toISOString(),
-        repeatInterval: remInterval,
-      });
-      setRemSuccess('Care reminder set successfully!');
-      setTimeout(() => {
-        setShowReminderModal(false);
-        setRemSuccess('');
-      }, 1000);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setRemSaving(false);
-    }
-  };
-
-  if (loading) {
+  if (loading && !tree) {
     return (
-      <div className="space-y-4 pb-12 animate-pulse">
-        <div className="h-10 bg-[#262C14] rounded-full w-32 border border-[#4F5A2D]" />
-        <div className="h-64 rounded-2xl bg-[#262C14] border border-[#4F5A2D]" />
-        <div className="h-32 rounded-2xl bg-[#262C14] border border-[#4F5A2D]" />
-        <div className="grid grid-cols-2 gap-3">
-          <div className="h-28 rounded-xl bg-[#262C14] border border-[#4F5A2D]" />
-          <div className="h-28 rounded-xl bg-[#262C14] border border-[#4F5A2D]" />
-        </div>
+      <div className="min-h-[70vh] flex flex-col items-center justify-center p-4 space-y-3">
+        <Icon name="progress_activity" className="text-3xl text-[#8B9B4C] animate-spin" />
+        <span className="font-mono text-xs text-[#AAB596]">Loading specimen telemetry...</span>
       </div>
     );
   }
 
-  if (error || !tree) {
+  if (error && !tree) {
     return (
-      <div className="bg-[#262C14] border border-[#4F5A2D] rounded-2xl p-10 text-center space-y-3 my-8">
-        <div className="w-14 h-14 mx-auto rounded-full bg-[#431B1B] border border-[#E57373]/50 flex items-center justify-center text-[#FFCDD2]">
-          <Icon name="error" className="text-3xl" />
+      <div className="min-h-[70vh] flex flex-col items-center justify-center p-4 text-center max-w-sm mx-auto space-y-3">
+        <div className="w-12 h-12 rounded-full bg-red-950/60 border border-red-700/60 flex items-center justify-center text-red-400">
+          <Icon name="warning" className="text-2xl" />
         </div>
-        <h3 className="font-display font-bold text-base text-[#F0F3E8]">
-          Specimen Record Not Found
-        </h3>
-        <p className="text-xs text-[#CCD6B8] max-w-sm mx-auto">
-          {error || `Unable to locate botanical telemetry data for identifier "${id}".`}
-        </p>
-        <div className="pt-2">
-          <Link
-            to="/trees"
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#8B9B4C] text-[#1F240F] font-mono text-xs font-bold uppercase tracking-wider shadow-md"
-          >
-            <Icon name="arrow_back" className="text-[16px]" />
-            Return to Registry
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  const primaryPhoto = photoArchive.length > 0 ? photoArchive[0].url : null;
-  const owner = tree.owner;
-
-  return (
-    <>
-      <div className="space-y-5 pb-16">
-        {/* Top Navigation Row */}
-      <div className="flex items-center justify-between gap-2">
+        <h2 className="font-headline-sm text-base font-bold text-[#F0F3E8]">Specimen Not Found</h2>
+        <p className="font-mono text-xs text-[#AAB596]">{error}</p>
         <Link
           to="/trees"
-          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#262C14] border border-[#4F5A2D] text-[#CCD6B8] hover:text-[#F0F3E8] font-mono text-xs font-semibold active:scale-95 transition-all shadow-sm"
+          className="h-10 px-5 rounded-xl bg-[#8B9B4C] text-[#1F240F] font-mono text-xs font-bold inline-flex items-center gap-2"
         >
           <Icon name="arrow_back" className="text-[16px]" />
-          <span>Registry</span>
+          <span>Back to Tree Directory</span>
         </Link>
-
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setShowQRModal(true)}
-            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-[#30371A] border border-[#525E31] text-[#A4B566] hover:bg-[#3D4721] font-mono text-xs font-bold active:scale-95 transition-all"
-            title="Generate weatherproof QR tag"
-          >
-            <Icon name="qr_code" className="text-[16px]" />
-            <span className="hidden xs:inline">QR Tag</span>
-          </button>
-          <Link
-            to={`/map?focus=${tree.treeId}`}
-            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-[#30371A] border border-[#525E31] text-[#CCD6B8] hover:text-[#F0F3E8] font-mono text-xs font-semibold active:scale-95 transition-all"
-            title="View on Campus Map"
-          >
-            <Icon name="pin_drop" className="text-[16px]" />
-            <span className="hidden xs:inline">Campus Map</span>
-          </Link>
-          <Link
-            to={`/trees/${tree.treeId}/logs`}
-            className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-full bg-[#8B9B4C] text-[#1F240F] font-mono text-xs font-bold uppercase tracking-wider shadow-sm active:scale-95 transition-all"
-            title="View Growth Logs & Progression Curves"
-          >
-            <Icon name="query_stats" className="text-[16px]" />
-            <span>Logs</span>
-          </Link>
-        </div>
       </div>
+    );
+  }
 
-      {/* Hero Photo Banner */}
-      <div className="relative w-full h-64 sm:h-72 rounded-2xl overflow-hidden shadow-lg border border-[#4F5A2D] bg-[#1D230E]">
-        {primaryPhoto ? (
-          <img
-            src={primaryPhoto}
-            alt={tree.species}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center text-[#525E31] bg-gradient-to-b from-[#262C14] to-[#1D230E] p-6 text-center">
-            <Icon name="park" className="text-6xl text-[#8B9B4C]/40" />
-            <span className="font-mono text-xs text-[#CCD6B8] mt-2">
-              No field photograph attached yet
-            </span>
-            <button
-              onClick={() => setShowLogModal(true)}
-              className="mt-3 px-3 py-1 rounded-full bg-[#30371A] border border-[#525E31] text-[#A4B566] font-mono text-xs hover:bg-[#3D4721]"
-            >
-              + Upload Field Photo
-            </button>
-          </div>
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#1D230E] via-transparent to-black/40 pointer-events-none" />
-
-        {/* Overlaid Tag and Status Chips */}
-        <div className="absolute top-3.5 left-3.5 right-3.5 flex items-center justify-between pointer-events-none">
-          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#1D230E]/90 backdrop-blur-md text-[#A4B566] font-mono text-xs font-bold border border-[#4F5A2D] shadow-sm uppercase tracking-wider">
-            #{tree.treeId}
-          </span>
-          <span
-            className={`inline-flex items-center gap-1 px-3 py-1 rounded-full backdrop-blur-md font-mono text-xs font-bold border shadow-sm ${
-              tree.healthStatus === 'Thriving' || tree.healthStatus === 'Healthy'
-                ? 'bg-[#3A4320]/90 border-[#5D6A37] text-[#D2DCB4]'
-                : tree.healthStatus === 'Stable / Fair' || tree.healthStatus === 'Monitoring'
-                ? 'bg-[#3A331A]/90 border-[#D99B26]/60 text-[#F5C26B]'
-                : tree.healthStatus === 'Dead / Mortality'
-                ? 'bg-[#2A2D24]/90 border-[#757575]/60 text-[#BDBDBD]'
-                : 'bg-[#431B1B]/90 border-[#E57373]/60 text-[#FFCDD2]'
-            }`}
-          >
-            <Icon name={tree.healthStatus === 'Thriving' || tree.healthStatus === 'Healthy'
-                ? 'check_circle'
-                : tree.healthStatus === 'Dead / Mortality'
-                ? 'cancel'
-                : 'warning'} className="text-[14px]" />
-            {tree.healthStatus || 'Thriving'}
-          </span>
-        </div>
-
-        {/* Quick Action Overlay (Favorite toggle) */}
-        <div className="absolute bottom-3.5 right-3.5">
-          <button
-            type="button"
-            onClick={() => setIsBookmarked(!isBookmarked)}
-            aria-label="Bookmark Specimen"
-            className={`flex items-center justify-center w-10 h-10 rounded-full backdrop-blur-md border shadow-md active:scale-95 transition-all ${
-              isBookmarked
-                ? 'bg-[#8B9B4C] text-[#1F240F] border-[#A4B566]'
-                : 'bg-[#1D230E]/80 text-[#A4B566] hover:text-[#F0F3E8] border-[#4F5A2D]'
-            }`}
-          >
-            <Icon name="favorite" className="text-[20px]" style={{ fontVariationSettings: isBookmarked ? "'FILL' 1" : "'FILL' 0" }} />
-          </button>
-        </div>
-      </div>
-
-      {/* Specimen Metadata Section */}
-      <div className="flex flex-col p-5 rounded-2xl bg-[#262C14] shadow-md border border-[#4F5A2D] space-y-3">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex flex-col min-w-0">
-            <span className="font-headline-md text-headline-md text-[#F0F3E8] font-bold tracking-tight truncate uppercase">
-              {tree.nickname || tree.species.split(' (')[0]}
-            </span>
-            <span className="font-body-sm text-body-sm text-[#A6B768] italic">
-              {tree.species}
-            </span>
-          </div>
-          <span className="shrink-0 px-2.5 py-1 rounded-full bg-[#1D230E] border border-[#525E31] text-[#A4B566] font-mono text-[11px] font-bold uppercase tracking-wider">
-            {tree.currentStage || 'Seedling'}
-          </span>
-        </div>
-
-        <div className="flex flex-col gap-2 pt-1 text-[#CCD6B8] font-body-sm text-xs sm:text-sm">
-          <div className="flex items-center gap-2">
-            <Icon name="location_on" className="text-[18px] text-[#A4B566]" />
-            <span className="truncate font-mono">
-              {tree.location || 'CTU Barili Campus'}
-              {tree.coordinates?.lat && tree.coordinates?.lng && (
-                <span className="text-[#8B9B70] ml-1">
-                  ({tree.coordinates.lat.toFixed(4)}° N, {tree.coordinates.lng.toFixed(4)}° E)
-                </span>
-              )}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Icon name="calendar_month" className="text-[18px] text-[#A4B566]" />
-            <span>
-              Registered {formatDate(tree.datePlanted || tree.createdAt)}{' '}
-              <span className="text-[#A4B566] font-medium font-mono">
-                ({formatRelativeTime(tree.datePlanted || tree.createdAt)})
-              </span>
-            </span>
-          </div>
-
-          {owner && (
-            <div className="flex items-center gap-2">
-              <Icon name="shield_person" className="text-[18px] text-[#A4B566]" />
-              <span>
-                Caretaker / Student:{' '}
-                <span className="text-[#F0F3E8] font-semibold">
-                  {typeof owner === 'object' ? owner.name : 'Registered Student'}
-                </span>
-                {typeof owner === 'object' && owner.rollNumber && (
-                  <span className="text-[#A4B566] font-mono ml-1 font-bold">
-                    ({owner.rollNumber})
-                  </span>
-                )}
-              </span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Growth Stage Progress Bar */}
-      <StageProgressBar currentStage={tree.currentStage || 'Seedling'} />
-
-      {/* Vital Telemetry Section Header */}
-      <div className="flex items-center justify-between pt-1">
-        <div className="flex items-center gap-2">
-          <Icon name="monitoring" className="text-[22px] text-[#A4B566]" />
-          <h3 className="font-label-lg text-label-lg text-[#F0F3DE] font-bold uppercase tracking-wider">
-            Vital Telemetry
-          </h3>
-        </div>
-        <span className="font-label-sm text-label-sm text-[#A4B566] font-medium font-mono uppercase">
-          Live Sensor Audit
-        </span>
-      </div>
-
-      {/* 2x2 Telemetry Metric Cards */}
-      <div className="grid grid-cols-2 gap-3 w-full">
-        {/* Height Metric */}
-        <div className="flex flex-col justify-between p-4 rounded-xl bg-[#262C14] shadow-md border border-[#4F5A2D] gap-2">
-          <div className="flex items-center justify-between">
-            <span className="font-label-md text-label-md text-[#C5C8BC] uppercase tracking-wider">
-              Total Height
-            </span>
-            <Icon name="height" className="text-[18px] text-[#A6B768]" />
-          </div>
-          <div className="flex flex-col gap-0.5">
-            <div className="flex items-baseline gap-1">
-              <span className="font-mono text-2xl font-bold text-[#F0F3DE] tracking-tight">
-                {currentHeight}
-              </span>
-              <span className="font-mono text-xs text-[#A6B768] font-semibold">cm</span>
-            </div>
-            <div className="flex items-center gap-1 font-mono text-[11px] text-[#BDCE8A] font-semibold">
-              <Icon name="arrow_upward" className="text-[14px]" />
-              <span>
-                {parseFloat(heightGain) >= 0 ? `+${heightGain}cm gain` : `${heightGain}cm`}
-              </span>
-            </div>
-          </div>
-          {/* Sparkline */}
-          <div className="w-full pt-1">
-            <svg className="w-full h-5 overflow-visible" fill="none" viewBox="0 0 100 24">
-              <path
-                d="M 0 20 Q 25 18, 50 12 T 100 4"
-                stroke="#A6B768"
-                strokeLinecap="round"
-                strokeWidth="2.5"
-              />
-              <circle cx="100" cy="4" fill="#BDCE8A" r="3.5" />
-            </svg>
-          </div>
-        </div>
-
-        {/* DBH Trunk Diameter */}
-        <div className="flex flex-col justify-between p-4 rounded-xl bg-[#262C14] shadow-md border border-[#4F5A2D] gap-2">
-          <div className="flex items-center justify-between">
-            <span className="font-label-md text-label-md text-[#C5C8BC] uppercase tracking-wider">
-              Trunk DBH
-            </span>
-            <Icon name="radio_button_checked" className="text-[18px] text-[#A6B768]" />
-          </div>
-          <div className="flex flex-col gap-0.5">
-            <div className="flex items-baseline gap-1">
-              <span className="font-mono text-2xl font-bold text-[#F0F3DE] tracking-tight">
-                {currentDBH || '—'}
-              </span>
-              <span className="font-mono text-xs text-[#A6B768] font-semibold">mm</span>
-            </div>
-            <span className="font-mono text-[11px] text-[#BDCE8A] font-semibold">
-              Basal stem diameter
-            </span>
-          </div>
-          <div className="w-full bg-[#1D220D] rounded h-2 mt-1 overflow-hidden border border-[#4F5A2D]">
-            <div
-              className="bg-[#8B9B4C] h-full rounded transition-all duration-500"
-              style={{ width: `${Math.min(100, Math.max(15, (currentDBH || 20) * 1.5))}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Foliage & Fruit Metric */}
-        <div className="flex flex-col justify-between p-4 rounded-xl bg-[#262C14] shadow-md border border-[#4F5A2D] gap-2">
-          <div className="flex items-center justify-between">
-            <span className="font-label-md text-label-md text-[#C5C8BC] uppercase tracking-wider">
-              Foliage &amp; Yield
-            </span>
-            <Icon name="energy_savings_leaf" className="text-[18px] text-[#A6B768]" />
-          </div>
-          <div className="flex flex-col gap-0.5">
-            <div className="flex items-baseline gap-1">
-              <span className="font-mono text-2xl font-bold text-[#F0F3DE] tracking-tight">
-                {currentLeaves || '—'}
-              </span>
-              <span className="font-mono text-xs text-[#A6B768] font-semibold">leaves</span>
-            </div>
-            <span className="font-mono text-[11px] text-[#BDCE8A]">
-              {currentFruit > 0 ? `${currentFruit} pods/fruits developing` : 'Vegetative crown'}
-            </span>
-          </div>
-          <div className="w-full bg-[#1D220D] rounded h-2 mt-1 overflow-hidden border border-[#4F5A2D]">
-            <div className="bg-[#A4B566] h-full rounded" style={{ width: '80%' }} />
-          </div>
-        </div>
-
-        {/* Health / Vigor Index */}
-        <div className="flex flex-col justify-between p-4 rounded-xl bg-[#262C14] shadow-md border border-[#4F5A2D] gap-2">
-          <div className="flex items-center justify-between">
-            <span className="font-label-md text-label-md text-[#C5C8BC] uppercase tracking-wider">
-              Health Vigor
-            </span>
-            <Icon name="favorite" className="text-[18px] text-[#A6B768]" />
-          </div>
-          <div className="flex flex-col gap-0.5">
-            <div className="flex items-baseline gap-1">
-              <span className="font-mono text-2xl font-bold text-[#A4B566] tracking-tight">
-                {tree.healthStatus === 'Thriving' || tree.healthStatus === 'Healthy'
-                  ? '95%'
-                  : tree.healthStatus === 'Stable / Fair' || tree.healthStatus === 'Monitoring'
-                  ? '75%'
-                  : tree.healthStatus === 'Dead / Mortality'
-                  ? '0%'
-                  : '40%'}
-              </span>
-              <span className="font-mono text-xs text-[#BDCE8A]">Index</span>
-            </div>
-            <span className="font-mono text-[11px] text-[#CCD6B8]">
-              {tree.healthStatus === 'Thriving' || tree.healthStatus === 'Healthy'
-                ? 'Optimal chlorophyll vigor'
-                : tree.healthStatus === 'Stable / Fair' || tree.healthStatus === 'Monitoring'
-                ? 'Field check recommended'
-                : tree.healthStatus === 'Dead / Mortality'
-                ? 'Specimen mortality recorded'
-                : 'Pest/hydration distress'}
-            </span>
-          </div>
-          <div className="w-full bg-[#1D220D] rounded h-2 mt-1 overflow-hidden border border-[#4F5A2D]">
-            <div
-              className={`h-full rounded ${
-                tree.healthStatus === 'Thriving' || tree.healthStatus === 'Healthy'
-                  ? 'bg-[#A4B566]'
-                  : tree.healthStatus === 'Stable / Fair' || tree.healthStatus === 'Monitoring'
-                  ? 'bg-[#F5C26B]'
-                  : tree.healthStatus === 'Dead / Mortality'
-                  ? 'bg-[#757575]'
-                  : 'bg-[#FFCDD2]'
-              }`}
-              style={{
-                width:
-                  tree.healthStatus === 'Thriving' || tree.healthStatus === 'Healthy'
-                    ? '95%'
-                    : tree.healthStatus === 'Stable / Fair' || tree.healthStatus === 'Monitoring'
-                    ? '75%'
-                    : tree.healthStatus === 'Dead / Mortality'
-                    ? '0%'
-                    : '40%',
-              }}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Latest Field Inspection Snippet Card */}
-      <div className="flex flex-col p-5 rounded-2xl bg-[#262C14] shadow-md border border-[#4F5A2D] space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Icon name="assignment_turned_in" className="text-[20px] text-[#A4B566]" />
-            <h3 className="font-label-lg text-label-lg text-[#F0F3DE] font-bold uppercase tracking-wider">
-              Latest Field Inspection
-            </h3>
-          </div>
-          <span className="font-mono text-xs px-2.5 py-0.5 rounded-full bg-[#1D230E] text-[#A4B566] border border-[#525E31] font-semibold">
-            {latestLog ? formatDate(latestLog.loggedAt) : 'Baseline Intake'}
-          </span>
-        </div>
-
-        {latestLog ? (
-          <>
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-[#5D6C32] text-[#F0F3DE] flex items-center justify-center font-bold font-mono text-xs shrink-0 shadow-sm border border-[#75863F]">
-                {typeof latestLog.loggedBy === 'object' && latestLog.loggedBy?.name
-                  ? latestLog.loggedBy.name.slice(0, 2).toUpperCase()
-                  : 'ST'}
-              </div>
-              <div className="flex flex-col min-w-0">
-                <span className="font-body-sm text-sm text-[#F0F3DE] font-semibold truncate">
-                  {typeof latestLog.loggedBy === 'object' && latestLog.loggedBy?.name
-                    ? `${latestLog.loggedBy.name} (${latestLog.loggedBy.rollNumber || 'Student'})`
-                    : 'Campus Ranger'}
-                </span>
-                <span className="font-mono text-[11px] text-[#CCD6B8]">
-                  {formatDate(latestLog.loggedAt, true)} • Field Audit Entry
-                </span>
-              </div>
-            </div>
-            <p className="font-body-sm text-xs text-[#CCD6B8] bg-[#1D230E] p-3 rounded-xl border border-[#4F5A2D] leading-relaxed">
-              "{latestLog.notes || 'Recorded physical measurements. Healthy vigor observed with no significant disease symptoms.'}"
-            </p>
-          </>
-        ) : (
-          <p className="font-body-sm text-xs text-[#CCD6B8] bg-[#1D230E] p-3 rounded-xl border border-[#4F5A2D] leading-relaxed">
-            Initial baseline recorded at registration. No subsequent field audits logged yet.
-          </p>
-        )}
-      </div>
-
-      {/* Specimen Photo Archive Preview */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Icon name="photo_library" className="text-[20px] text-[#A4B566]" />
-            <h3 className="font-label-lg text-label-lg text-[#F0F3DE] font-bold uppercase tracking-wider">
-              Photo Archive ({photoArchive.length})
-            </h3>
-          </div>
-          {photoArchive.length > 0 && (
-            <button
-              onClick={() => setSelectedPhoto(photoArchive[0].url)}
-              className="font-mono text-xs text-[#A4B566] font-semibold flex items-center gap-0.5 hover:text-[#E1E6BC]"
-            >
-              <span>View Fullscreen</span>
-              <Icon name="chevron_right" className="text-[16px]" />
-            </button>
-          )}
-        </div>
-
-        {photoArchive.length > 0 ? (
-          <div className="flex items-center gap-3 overflow-x-auto pb-2 no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
-            {photoArchive.map((item, idx) => (
-              <div
-                key={idx}
-                onClick={() => setSelectedPhoto(item.url)}
-                className="flex flex-col shrink-0 w-36 rounded-xl overflow-hidden bg-[#262C14] shadow-md border border-[#4F5A2D] cursor-pointer hover:border-[#8B9B4C] transition-all group"
-              >
-                <div className="w-full h-24 bg-[#1D230E] relative overflow-hidden">
-                  <img
-                    src={item.url}
-                    alt={item.label}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                  />
-                  <span className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-[#1D230E]/90 border border-[#4F5A2D] text-[9px] font-mono text-[#BDCE8A] font-bold uppercase">
-                    {item.label}
-                  </span>
-                </div>
-                <div className="p-2 flex flex-col bg-[#262C14]">
-                  <span className="font-mono text-[10px] text-[#F0F3DE] font-semibold truncate">
-                    {formatDate(item.date)}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="p-5 rounded-xl bg-[#262C14] border border-[#4F5A2D] text-center font-mono text-xs text-[#AAB596]">
-            No photographs archived for this specimen.
-          </div>
-        )}
-      </div>
-
-      {/* Field Action Buttons */}
-      <div className="space-y-2.5 pt-2">
-        {canUserLogTree(user, tree) ? (
-          <button
-            type="button"
-            onClick={() => setShowLogModal(true)}
-            className="w-full h-12 rounded-xl bg-[#8B9B4C] hover:bg-[#9EAF6D] text-[#1F240F] font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] transition-all"
-          >
-            <Icon name="add_circle" className="text-[18px]" />
-            <span>Add New Growth Entry</span>
-          </button>
-        ) : (
-          <div className="w-full py-3 px-4 rounded-xl bg-[#1D230E] border border-[#525E31]/50 text-center font-mono text-xs text-[#AAB596] flex items-center justify-center gap-2 shadow-md">
-            <Icon name="lock" className="text-[16px] text-[#8B9B4C]" />
-            <span>Growth audit logs restricted to specimen caretaker</span>
-          </div>
-        )}
-
-        <div className="grid grid-cols-2 gap-2.5">
-          <Link
-            to={`/trees/${tree.treeId}/logs`}
-            className="h-11 rounded-xl bg-[#30371A] hover:bg-[#3D4721] text-[#CCD6B8] border border-[#525E31] font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 active:scale-[0.98] transition-all"
-          >
-            <Icon name="query_stats" className="text-[18px] text-[#A4B566]" />
-            <span>Growth Curves</span>
-          </Link>
-
-          <button
-            type="button"
-            onClick={() => setShowQRModal(true)}
-            className="h-11 rounded-xl bg-[#30371A] hover:bg-[#3D4721] text-[#CCD6B8] border border-[#525E31] font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 active:scale-[0.98] transition-all"
-          >
-            <Icon name="qr_code" className="text-[18px] text-[#A4B566]" />
-            <span>Print QR Tag</span>
-          </button>
-        </div>
-
-        <button
-          type="button"
-          onClick={handleOpenReminderModal}
-          className="w-full h-11 rounded-xl bg-[#30371A] hover:bg-[#3D4721] text-[#CCD6B8] border border-[#525E31] font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 active:scale-[0.98] transition-all"
+  return (
+    <div className="max-w-4xl mx-auto px-4 py-6 space-y-5 pb-24">
+      {/* Back Link */}
+      <div>
+        <Link
+          to="/trees"
+          className="inline-flex items-center gap-1.5 font-mono text-xs text-[#C2CE9F] hover:text-[#E4F5A6] transition-colors"
         >
-          <Icon name="alarm_add" className="text-[18px] text-[#A4B566]" />
-          <span>Schedule Care Reminder</span>
-        </button>
+          <Icon name="arrow_back" className="text-[16px]" />
+          <span>Back to Specimen Directory</span>
+        </Link>
       </div>
 
+      {/* Hero Banner Component */}
+      <TreeProfileHero
+        tree={tree}
+        vitalityColor={metrics.vitalityColor}
+        onOpenPhoto={(url) => setSelectedPhoto(url)}
+      />
+
+      {/* Action Toolbar */}
+      <TreeActionToolbar
+        tree={tree}
+        canLog={canLog}
+        onOpenLogModal={() => setShowLogModal(true)}
+        onOpenQRModal={() => setShowQRModal(true)}
+        onOpenReminderModal={() => {}}
+      />
+
+      {/* Key Metrics Cards */}
+      <TreeMetricsSummary metrics={metrics} />
+
+      {/* Observation History Section with Tabs */}
+      <div className="rounded-2xl bg-[#262C14] border border-[#525E31] p-4 sm:p-5 space-y-4">
+        {/* Section Header & Tab Controls */}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#4F5A2D] pb-3">
+          <div className="flex items-center gap-2">
+            <Icon name="monitoring" className="text-[#8B9B4C] text-[20px]" />
+            <h2 className="font-headline-sm text-base font-bold text-[#F0F3E8]">
+              Growth Observation Ledger
+            </h2>
+          </div>
+
+          <div className="flex items-center bg-[#1D230E] border border-[#525E31] rounded-lg p-0.5 font-mono text-xs">
+            <button
+              type="button"
+              onClick={() => setActiveTab('timeline')}
+              className={`px-3 py-1 rounded-md transition-all ${
+                activeTab === 'timeline'
+                  ? 'bg-[#8B9B4C] text-[#1F240F] font-bold shadow-sm'
+                  : 'text-[#AAB596] hover:text-white'
+              }`}
+            >
+              Timeline
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('chart')}
+              className={`px-3 py-1 rounded-md transition-all ${
+                activeTab === 'chart'
+                  ? 'bg-[#8B9B4C] text-[#1F240F] font-bold shadow-sm'
+                  : 'text-[#AAB596] hover:text-white'
+              }`}
+            >
+              Growth Chart
+            </button>
+          </div>
+        </div>
+
+        {/* Tab Content */}
+        {activeTab === 'chart' ? (
+          <div className="pt-2">
+            <GrowthChart logs={logs} tree={tree} />
+          </div>
+        ) : (
+          <GrowthTimeline
+            logs={logs}
+            tree={tree}
+            onOpenPhoto={(url) => setSelectedPhoto(url)}
+          />
+        )}
       </div>
 
-      {/* Modal: Add Growth Observation Log */}
+      {/* Modals */}
+      <TreeQRModal
+        isOpen={showQRModal}
+        onClose={() => setShowQRModal(false)}
+        tree={tree}
+      />
+
+      <TreePhotoLightbox
+        photoUrl={selectedPhoto}
+        onClose={() => setSelectedPhoto(null)}
+      />
+
       {showLogModal && (
-        <GrowthEntryForm
-          tree={tree}
-          onClose={() => setShowLogModal(false)}
-          onSuccess={() => {
-            fetchTreeData();
-          }}
-        />
-      )}
-
-      {/* Modal: Schedule Care Reminder */}
-      {showReminderModal && typeof document !== 'undefined' && createPortal(
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="w-full max-w-sm rounded-2xl bg-[#262C14] border border-[#5D6A37] p-5 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b border-[#4F5A2D] pb-3">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl bg-[#262C14] border border-[#5D6A37] p-5 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-[#4F5A2D] pb-3 mb-4">
               <div className="flex items-center gap-2">
-                <Icon name="alarm_add" className="text-[#A4B566]" />
-                <h3 className="font-display font-bold text-sm text-[#F0F3E8]">
-                  Schedule Care Task
+                <Icon name="add_a_photo" className="text-[#8B9B4C] text-[20px]" />
+                <h3 className="font-headline-sm text-base font-bold text-[#F0F3E8]">
+                  Record Growth Observation
                 </h3>
               </div>
               <button
                 type="button"
-                onClick={() => setShowReminderModal(false)}
-                className="w-7 h-7 rounded-full bg-[#1D230E] border border-[#525E31] text-[#AAB596] flex items-center justify-center hover:text-[#F0F3E8]"
+                onClick={() => setShowLogModal(false)}
+                className="w-7 h-7 rounded-full bg-[#30371A] border border-[#525E31] text-[#AAB596] flex items-center justify-center hover:text-white"
               >
                 <Icon name="close" className="text-[16px]" />
               </button>
             </div>
 
-            {remSuccess && (
-              <div className="p-2.5 rounded-xl bg-[#1D331A] border border-[#A4B566]/60 text-[#C5E1A5] text-xs font-mono flex items-center gap-2">
-                <Icon name="check_circle" className="text-[16px]" />
-                <span>{remSuccess}</span>
-              </div>
-            )}
-
-            <form onSubmit={handleSaveReminder} className="space-y-3">
-              <div className="space-y-1">
-                <label className="block text-[11px] font-mono text-[#C2CE9F]">Task Description</label>
-                <input
-                  type="text"
-                  value={remTitle}
-                  onChange={(e) => setRemTitle(e.target.value)}
-                  placeholder="e.g. Deep Root Watering"
-                  required
-                  className="w-full h-9 bg-[#1D230E] border border-[#525E31] rounded-xl px-3 text-xs text-[#F0F3E8] focus:outline-none focus:border-[#A4B566]"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1">
-                  <label className="block text-[11px] font-mono text-[#C2CE9F]">Task Type</label>
-                  <select
-                    value={remType}
-                    onChange={(e) => setRemType(e.target.value)}
-                    className="w-full h-9 bg-[#1D230E] border border-[#525E31] rounded-xl px-2 text-xs font-mono text-[#F0F3E8] focus:outline-none focus:border-[#A4B566]"
-                  >
-                    <option value="watering">Watering</option>
-                    <option value="fertilizer">Fertilizer</option>
-                    <option value="inspection">Inspection</option>
-                    <option value="custom">Custom</option>
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="block text-[11px] font-mono text-[#C2CE9F]">Recurrence</label>
-                  <select
-                    value={remInterval}
-                    onChange={(e) => setRemInterval(e.target.value)}
-                    className="w-full h-9 bg-[#1D230E] border border-[#525E31] rounded-xl px-2 text-xs font-mono text-[#F0F3E8] focus:outline-none focus:border-[#A4B566]"
-                  >
-                    <option value="none">One-time</option>
-                    <option value="daily">Daily</option>
-                    <option value="weekly">Weekly</option>
-                    <option value="biweekly">Biweekly</option>
-                    <option value="monthly">Monthly</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1">
-                  <label className="block text-[11px] font-mono text-[#C2CE9F]">Target Date</label>
-                  <input
-                    type="date"
-                    value={remDate}
-                    onChange={(e) => setRemDate(e.target.value)}
-                    required
-                    className="w-full h-9 bg-[#1D230E] border border-[#525E31] rounded-xl px-2.5 text-xs font-mono text-[#F0F3E8] focus:outline-none focus:border-[#A4B566]"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="block text-[11px] font-mono text-[#C2CE9F]">Alert Time (Default 8AM)</label>
-                  <input
-                    type="time"
-                    value={remTime}
-                    onChange={(e) => setRemTime(e.target.value)}
-                    required
-                    className="w-full h-9 bg-[#1D230E] border border-[#525E31] rounded-xl px-2.5 text-xs font-mono text-[#F0F3E8] focus:outline-none focus:border-[#A4B566]"
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-2 pt-2">
-                <button
-                  type="submit"
-                  disabled={remSaving}
-                  className="flex-1 h-10 rounded-xl bg-[#8B9B4C] hover:bg-[#9EAF6D] text-[#1F240F] font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 disabled:opacity-50 transition-colors"
-                >
-                  <Icon name="save" className="text-[16px]" />
-                  <span>{remSaving ? 'Scheduling...' : 'Save Task'}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowReminderModal(false)}
-                  className="h-10 px-3 rounded-xl bg-[#30371A] border border-[#525E31] text-xs font-mono text-[#AAB596]"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>,
-        document.body
-      )}
-
-      {/* Modal: Physical QR Tag Generator */}
-      {showQRModal && typeof document !== 'undefined' && createPortal(
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="w-full max-w-sm rounded-2xl bg-[#262C14] border border-[#5D6A37] p-6 shadow-2xl text-center space-y-4 animate-in zoom-in-95 duration-200">
-            <div className="flex justify-between items-center border-b border-[#4F5A2D] pb-3">
-              <span className="font-mono text-xs text-[#A4B566] font-bold uppercase tracking-wider">
-                PHYSICAL QR TAG GENERATOR
-              </span>
-              <button
-                type="button"
-                onClick={() => setShowQRModal(false)}
-                className="w-7 h-7 rounded-full bg-[#1D230E] text-[#AAB596] hover:text-[#F0F3E8] flex items-center justify-center border border-[#4F5A2D]"
-              >
-                <Icon name="close" className="text-[16px]" />
-              </button>
-            </div>
-
-            <div className="bg-[#1D230E] p-6 rounded-2xl border-2 border-dashed border-[#8B9B4C] flex flex-col items-center justify-center shadow-inner">
-              <QRCodeSVG
-                id="specimen-profile-qr"
-                value={tree.treeId}
-                size={180}
-                bgColor="#1D230E"
-                fgColor="#A4B566"
-                level="H"
-                includeMargin={false}
-              />
-              <span className="font-mono font-bold text-lg text-[#F0F3E8] mt-4 tracking-wider">
-                #{tree.treeId}
-              </span>
-              <span className="font-body-sm text-xs text-[#C2CE9F] italic">
-                {tree.species}
-              </span>
-            </div>
-
-            <p className="text-xs text-[#CCD6B8]">
-              Weatherproof physical QR identification tag. Affix to field nursery stakes for instant camera identification on campus.
-            </p>
-
-            <div className="flex gap-2 pt-1">
-              <button
-                type="button"
-                onClick={handleDownloadQR}
-                disabled={isDownloadingQR}
-                className="flex-1 h-11 rounded-xl bg-[#8B9B4C] hover:bg-[#9EAF6D] disabled:opacity-60 disabled:cursor-not-allowed text-[#1F240F] font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-md transition-all active:scale-95"
-              >
-                {isDownloadingQR ? (
-                  <>
-                    <Icon name="progress_activity" className="text-[16px] animate-spin" />
-                    <span>Saving...</span>
-                  </>
-                ) : (
-                  <>
-                    <Icon name="download" className="text-[16px]" />
-                    <span>Download PNG</span>
-                  </>
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={() => window.print()}
-                className="px-4 h-11 rounded-xl bg-[#30371A] hover:bg-[#3D4721] border border-[#525E31] text-[#F0F3E8] font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1 transition-colors active:scale-95"
-              >
-                <Icon name="print" className="text-[16px]" />
-                <span>Print</span>
-              </button>
-            </div>
-
-            {/* Real-time Download Feedback Banner */}
-            {qrDownloadNotice === 'downloading' && (
-              <div className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-[#38411F] border border-[#5D6A37] text-xs font-mono text-[#D8DFC8] animate-in fade-in zoom-in-95">
-                <Icon name="progress_activity" className="text-[16px] text-[#A4B566] animate-spin" />
-                <span>Generating high-res PNG tag... download starting</span>
-              </div>
-            )}
-            {qrDownloadNotice === 'success' && (
-              <div className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-[#2D3F1E] border border-[#7A9330] text-xs font-mono text-[#E4F5A6] animate-in fade-in zoom-in-95">
-                <Icon name="check_circle" className="text-[16px] text-[#A4B566]" />
-                <span>Tag downloaded! Check your downloads.</span>
-              </div>
-            )}
-          </div>
-        </div>,
-        document.body
-      )}
-
-      {/* Lightbox Modal for Photo */}
-      {selectedPhoto && typeof document !== 'undefined' && createPortal(
-        <div
-          onClick={() => setSelectedPhoto(null)}
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="relative max-w-2xl max-h-[85vh] rounded-2xl overflow-hidden border border-[#525E31] bg-[#1D230E] shadow-2xl animate-in zoom-in-95 duration-200"
-          >
-            <img
-              src={selectedPhoto}
-              alt="Specimen inspection photo"
-              className="w-full h-auto max-h-[80vh] object-contain"
+            <GrowthEntryForm
+              tree={tree}
+              onSuccess={handleLogCreated}
+              onCancel={() => setShowLogModal(false)}
             />
-            <button
-              onClick={() => setSelectedPhoto(null)}
-              className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/70 text-white flex items-center justify-center border border-white/30 hover:bg-black/90 active:scale-95 transition-all"
-              title="Close photo"
-            >
-              <Icon name="close" className="text-[18px]" />
-            </button>
           </div>
-        </div>,
-        document.body
+        </div>
       )}
-    </>
+    </div>
   );
 }

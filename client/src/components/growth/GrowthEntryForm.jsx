@@ -1,21 +1,29 @@
-import React, { useState, useRef } from 'react';
-import { createPortal } from 'react-dom';
+import React, { useState } from 'react';
 import growthLogService from '../../services/growthLogService';
 import { useAuth } from '../../hooks/useAuth';
 import { canUserLogTree, canUserEditOrDeleteLog } from '../../utils/permissions';
-import { GROWTH_STAGES, HEALTH_STATUSES } from '../../utils/constants';
-import { compressImage } from '../../utils/imageCompressor';
 import { enqueueOfflineLog } from '../../utils/offlineQueue';
 import Icon from '../common/Icon';
 
+// Modular Sub-Components
+import ObservationPhotoPicker from './ObservationPhotoPicker';
+import ObservationVitalitySelector from './ObservationVitalitySelector';
+import ObservationMetricsInputs from './ObservationMetricsInputs';
+
+/**
+ * Growth Observation Entry Form
+ * Supports mandatory photo capture, offline queueing, and Forestry Standard vitality ratings
+ */
 export default function GrowthEntryForm({
   tree,
   trees = [],
   editingLog = null,
+  onCancel,
   onClose,
   onSuccess,
 }) {
   const { user } = useAuth();
+  const handleCancelAction = onCancel || onClose;
 
   const [selectedTreeId, setSelectedTreeId] = useState(
     editingLog?.tree?.treeId ||
@@ -34,7 +42,7 @@ export default function GrowthEntryForm({
     ? canUserEditOrDeleteLog(user, editingLog, targetTree)
     : canUserLogTree(user, targetTree);
 
-  // Measurements
+  // Form State
   const [height, setHeight] = useState(
     editingLog?.height ??
       (tree?.latestHeight || tree?.initialHeight || tree?.height || '')
@@ -56,103 +64,35 @@ export default function GrowthEntryForm({
   );
   const [notes, setNotes] = useState(editingLog?.notes || '');
 
-  // Photo upload (Camera & Gallery options)
+  // Photo Evidence State
   const [photoFile, setPhotoFile] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(editingLog?.photo || null);
-  const cameraInputRef = useRef(null);
-  const galleryInputRef = useRef(null);
 
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  const handlePhotoSelect = async (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (!file.type.startsWith('image/')) {
-        setErrorMessage('Please select a valid image file (JPEG, PNG, WebP).');
-        return;
-      }
-      setErrorMessage('');
-      try {
-        const compressed = await compressImage(file, { maxWidth: 1280, maxHeight: 1280, quality: 0.8 });
-        setPhotoFile(compressed);
-        setPhotoPreview(URL.createObjectURL(compressed));
-      } catch (err) {
-        console.warn('[GrowthEntryForm] Compression fallback:', err);
-        setPhotoFile(file);
-        setPhotoPreview(URL.createObjectURL(file));
-      }
-    }
-  };
-
-  const handleRemovePhoto = () => {
-    setPhotoFile(null);
-    setPhotoPreview(null);
-    if (cameraInputRef.current) {
-      cameraInputRef.current.value = '';
-    }
-    if (galleryInputRef.current) {
-      galleryInputRef.current.value = '';
-    }
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setErrorMessage('');
-
     if (!isAuthorized) {
-      setErrorMessage(
-        'Permission Denied: Only the specimen owner or authorized field supervisor can save observations.'
-      );
+      setErrorMessage('You are not authorized to record observations for this specimen.');
       return;
     }
 
-    if (!selectedTreeId) {
-      setErrorMessage('Please select a specimen tree or plant.');
-      return;
-    }
-
-    if (!height || isNaN(parseFloat(height))) {
-      setErrorMessage('Height measurement is required and must be a valid number.');
-      return;
-    }
-
-    if (!photoFile && !photoPreview) {
-      setErrorMessage(
-        'Observation Photo Mandatory: Visual photographic evidence is required for all observation logs.'
-      );
+    if (!photoFile && !photoPreview && !editingLog?.photo) {
+      setErrorMessage('Visual photographic evidence is mandatory for all observation entries.');
       return;
     }
 
     setSubmitting(true);
-    try {
-      const formData = new FormData();
-      formData.append('tree', selectedTreeId);
-      formData.append('height', parseFloat(height));
+    setErrorMessage('');
 
-      if (stemDiameter !== '' && stemDiameter !== null) {
-        formData.append('stemDiameter', parseFloat(stemDiameter));
-      }
-      if (leafCount !== '' && leafCount !== null) {
-        formData.append('leafCount', parseInt(leafCount, 10));
-      }
-      if (fruitCount !== '' && fruitCount !== null) {
-        formData.append('fruitCount', parseInt(fruitCount, 10));
-      }
+    const treeIdent = targetTree?._id || targetTree?.treeId || selectedTreeId;
 
-      formData.append('growthStage', stage);
-      formData.append('healthStatus', health);
-      formData.append('notes', notes.trim());
-
-      if (photoFile) {
-        formData.append('photo', photoFile);
-      }
-
-      // If device is offline, enqueue directly into IndexedDB
-      if (typeof navigator !== 'undefined' && !navigator.onLine) {
-        console.log('[GrowthEntryForm] Offline mode active: storing observation in local queue...');
-        const offlineRecord = await enqueueOfflineLog({
-          tree: targetTree?._id || selectedTreeId,
+    // Check if offline
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      try {
+        const queuedRecord = await enqueueOfflineLog({
+          tree: targetTree?._id || treeIdent,
           treeId: targetTree?.treeId || selectedTreeId,
           height: parseFloat(height),
           stemDiameter: stemDiameter ? parseFloat(stemDiameter) : null,
@@ -164,16 +104,42 @@ export default function GrowthEntryForm({
           photo: photoFile || photoPreview,
           loggedAt: new Date().toISOString(),
         });
+
         if (onSuccess) {
-          onSuccess({ ...offlineRecord, isOffline: true });
+          onSuccess({
+            ...queuedRecord,
+            _isOfflineDraft: true,
+          });
         }
-        onClose();
         return;
+      } catch (err) {
+        setErrorMessage('Failed to queue offline entry: ' + err.message);
+        setSubmitting(false);
+        return;
+      }
+    }
+
+    // Online submission via FormData
+    try {
+      const formData = new FormData();
+      formData.append('tree', treeIdent);
+      formData.append('height', height);
+      if (stemDiameter) formData.append('stemDiameter', stemDiameter);
+      if (leafCount) formData.append('leafCount', leafCount);
+      if (fruitCount) formData.append('fruitCount', fruitCount);
+      formData.append('growthStage', stage);
+      formData.append('healthStatus', health);
+      if (notes.trim()) formData.append('notes', notes.trim());
+
+      if (photoFile) {
+        formData.append('photo', photoFile);
+      } else if (photoPreview) {
+        formData.append('photo', photoPreview);
       }
 
       let res;
-      if (editingLog?._id) {
-        res = await growthLogService.updateLog(editingLog._id, formData);
+      if (editingLog) {
+        res = await growthLogService.updateLog(editingLog._id || editingLog.id, formData);
       } else {
         res = await growthLogService.createLog(formData);
       }
@@ -181,16 +147,12 @@ export default function GrowthEntryForm({
       if (onSuccess) {
         onSuccess(res.data);
       }
-      onClose();
     } catch (err) {
-      console.error('[GrowthEntryForm] Submit failed:', err);
-
-      // If connection dropped during submit, save to offline IndexedDB queue
-      if (!navigator.onLine || err.message === 'Network Error' || !err.response) {
-        console.warn('[GrowthEntryForm] Network drop during submit, falling back to offline queue:', err.message);
+      // If network dropped during request, fallback to offline queue
+      if (!navigator.onLine || err.message?.includes('Network Error')) {
         try {
-          const offlineRecord = await enqueueOfflineLog({
-            tree: targetTree?._id || selectedTreeId,
+          const queued = await enqueueOfflineLog({
+            tree: targetTree?._id || treeIdent,
             treeId: targetTree?.treeId || selectedTreeId,
             height: parseFloat(height),
             stemDiameter: stemDiameter ? parseFloat(stemDiameter) : null,
@@ -202,343 +164,131 @@ export default function GrowthEntryForm({
             photo: photoFile || photoPreview,
             loggedAt: new Date().toISOString(),
           });
-          if (onSuccess) {
-            onSuccess({ ...offlineRecord, isOffline: true });
-          }
-          onClose();
+          if (onSuccess) onSuccess({ ...queued, _isOfflineDraft: true });
           return;
         } catch (queueErr) {
-          console.error('[GrowthEntryForm] Offline queue failed:', queueErr);
+          setErrorMessage('Error queueing offline log: ' + queueErr.message);
         }
+      } else {
+        setErrorMessage(err.response?.data?.message || err.message || 'Failed to submit log entry.');
       }
-
-      const msg =
-        err.response?.data?.message ||
-        err.message ||
-        'Failed to submit growth observation.';
-      setErrorMessage(msg);
     } finally {
       setSubmitting(false);
     }
   };
 
-  const modalContent = (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
-      <div className="w-full max-w-lg my-auto rounded-2xl bg-[#262C14] border border-[#5D6A37] p-5 sm:p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-[#4F5A2D] pb-3">
-          <div>
-            <div className="flex items-center gap-1.5 font-mono text-[11px] text-[#A4B566] uppercase font-bold tracking-wider">
-              <span className="w-2 h-2 rounded-full bg-[#8B9B4C] animate-pulse" />
-              <span>{editingLog ? 'MODIFY LOG' : 'FIELD OBSERVATION ENTRY'}</span>
-            </div>
-            <h3 className="font-headline-sm text-base sm:text-lg text-[#F0F3E8] font-bold">
-              {editingLog ? 'Edit Growth Telemetry' : 'Record Growth Telemetry'}
-            </h3>
-          </div>
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {errorMessage && (
+        <div className="p-3 rounded-xl bg-red-950/80 border border-red-700/80 text-red-200 text-xs font-mono">
+          {errorMessage}
+        </div>
+      )}
+
+      {/* Specimen Selector if multiple trees available */}
+      {trees.length > 1 && !tree && !editingLog && (
+        <div className="space-y-1">
+          <label className="block text-xs font-mono font-bold text-[#E4F5A6] uppercase tracking-wider">
+            Select Specimen *
+          </label>
+          <select
+            value={selectedTreeId}
+            onChange={(e) => setSelectedTreeId(e.target.value)}
+            className="w-full h-10 bg-[#1D230E] border border-[#525E31] rounded-xl px-3 text-xs font-mono text-[#F0F3E8] focus:outline-none focus:border-[#A4B566]"
+          >
+            {trees.map((t) => (
+              <option key={t.treeId} value={t.treeId}>
+                #{t.treeId} — {t.nickname ? `${t.nickname} (${t.species})` : t.species}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Mandatory Photo Evidence Picker */}
+      <ObservationPhotoPicker
+        photoFile={photoFile}
+        photoPreview={photoPreview}
+        onPhotoSelected={(file, preview) => {
+          setPhotoFile(file);
+          setPhotoPreview(preview);
+          setErrorMessage('');
+        }}
+        onRemovePhoto={() => {
+          setPhotoFile(null);
+          setPhotoPreview(null);
+        }}
+        disabled={submitting}
+      />
+
+      {/* Forestry Standard Vitality Selector */}
+      <ObservationVitalitySelector
+        value={health}
+        onChange={setHealth}
+        disabled={submitting}
+      />
+
+      {/* Botanical Telemetry Inputs */}
+      <ObservationMetricsInputs
+        height={height}
+        onHeightChange={setHeight}
+        stemDiameter={stemDiameter}
+        onStemDiameterChange={setStemDiameter}
+        leafCount={leafCount}
+        onLeafCountChange={setLeafCount}
+        fruitCount={fruitCount}
+        onFruitCountChange={setFruitCount}
+        growthStage={stage}
+        onGrowthStageChange={setStage}
+        disabled={submitting}
+      />
+
+      {/* Field Notes */}
+      <div className="space-y-1">
+        <label className="block text-xs font-mono font-medium text-[#C2CE9F] uppercase tracking-wider">
+          Field Notes & Observations
+        </label>
+        <textarea
+          rows={3}
+          value={notes}
+          disabled={submitting}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="e.g. Added mulch around root perimeter. Minor leaf yellowing under control."
+          className="w-full bg-[#1D230E] border border-[#525E31] rounded-xl p-3 text-xs font-mono text-[#F0F3E8] focus:outline-none focus:border-[#A4B566] placeholder-[#5B664B]"
+        />
+      </div>
+
+      {/* Form Action Buttons */}
+      <div className="flex gap-2.5 pt-2">
+        <button
+          type="submit"
+          disabled={submitting}
+          className="flex-1 h-11 rounded-xl bg-[#8B9B4C] hover:bg-[#9EAF6D] text-[#1F240F] font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors shadow-md disabled:opacity-50"
+        >
+          {submitting ? (
+            <>
+              <div className="w-4 h-4 border-2 border-[#1F240F] border-t-transparent rounded-full animate-spin" />
+              <span>Recording...</span>
+            </>
+          ) : (
+            <>
+              <Icon name="check_circle" className="text-[18px]" />
+              <span>{editingLog ? 'Update Entry' : 'Submit Observation'}</span>
+            </>
+          )}
+        </button>
+
+        {handleCancelAction && (
           <button
             type="button"
-            onClick={onClose}
-            className="w-8 h-8 rounded-full bg-[#1D230E] text-[#AAB596] hover:text-[#F0F3E8] flex items-center justify-center border border-[#4F5A2D] active:scale-95 transition-all"
-            title="Close"
+            onClick={handleCancelAction}
+            disabled={submitting}
+            className="h-11 px-5 rounded-xl bg-[#30371A] hover:bg-[#3D4721] border border-[#525E31] text-xs font-mono text-[#D8DFC8] transition-colors"
           >
-            <Icon name="close" className="w-4.5 h-4.5" />
+            Cancel
           </button>
-        </div>
-
-        {/* Scrollable Form Body */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Permission Alert if not authorized */}
-          {!isAuthorized && (
-            <div className="rounded-xl bg-[#431B1B] border border-[#E57373]/60 p-3.5 text-xs text-[#FFCDD2] flex items-start gap-2.5">
-              <Icon name="lock" className="w-5 h-5 shrink-0 text-[#E57373]" />
-              <div>
-                <span className="font-bold block uppercase font-mono text-[11px]">
-                  Restricted Observation Access
-                </span>
-                <span>
-                  Only the specimen owner or authorized field supervisor can record or edit growth observations for this tree.
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* Error Message */}
-          {errorMessage && (
-            <div className="rounded-xl bg-[#431B1B] border border-[#E57373]/60 p-3 text-xs text-[#FFCDD2] flex items-center gap-2">
-              <Icon name="error" className="w-4.5 h-4.5 shrink-0" />
-              <span>{errorMessage}</span>
-            </div>
-          )}
-
-          {/* Specimen Tag Banner */}
-          {targetTree ? (
-            <div className="p-3 rounded-xl bg-[#1D230E] border border-[#4F5A2D] flex items-center justify-between">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <Icon name="park" className="text-[#8B9B4C] w-5 h-5 shrink-0" />
-                <div className="min-w-0">
-                  <span className="font-mono text-xs font-bold text-[#F0F3E8] block">
-                    #{targetTree.treeId}
-                  </span>
-                  <span className="font-body-sm text-xs text-[#CCD6B8] block truncate">
-                    {targetTree.nickname || targetTree.species}
-                  </span>
-                </div>
-              </div>
-              <span className="px-2 py-0.5 rounded-full font-mono text-[10px] bg-[#333B1C] text-[#BDCE8A] border border-[#525E31] shrink-0 truncate max-w-[150px]">
-                {targetTree.location || 'Campus Plot'}
-              </span>
-            </div>
-          ) : (
-            <div>
-              <label className="block text-xs font-mono text-[#C2CE9F] uppercase mb-1 font-semibold">
-                Select Monitored Specimen *
-              </label>
-              <select
-                value={selectedTreeId}
-                onChange={(e) => setSelectedTreeId(e.target.value)}
-                className="w-full h-11 bg-[#1D230E] border border-[#525E31] rounded-xl px-3 text-xs font-mono text-[#F0F3E8] focus:outline-none focus:border-[#A4B566]"
-                required
-              >
-                {trees.map((t) => (
-                  <option key={t.treeId} value={t.treeId}>
-                    #{t.treeId} — {t.nickname || t.species} ({t.species})
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {/* Biometrics Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {/* Height Input */}
-            <div>
-              <label className="block text-xs font-mono text-[#C2CE9F] uppercase mb-1 font-semibold">
-                Height (cm) * <span className="text-[10px] text-[#AAB596] lowercase">centimeters</span>
-              </label>
-              <div className="relative">
-                <input
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  max="10000"
-                  placeholder="e.g. 145.5"
-                  value={height}
-                  onChange={(e) => setHeight(e.target.value)}
-                  className="w-full h-11 bg-[#1D230E] border border-[#525E31] rounded-xl px-3 font-mono text-xs text-[#F0F3E8] focus:outline-none focus:border-[#A4B566]"
-                  required
-                />
-                <span className="absolute right-3 top-3 text-[11px] font-mono text-[#AAB596]">cm</span>
-              </div>
-            </div>
-
-            {/* Stem DBH Input */}
-            <div>
-              <label className="block text-xs font-mono text-[#C2CE9F] uppercase mb-1 font-semibold">
-                Trunk DBH (mm) <span className="text-[10px] text-[#AAB596] lowercase">millimeters</span>
-              </label>
-              <div className="relative">
-                <input
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  placeholder="e.g. 42.0"
-                  value={stemDiameter}
-                  onChange={(e) => setStemDiameter(e.target.value)}
-                  className="w-full h-11 bg-[#1D230E] border border-[#525E31] rounded-xl px-3 font-mono text-xs text-[#F0F3E8] focus:outline-none focus:border-[#A4B566]"
-                />
-                <span className="absolute right-3 top-3 text-[11px] font-mono text-[#AAB596]">mm</span>
-              </div>
-            </div>
-
-            {/* Leaf Count */}
-            <div>
-              <label className="block text-xs font-mono text-[#C2CE9F] uppercase mb-1 font-semibold">
-                Leaf Count <span className="text-[10px] text-[#AAB596] lowercase">approx.</span>
-              </label>
-              <input
-                type="number"
-                min="0"
-                placeholder="e.g. 180"
-                value={leafCount}
-                onChange={(e) => setLeafCount(e.target.value)}
-                className="w-full h-11 bg-[#1D230E] border border-[#525E31] rounded-xl px-3 font-mono text-xs text-[#F0F3E8] focus:outline-none focus:border-[#A4B566]"
-              />
-            </div>
-
-            {/* Fruit / Pod Count */}
-            <div>
-              <label className="block text-xs font-mono text-[#C2CE9F] uppercase mb-1 font-semibold">
-                Fruit / Pod Count <span className="text-[10px] text-[#AAB596] lowercase">if fruiting</span>
-              </label>
-              <input
-                type="number"
-                min="0"
-                placeholder="e.g. 12"
-                value={fruitCount}
-                onChange={(e) => setFruitCount(e.target.value)}
-                className="w-full h-11 bg-[#1D230E] border border-[#525E31] rounded-xl px-3 font-mono text-xs text-[#F0F3E8] focus:outline-none focus:border-[#A4B566]"
-              />
-            </div>
-          </div>
-
-          {/* Phenological Stage & Health Status */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-mono text-[#C2CE9F] uppercase mb-1 font-semibold">
-                Phenological Stage
-              </label>
-              <select
-                value={stage}
-                onChange={(e) => setStage(e.target.value)}
-                className="w-full h-11 bg-[#1D230E] border border-[#525E31] rounded-xl px-3 text-xs font-mono text-[#F0F3E8] focus:outline-none focus:border-[#A4B566]"
-              >
-                {GROWTH_STAGES.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-mono text-[#C2CE9F] uppercase mb-1 font-semibold">
-                Health Status
-              </label>
-              <select
-                value={health}
-                onChange={(e) => setHealth(e.target.value)}
-                className="w-full h-11 bg-[#1D230E] border border-[#525E31] rounded-xl px-3 text-xs font-mono text-[#F0F3E8] focus:outline-none focus:border-[#A4B566]"
-              >
-                {HEALTH_STATUSES.map((h) => (
-                  <option key={h} value={h}>
-                    {h}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Photo Upload Field */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-xs font-mono text-[#C2CE9F] uppercase font-semibold">
-                Observation Photo (Field Verification) *
-              </label>
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#E57373]/20 border border-[#E57373]/50 text-[#FFCDD2] text-[10px] font-mono font-bold tracking-tight">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#E57373] animate-pulse"></span>
-                Proof Mandatory
-              </span>
-            </div>
-            {photoPreview ? (
-              <div className="relative rounded-xl overflow-hidden border border-[#525E31] h-36 bg-black">
-                <img
-                  src={photoPreview}
-                  alt="Observation verification"
-                  className="w-full h-full object-cover"
-                />
-                <button
-                  type="button"
-                  onClick={handleRemovePhoto}
-                  className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/70 text-[#FFCDD2] flex items-center justify-center backdrop-blur-md active:scale-95 transition-all"
-                  title="Remove photo"
-                >
-                  <Icon name="close" className="w-4.5 h-4.5" />
-                </button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => cameraInputRef.current?.click()}
-                  className="border-2 border-dashed border-[#525E31] hover:border-[#8B9B4C] rounded-xl p-3.5 text-center cursor-pointer bg-[#1D230E] hover:bg-[#262C14] transition-all flex flex-col items-center justify-center gap-1 active:scale-95 group"
-                >
-                  <Icon
-                    name="photo_camera"
-                    className="w-6 h-6 text-[#A4B566] group-hover:scale-110 transition-transform"
-                  />
-                  <span className="font-mono text-xs font-bold text-[#F0F3E8]">Take Photo</span>
-                  <span className="text-[10px] font-mono text-[#CCD6B8]">Direct Camera</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => galleryInputRef.current?.click()}
-                  className="border-2 border-dashed border-[#525E31] hover:border-[#8B9B4C] rounded-xl p-3.5 text-center cursor-pointer bg-[#1D230E] hover:bg-[#262C14] transition-all flex flex-col items-center justify-center gap-1 active:scale-95 group"
-                >
-                  <Icon
-                    name="photo_library"
-                    className="w-6 h-6 text-[#8B9B4C] group-hover:scale-110 transition-transform"
-                  />
-                  <span className="font-mono text-xs font-bold text-[#F0F3E8]">Choose File</span>
-                  <span className="text-[10px] font-mono text-[#CCD6B8]">Gallery / Storage</span>
-                </button>
-              </div>
-            )}
-
-            {/* Direct Camera Input with capture="environment" */}
-            <input
-              type="file"
-              ref={cameraInputRef}
-              accept="image/*"
-              capture="environment"
-              onChange={handlePhotoSelect}
-              className="hidden"
-            />
-            {/* Storage / Gallery File Picker */}
-            <input
-              type="file"
-              ref={galleryInputRef}
-              accept="image/*"
-              onChange={handlePhotoSelect}
-              className="hidden"
-            />
-          </div>
-
-          {/* Notes & Field Observations */}
-          <div>
-            <label className="block text-xs font-mono text-[#C2CE9F] uppercase mb-1 font-semibold">
-              Field Notes / Ecological Observations
-            </label>
-            <textarea
-              rows="3"
-              placeholder="e.g. Pruned dead lower branches, apical stem vigorous, applied organic compost..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="w-full bg-[#1D230E] border border-[#525E31] rounded-xl p-3 text-xs text-[#F0F3E8] placeholder:text-[#CCD6B8]/50 focus:outline-none focus:border-[#A4B566]"
-            />
-          </div>
-          {/* Action Buttons */}
-          <div className="pt-2 flex items-center gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 h-11 rounded-xl bg-[#30371A] hover:bg-[#3D4721] text-[#CCD6B8] border border-[#525E31] font-mono text-xs font-bold uppercase tracking-wider active:scale-95 transition-all"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={submitting || !isAuthorized}
-              className="flex-1 h-11 rounded-xl bg-[#8B9B4C] hover:bg-[#9EAF6D] disabled:opacity-40 disabled:cursor-not-allowed text-[#1F240F] font-mono text-xs font-bold uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all"
-            >
-              {submitting ? (
-                <>
-                  <Icon name="refresh" className="w-4.5 h-4.5 animate-spin" />
-                  <span>Saving...</span>
-                </>
-              ) : (
-                <>
-                  <Icon name="verified" className="w-4.5 h-4.5" />
-                  <span>{editingLog ? 'Update Audit' : 'Commit Audit Log'}</span>
-                </>
-              )}
-            </button>
-          </div>
-        </form>
+        )}
       </div>
-    </div>
+    </form>
   );
-
-  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent;
 }

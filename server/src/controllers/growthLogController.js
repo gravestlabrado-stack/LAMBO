@@ -1,7 +1,4 @@
-const mongoose = require('mongoose');
-const GrowthLog = require('../models/GrowthLog');
-const Tree = require('../models/Tree');
-const { uploadBufferToCloudinary } = require('../config/cloudinary');
+const growthLogService = require('../services/growthLogService');
 
 /**
  * @desc    Get growth logs (filtered by tree or student)
@@ -10,56 +7,24 @@ const { uploadBufferToCloudinary } = require('../config/cloudinary');
  */
 const getGrowthLogs = async (req, res, next) => {
   try {
-    const {
-      tree: treeParam,
-      limit = 100,
-      page = 1,
-      sortBy = 'loggedAt',
-      order = 'desc',
-    } = req.query;
+    const { tree: treeParam, limit = 100, page = 1, sortBy = 'loggedAt', order = 'desc' } = req.query;
 
-    const query = {};
-
-    if (treeParam) {
-      // Find tree by ObjectId or by treeId string (e.g. LMB-0001)
-      let treeDoc;
-      if (mongoose.Types.ObjectId.isValid(treeParam)) {
-        treeDoc = await Tree.findById(treeParam);
-      } else {
-        treeDoc = await Tree.findOne({ treeId: treeParam.toUpperCase() });
-      }
-
-      if (treeDoc) {
-        query.tree = treeDoc._id;
-      } else {
-        return res.status(200).json({ success: true, count: 0, data: [] });
-      }
-    } else {
-      // If no tree specified, fetch logs created by this student or for trees owned by this student
-      query.loggedBy = req.user._id;
-    }
-
-    const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
-    const sortOrder = order === 'asc' ? 1 : -1;
-
-    const [logs, total] = await Promise.all([
-      GrowthLog.find(query)
-        .populate('tree', 'treeId species nickname healthStatus currentStage')
-        .populate('loggedBy', 'name rollNumber course')
-        .sort({ [sortBy]: sortOrder })
-        .skip(skip)
-        .limit(parseInt(limit, 10))
-        .lean(),
-      GrowthLog.countDocuments(query),
-    ]);
+    const result = await growthLogService.getGrowthLogs({
+      treeParam,
+      userId: req.user._id,
+      limit,
+      page,
+      sortBy,
+      order,
+    });
 
     res.status(200).json({
       success: true,
-      count: logs.length,
-      total,
-      page: parseInt(page, 10),
-      totalPages: Math.ceil(total / parseInt(limit, 10)),
-      data: logs,
+      count: result.logs.length,
+      total: result.total,
+      page: result.page,
+      totalPages: result.totalPages,
+      data: result.logs,
     });
   } catch (error) {
     next(error);
@@ -73,29 +38,18 @@ const getGrowthLogs = async (req, res, next) => {
  */
 const getGrowthLogById = async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const result = await growthLogService.getGrowthLogById(req.params.id);
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({
+    if (result.status !== 200) {
+      return res.status(result.status).json({
         success: false,
-        message: 'Invalid log ID format',
-      });
-    }
-
-    const log = await GrowthLog.findById(id)
-      .populate('tree', 'treeId species nickname healthStatus currentStage coordinates location')
-      .populate('loggedBy', 'name rollNumber course');
-
-    if (!log) {
-      return res.status(404).json({
-        success: false,
-        message: 'Growth log entry not found',
+        message: result.message,
       });
     }
 
     res.status(200).json({
       success: true,
-      data: log,
+      data: result.log,
     });
   } catch (error) {
     next(error);
@@ -109,146 +63,24 @@ const getGrowthLogById = async (req, res, next) => {
  */
 const createGrowthLog = async (req, res, next) => {
   try {
-    const {
-      tree: treeParam,
-      height,
-      stemDiameter,
-      leafCount,
-      fruitCount,
-      growthStage,
-      healthStatus,
-      notes,
-      loggedAt,
-    } = req.body;
-
-    if (!treeParam) {
-      return res.status(400).json({
-        success: false,
-        message: 'Tree identifier is required',
-      });
-    }
-
-    if (height === undefined || height === null || isNaN(parseFloat(height))) {
-      return res.status(400).json({
-        success: false,
-        message: 'Height measurement (cm) is required and must be a number',
-      });
-    }
-
-    // Resolve tree by ObjectId or by treeId string (e.g. LMB-0001)
-    let targetTree;
-    if (mongoose.Types.ObjectId.isValid(treeParam)) {
-      targetTree = await Tree.findById(treeParam);
-    }
-    if (!targetTree) {
-      targetTree = await Tree.findOne({ treeId: String(treeParam).toUpperCase() });
-    }
-
-    if (!targetTree) {
-      return res.status(404).json({
-        success: false,
-        message: `Tree not found for identifier ${treeParam}`,
-      });
-    }
-
-    // Authorization: only tree owner or authorized supervisor / officer can log growth
-    const targetTreeOwnerId = targetTree.owner ? String(targetTree.owner._id || targetTree.owner) : '';
-    const userId = String(req.user._id || '');
-    const isOwner = Boolean(targetTreeOwnerId && userId && targetTreeOwnerId === userId);
-    const isSupervisor = req.user.rollNumber && String(req.user.rollNumber).trim() === '9260572';
-    const isOfficer = req.user.role === 'officer';
-
-    if (!isOwner && !isSupervisor && !isOfficer) {
-      return res.status(403).json({
-        success: false,
-        message: 'Only the specimen owner or authorized field supervisor can record growth for this tree.',
-      });
-    }
-
-    // Handle photo upload (mandatory for growth observation logs)
-    let photoUrl = req.body.photo || null;
-    if (req.file) {
-      const uploadRes = await uploadBufferToCloudinary(req.file.buffer, 'lambo_logs');
-      photoUrl = uploadRes.url;
-    }
-
-    if (!photoUrl) {
-      return res.status(400).json({
-        success: false,
-        message: 'Visual photographic evidence is mandatory for all observation entries.',
-      });
-    }
-
-    // Deduplication guard: prevent identical concurrent or double-clicked submissions
-    const parsedLoggedAt = loggedAt ? new Date(loggedAt) : new Date();
-    const duplicateQuery = {
-      tree: targetTree._id,
-      loggedBy: req.user._id,
-      $or: [
-        ...(loggedAt ? [{ loggedAt: parsedLoggedAt }] : []),
-        {
-          createdAt: { $gte: new Date(Date.now() - 15000) },
-          height: parseFloat(height),
-          notes: notes ? notes.trim() : '',
-        },
-      ],
-    };
-
-    const existingLog = await GrowthLog.findOne(duplicateQuery);
-    if (existingLog) {
-      const populatedExisting = await GrowthLog.findById(existingLog._id)
-        .populate('tree', 'treeId species nickname healthStatus currentStage')
-        .populate('loggedBy', 'name rollNumber course');
-      return res.status(200).json({
-        success: true,
-        message: 'Growth log entry already recorded',
-        data: populatedExisting,
-      });
-    }
-
-    const log = await GrowthLog.create({
-      tree: targetTree._id,
-      loggedBy: req.user._id,
-      height: parseFloat(height),
-      stemDiameter: stemDiameter ? parseFloat(stemDiameter) : null,
-      leafCount: leafCount ? parseInt(leafCount, 10) : null,
-      fruitCount: fruitCount ? parseInt(fruitCount, 10) : null,
-      growthStage: growthStage || targetTree.currentStage || 'Seedling',
-      healthStatus: healthStatus || targetTree.healthStatus || 'Thriving',
-      photo: photoUrl,
-      notes: notes ? notes.trim() : '',
-      loggedAt: loggedAt ? new Date(loggedAt) : new Date(),
+    const result = await growthLogService.createGrowthLog({
+      userId: req.user._id,
+      userRole: req.user.role,
+      data: req.body,
+      photoBuffer: req.file ? req.file.buffer : null,
     });
 
-    // Update parent tree's status with latest observation metrics
-    if (growthStage) {
-      targetTree.currentStage = growthStage;
-    }
-    if (healthStatus) {
-      targetTree.healthStatus = healthStatus;
-      if (healthStatus === 'Dead / Mortality') {
-        targetTree.status = 'dead';
-      } else if (targetTree.status === 'dead') {
-        targetTree.status = 'alive';
-      }
-    }
-    if (photoUrl) {
-      targetTree.photos.push({
-        url: photoUrl,
-        caption: `Observation log on ${new Date().toLocaleDateString()}`,
-        uploadedAt: new Date(),
+    if (result.status !== 201) {
+      return res.status(result.status).json({
+        success: false,
+        message: result.message,
       });
     }
-    await targetTree.save();
-
-    const populated = await GrowthLog.findById(log._id)
-      .populate('tree', 'treeId species nickname healthStatus currentStage')
-      .populate('loggedBy', 'name rollNumber course');
 
     res.status(201).json({
       success: true,
-      message: 'Growth log entry recorded successfully',
-      data: populated,
+      message: 'Growth log recorded successfully',
+      data: result.log,
     });
   } catch (error) {
     next(error);
@@ -256,74 +88,31 @@ const createGrowthLog = async (req, res, next) => {
 };
 
 /**
- * @desc    Update a growth log entry
+ * @desc    Update an existing growth log
  * @route   PUT /api/growth-logs/:id
  * @access  Private
  */
 const updateGrowthLog = async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const result = await growthLogService.updateGrowthLog({
+      id: req.params.id,
+      userId: req.user._id,
+      userRole: req.user.role,
+      data: req.body,
+      photoBuffer: req.file ? req.file.buffer : null,
+    });
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({
+    if (result.status !== 200) {
+      return res.status(result.status).json({
         success: false,
-        message: 'Invalid log ID format',
+        message: result.message,
       });
     }
-
-    const log = await GrowthLog.findById(id);
-
-    if (!log) {
-      return res.status(404).json({
-        success: false,
-        message: 'Growth log not found',
-      });
-    }
-
-    // Verify ownership: loggedBy OR tree owner OR field supervisor (Roll #9260572)
-    const targetTree = await Tree.findById(log.tree);
-    const loggedById = String(log.loggedBy?._id || log.loggedBy || '');
-    const userId = String(req.user._id || '');
-    const treeOwnerId = targetTree && targetTree.owner ? String(targetTree.owner._id || targetTree.owner) : '';
-    const isCreator = Boolean(loggedById && userId && loggedById === userId);
-    const isTreeOwner = Boolean(treeOwnerId && userId && treeOwnerId === userId);
-    const isSupervisor = req.user.rollNumber && String(req.user.rollNumber).trim() === '9260572';
-    const isOfficer = req.user.role === 'officer';
-
-    if (!isCreator && !isTreeOwner && !isSupervisor && !isOfficer) {
-      return res.status(403).json({
-        success: false,
-        message: 'Not authorized to modify this log entry. Only the specimen owner or supervisor can edit.',
-      });
-    }
-
-    const { height, stemDiameter, leafCount, fruitCount, growthStage, healthStatus, notes, loggedAt } =
-      req.body;
-
-    if (height !== undefined) log.height = parseFloat(height);
-    if (stemDiameter !== undefined) log.stemDiameter = parseFloat(stemDiameter);
-    if (leafCount !== undefined) log.leafCount = parseInt(leafCount, 10);
-    if (fruitCount !== undefined) log.fruitCount = parseInt(fruitCount, 10);
-    if (growthStage) log.growthStage = growthStage;
-    if (healthStatus) log.healthStatus = healthStatus;
-    if (notes !== undefined) log.notes = notes.trim();
-    if (loggedAt) log.loggedAt = new Date(loggedAt);
-
-    if (req.file) {
-      const uploadRes = await uploadBufferToCloudinary(req.file.buffer, 'lambo_logs');
-      log.photo = uploadRes.url;
-    }
-
-    await log.save();
-
-    const updated = await GrowthLog.findById(log._id)
-      .populate('tree', 'treeId species nickname')
-      .populate('loggedBy', 'name rollNumber course');
 
     res.status(200).json({
       success: true,
       message: 'Growth log updated successfully',
-      data: updated,
+      data: result.log,
     });
   } catch (error) {
     next(error);
@@ -331,50 +120,28 @@ const updateGrowthLog = async (req, res, next) => {
 };
 
 /**
- * @desc    Delete a growth log entry
+ * @desc    Delete a growth log
  * @route   DELETE /api/growth-logs/:id
  * @access  Private
  */
 const deleteGrowthLog = async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const result = await growthLogService.deleteGrowthLog({
+      id: req.params.id,
+      userId: req.user._id,
+      userRole: req.user.role,
+    });
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({
+    if (result.status !== 200) {
+      return res.status(result.status).json({
         success: false,
-        message: 'Invalid log ID format',
+        message: result.message,
       });
     }
-
-    const log = await GrowthLog.findById(id);
-
-    if (!log) {
-      return res.status(404).json({
-        success: false,
-        message: 'Growth log not found',
-      });
-    }
-
-    const targetTree = await Tree.findById(log.tree);
-    const loggedById = String(log.loggedBy?._id || log.loggedBy || '');
-    const userId = String(req.user._id || '');
-    const treeOwnerId = targetTree && targetTree.owner ? String(targetTree.owner._id || targetTree.owner) : '';
-    const isCreator = Boolean(loggedById && userId && loggedById === userId);
-    const isTreeOwner = Boolean(treeOwnerId && userId && treeOwnerId === userId);
-    const isSupervisor = req.user.rollNumber && String(req.user.rollNumber).trim() === '9260572';
-
-    if (!isCreator && !isTreeOwner && !isSupervisor) {
-      return res.status(403).json({
-        success: false,
-        message: 'Not authorized to delete this log entry. Only the specimen owner or supervisor can delete.',
-      });
-    }
-
-    await log.deleteOne();
 
     res.status(200).json({
       success: true,
-      message: 'Growth log entry removed successfully',
+      message: 'Growth log deleted successfully',
     });
   } catch (error) {
     next(error);
@@ -382,55 +149,24 @@ const deleteGrowthLog = async (req, res, next) => {
 };
 
 /**
- * @desc    Export growth logs for a tree (formatted for spreadsheet / CSV generation)
- * @route   GET /api/growth-logs/export/:treeId
+ * @desc    Get growth analytics & trend curves for a tree
+ * @route   GET /api/growth-logs/analytics/:treeId
  * @access  Private
  */
-const exportTreeLogs = async (req, res, next) => {
+const getTreeGrowthAnalytics = async (req, res, next) => {
   try {
-    const { treeId } = req.params;
+    const result = await growthLogService.getTreeGrowthAnalytics(req.params.treeId);
 
-    let treeDoc;
-    if (mongoose.Types.ObjectId.isValid(treeId)) {
-      treeDoc = await Tree.findById(treeId);
-    } else {
-      treeDoc = await Tree.findOne({ treeId: treeId.toUpperCase() });
-    }
-
-    if (!treeDoc) {
-      return res.status(404).json({
+    if (result.status !== 200) {
+      return res.status(result.status).json({
         success: false,
-        message: `Tree not found for identifier ${treeId}`,
+        message: result.message,
       });
     }
 
-    const logs = await GrowthLog.find({ tree: treeDoc._id })
-      .populate('loggedBy', 'name rollNumber course')
-      .sort({ loggedAt: 1 })
-      .lean();
-
-    const formattedExport = logs.map((log) => ({
-      date: new Date(log.loggedAt).toISOString().split('T')[0],
-      treeId: treeDoc.treeId,
-      species: treeDoc.species,
-      nickname: treeDoc.nickname || '',
-      heightCm: log.height,
-      stemDiameterCm: log.stemDiameter !== null ? log.stemDiameter : '',
-      leafCount: log.leafCount !== null ? log.leafCount : '',
-      fruitCount: log.fruitCount !== null ? log.fruitCount : '',
-      stage: log.growthStage,
-      healthStatus: log.healthStatus,
-      recordedBy: log.loggedBy ? `${log.loggedBy.name} (${log.loggedBy.rollNumber})` : 'Unknown',
-      notes: log.notes || '',
-      photoUrl: log.photo || '',
-    }));
-
     res.status(200).json({
       success: true,
-      treeId: treeDoc.treeId,
-      species: treeDoc.species,
-      totalEntries: formattedExport.length,
-      data: formattedExport,
+      data: result.analytics,
     });
   } catch (error) {
     next(error);
@@ -443,5 +179,5 @@ module.exports = {
   createGrowthLog,
   updateGrowthLog,
   deleteGrowthLog,
-  exportTreeLogs,
+  getTreeGrowthAnalytics,
 };

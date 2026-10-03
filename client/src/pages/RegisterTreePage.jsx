@@ -9,7 +9,6 @@ import { compressImage } from '../utils/imageCompressor';
 import Icon from '../components/common/Icon';
 
 export default function RegisterTreePage() {
-  const navigate = useNavigate();
   const { addTree } = useTrees();
 
   // Basic Details
@@ -18,7 +17,6 @@ export default function RegisterTreePage() {
   const [nickname, setNickname] = useState('');
   const [healthStatus, setHealthStatus] = useState('Thriving');
   const [currentStage, setCurrentStage] = useState('Seedling');
-  const [isCompressingPhoto, setIsCompressingPhoto] = useState(false);
 
   // Forest Zone / Campus Sector from MongoDB
   const [zones, setZones] = useState([]);

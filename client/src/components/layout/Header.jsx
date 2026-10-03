@@ -1,335 +1,48 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import Icon from '../common/Icon';
-import { createPortal } from 'react-dom';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useTrees } from '../../context/TreeContext';
-import {
-  isPushSupported,
-  getNotificationPermission,
-  subscribeUserToPush,
-  sendTestAlert,
-} from '../../utils/pushManager';
-import { formatDate } from '../../utils/formatters';
+import { useNetworkRadar } from '../../hooks/useNetworkRadar';
+import { useOfflineQueue } from '../../hooks/useOfflineQueue';
+import { usePWAInstall } from '../../hooks/usePWAInstall';
 
-export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' }) {
-  const navigate = useNavigate();
+import ConnectionRadar from './header/ConnectionRadar';
+import RemindersDrawer from './header/RemindersDrawer';
+import UserProfileMenu from './header/UserProfileMenu';
+import EditProfileModal from './header/EditProfileModal';
+import OfflineQueueModal from './header/OfflineQueueModal';
+
+/**
+ * Top Tactical App Header
+ * Coordinates real-time connectivity radar, offline queue, reminders, and profile controls
+ */
+export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V2.5' }) {
   const { user, logout, updateProfile } = useAuth();
-  const {
-    trees = [],
-    reminders,
-    toggleReminder,
-    addReminder,
-    deleteReminder,
-    offlineCount,
-    syncOffline,
-  } = useTrees();
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const { trees = [], reminders = [], toggleReminder, addReminder, deleteReminder } = useTrees();
+
+  // Custom Hooks
+  const { isOnline, dbStatus, checkConnection } = useNetworkRadar();
+  const { queue, queueCount, isSyncing, syncFlash, triggerSync, deleteQueueItem } = useOfflineQueue();
+  const { isInstallable, isInstalled, promptInstall } = usePWAInstall();
+
+  // Modal / Drawer UI State
   const [showReminders, setShowReminders] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [showNewReminderInput, setShowNewReminderInput] = useState(false);
-  const [newTitle, setNewTitle] = useState('');
-  const [newTreeId, setNewTreeId] = useState('');
-  const [newType, setNewType] = useState('watering');
-  const [newInterval, setNewInterval] = useState('none');
-  const [newDate, setNewDate] = useState(() => new Date().toISOString().split('T')[0]);
-  const [newTime, setNewTime] = useState('08:00');
-  const [deferredPrompt, setDeferredPrompt] = useState(null);
-
-  // Push Notifications state
-  const [pushPermission, setPushPermission] = useState(() => getNotificationPermission());
-  const [isSubscribingPush, setIsSubscribingPush] = useState(false);
-  const [pushMessage, setPushMessage] = useState('');
-  const [isSyncingOffline, setIsSyncingOffline] = useState(false);
-  const [isSavingDb, setIsSavingDb] = useState(false);
-  const [justSynced, setJustSynced] = useState(false);
-
-  // Detect whether the PWA is installed / running standalone
-  const [isInstalled, setIsInstalled] = useState(() => {
-    const isStandalone =
-      (typeof window !== 'undefined' && window.matchMedia('(display-mode: standalone)').matches) ||
-      (typeof window !== 'undefined' && window.navigator?.standalone === true) ||
-      (typeof document !== 'undefined' && document.referrer.includes('android-app://'));
-    const stored = typeof localStorage !== 'undefined' && localStorage.getItem('lambo_pwa_installed') === 'true';
-    return Boolean(isStandalone || stored);
-  });
-
-  // Profile Edit Modal State
   const [showEditProfile, setShowEditProfile] = useState(false);
-  const [editName, setEditName] = useState('');
-  const [editCourse, setEditCourse] = useState('');
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [showPasswordFields, setShowPasswordFields] = useState(false);
-  const [avatarFile, setAvatarFile] = useState(null);
-  const [avatarPreview, setAvatarPreview] = useState(null);
-  const [isSavingProfile, setIsSavingProfile] = useState(false);
-  const [profileError, setProfileError] = useState('');
-  const [profileSuccess, setProfileSuccess] = useState('');
-  const fileInputRef = useRef(null);
+  const [showQueueModal, setShowQueueModal] = useState(false);
 
-  useEffect(() => {
-    const handleOnline = () => {
-      setIsOnline(true);
-      // Automatically attempt sync when network reconnects
-      if (typeof syncOffline === 'function') {
-        syncOffline().catch(() => {});
-      }
-    };
-    const handleOffline = () => setIsOnline(false);
+  const pendingRemindersCount = reminders.filter((r) => !r.completed).length;
 
-    const handleConnectionStatus = (e) => {
-      const { status } = e.detail || {};
-      if (status === 'offline') setIsOnline(false);
-      if (status === 'online') setIsOnline(true);
-    };
-
-    const handleStorageActivity = (e) => {
-      const { action } = e.detail || {};
-      if (action === 'saving') {
-        setIsSavingDb(true);
-      } else if (action === 'saved') {
-        setTimeout(() => setIsSavingDb(false), 500);
-      }
-    };
-
-    const handleSyncedEvent = (e) => {
-      const { synced } = e.detail || {};
-      if (synced > 0) {
-        setJustSynced(true);
-        setTimeout(() => setJustSynced(false), 2500);
-      }
-    };
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    window.addEventListener('lambo_connection_status', handleConnectionStatus);
-    window.addEventListener('lambo_storage_activity', handleStorageActivity);
-    window.addEventListener('lambo_offline_synced', handleSyncedEvent);
-
-    const handleBeforeInstall = (e) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-    };
-    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
-
-    const handleAppInstalled = () => {
-      setIsInstalled(true);
-      try {
-        localStorage.setItem('lambo_pwa_installed', 'true');
-      } catch (err) {}
-      setDeferredPrompt(null);
-    };
-    window.addEventListener('appinstalled', handleAppInstalled);
-
-    const mediaQuery = window.matchMedia('(display-mode: standalone)');
-    const handleDisplayChange = (e) => {
-      if (e.matches) {
-        setIsInstalled(true);
-        try {
-          localStorage.setItem('lambo_pwa_installed', 'true');
-        } catch (err) {}
-      }
-    };
-    if (mediaQuery.addEventListener) {
-      mediaQuery.addEventListener('change', handleDisplayChange);
-    }
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-      window.removeEventListener('lambo_connection_status', handleConnectionStatus);
-      window.removeEventListener('lambo_storage_activity', handleStorageActivity);
-      window.removeEventListener('lambo_offline_synced', handleSyncedEvent);
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
-      window.removeEventListener('appinstalled', handleAppInstalled);
-      if (mediaQuery.removeEventListener) {
-        mediaQuery.removeEventListener('change', handleDisplayChange);
-      }
-    };
-  }, [syncOffline]);
-
-  const handleInstallClick = async () => {
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') {
-        setIsInstalled(true);
-        try {
-          localStorage.setItem('lambo_pwa_installed', 'true');
-        } catch (err) {}
-        setDeferredPrompt(null);
-      }
-    } else {
-      alert(
-        'To install LAMBO:\n\n• On Android/Chrome: Tap browser menu (⋮) → "Install app" or "Add to Home screen"\n• On iPhone/iPad (Safari): Tap the Share button (⎋) → "Add to Home Screen" (⊕)'
-      );
-    }
-  };
-
-  const handleOpenEditProfile = () => {
-    setEditName(user?.name || '');
-    setEditCourse(user?.course || user?.section || '');
-    setCurrentPassword('');
-    setNewPassword('');
-    setShowPasswordFields(false);
-    setAvatarFile(null);
-    setAvatarPreview(user?.avatar || null);
-    setProfileError('');
-    setProfileSuccess('');
-    setShowProfileMenu(false);
-    setShowEditProfile(true);
-  };
-
-  const handleAvatarSelect = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      setProfileError('Please select a valid image file (JPEG, PNG, WebP).');
-      return;
-    }
-
-    if (file.size > 10 * 1024 * 1024) {
-      setProfileError('Image size must be less than 10MB.');
-      return;
-    }
-
-    setAvatarFile(file);
-    setAvatarPreview(URL.createObjectURL(file));
-    setProfileError('');
-  };
-
-  const handleSaveProfile = async (e) => {
-    e.preventDefault();
-    if (!editName.trim()) {
-      setProfileError('Full name cannot be empty.');
-      return;
-    }
-
-    if (newPassword && !currentPassword) {
-      setProfileError('Please enter your current password to set a new password.');
-      return;
-    }
-
-    if (newPassword && newPassword.length < 6) {
-      setProfileError('New password must be at least 6 characters long.');
-      return;
-    }
-
-    setIsSavingProfile(true);
-    setProfileError('');
-    setProfileSuccess('');
-
-    try {
-      const formData = new FormData();
-      formData.append('name', editName.trim());
-      formData.append('course', editCourse.trim());
-      if (avatarFile) {
-        formData.append('avatar', avatarFile);
-      }
-      if (newPassword) {
-        formData.append('currentPassword', currentPassword);
-        formData.append('newPassword', newPassword);
-      }
-
-      await updateProfile(formData);
-      setProfileSuccess('Profile updated successfully!');
-      setTimeout(() => {
-        setShowEditProfile(false);
-        setProfileSuccess('');
-      }, 1000);
-    } catch (err) {
-      setProfileError(err.response?.data?.message || err.message || 'Failed to update profile');
-    } finally {
-      setIsSavingProfile(false);
-    }
-  };
-
-  const pendingCount = reminders.filter((r) => !r.completed).length;
-
-  const handleEnablePush = async () => {
-    setIsSubscribingPush(true);
-    setPushMessage('');
-    try {
-      await subscribeUserToPush();
-      setPushPermission(getNotificationPermission());
-      setPushMessage('Push alerts active! Tap "Test Alert" to test.');
-    } catch (err) {
-      setPushMessage(err.message || 'Failed to enable push notifications');
-    } finally {
-      setIsSubscribingPush(false);
-    }
-  };
-
-  const handleTestPush = async () => {
-    setPushMessage('Sending test alert to this device...');
-    try {
-      await sendTestAlert();
-      setPushMessage('Test alert sent to this device! Check your notification tray.');
-    } catch (err) {
-      setPushMessage(err.message || 'Failed to dispatch test notification');
-    }
-  };
-
-  const handleManualSync = async () => {
-    if (isSyncingOffline) return;
-    setIsSyncingOffline(true);
-    try {
-      // 1. Verify server connectivity first via public health check
-      const pingRes = await fetch('/api/health', { cache: 'no-store' }).catch(() => null);
-      if (!pingRes || !pingRes.ok) {
-        setIsOnline(false);
-        return;
-      }
-      setIsOnline(true);
-
-      // 2. Perform offline queue sync
-      const res = await syncOffline();
-      if (res && res.synced > 0) {
-        setJustSynced(true);
-        setTimeout(() => setJustSynced(false), 2500);
-      } else {
-        setJustSynced(true);
-        setTimeout(() => setJustSynced(false), 1800);
-      }
-    } catch {
-      setIsOnline(false);
-    } finally {
-      setIsSyncingOffline(false);
-    }
-  };
-
-  const handleCreateReminder = async (e) => {
-    e.preventDefault();
-    if (newTitle.trim()) {
-      const scheduledDateTime = new Date(`${newDate}T${newTime}:00`);
-      const matchedTree = trees.find(
-        (t) => String(t.treeId).trim().toUpperCase() === newTreeId.trim().toUpperCase()
-      );
-      await addReminder({
-        title: newTitle.trim(),
-        treeId: matchedTree?.treeId || newTreeId.trim().toUpperCase() || 'CAMPUS',
-        species: matchedTree
-          ? matchedTree.nickname
-            ? `${matchedTree.nickname} (${matchedTree.species})`
-            : matchedTree.species
-          : 'Campus Specimen',
-        scheduledDate: scheduledDateTime.toISOString(),
-        dueDate: `${newDate} at ${newTime}`,
-        type: newType,
-        repeatInterval: newInterval,
-      });
-      setNewTitle('');
-      setShowNewReminderInput(false);
-    }
+  const handleRetrySync = async () => {
+    await checkConnection();
+    await triggerSync();
   };
 
   return (
     <>
       <header className="fixed top-0 w-full z-50 pt-safe bg-[#1D230E]/95 backdrop-blur-xl border-b border-[#525E31]/40 shadow-[0_2px_12px_rgba(0,0,0,0.4)]">
         <div className="h-16 px-4 flex items-center justify-between gap-3 max-w-5xl mx-auto">
-          {/* Brand & Page Info */}
+          {/* Brand & Page Titles */}
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
             <img
               alt="LAMBO Logo"
@@ -347,798 +60,89 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
           </div>
 
           {/* Unified Tactical Pill Toolbar */}
-          <div className="relative shrink-0">
+          <div className="relative shrink-0 flex items-center gap-2">
             <div className="flex items-center bg-[#30371A]/90 border border-[#525E31] rounded-full p-1 pl-2.5 sm:pl-3 pr-1 gap-1 sm:gap-1.5 shadow-sm">
-              {/* Dynamic Connection & Sync Hub */}
-              {isSavingDb ? (
-                /* State 1: Caching to IndexedDB Animation */
-                <div
-                  title="Writing botanical records to IndexedDB"
-                  className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#38411F] border border-[#8B9B4C]/70 text-[#E1E6BC] font-mono text-[10px] sm:text-[11px] animate-pulse select-none"
-                >
-                  <Icon name="progress_activity" className="text-[12px] text-[#A4B566] animate-spin" />
-                  <span className="font-semibold text-[#A4B566]">DB Active</span>
-                </div>
-              ) : isSyncingOffline ? (
-                /* State 2: Syncing with Server Animation */
-                <div
-                  title="Synchronizing offline observation records to campus database"
-                  className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#D99B26]/30 border border-[#D99B26] text-[#F5C26B] font-mono text-[10px] sm:text-[11px] shadow-sm select-none"
-                >
-                  <Icon name="sync" className="text-[13px] text-[#F5C26B] animate-spin" />
-                  <span className="font-bold">Syncing...</span>
-                </div>
-              ) : justSynced ? (
-                /* State 3: Just Synced Success Animation */
-                <div
-                  className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#2D3F1E] border border-[#7A9330] text-[#E4F5A6] font-mono text-[10px] sm:text-[11px] shadow-sm animate-in fade-in select-none"
-                >
-                  <Icon name="check_circle" className="text-[13px] text-[#A4B566]" />
-                  <span className="font-bold">Synced ✓</span>
-                </div>
-              ) : !isOnline ? (
-                /* State 4: Offline Mode with direct Retry Sync Action */
-                <div
-                  className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#3A1818] border border-[#8C3A3A] text-[#FFBDBD] font-mono text-[10px] sm:text-[11px] select-none"
-                >
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+              {/* Connection Radar */}
+              <ConnectionRadar
+                isOnline={isOnline}
+                isSavingDb={dbStatus === 'saving'}
+                isSyncing={isSyncing}
+                justSynced={syncFlash}
+                offlineCount={queueCount}
+                onRetrySync={handleRetrySync}
+                onOpenQueue={() => setShowQueueModal(true)}
+              />
+
+              {/* Reminders / Notifications Bell Button */}
+              <button
+                type="button"
+                onClick={() => setShowReminders(true)}
+                title="View Care Reminders"
+                className="relative w-8 h-8 rounded-full border border-[#525E31] bg-[#1D230E] flex items-center justify-center text-[#D8DFC8] hover:text-white hover:border-[#8B9B4C] transition-colors"
+              >
+                <Icon name="notifications" className="text-[17px]" />
+                {pendingRemindersCount > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-4 min-w-[16px] px-1 items-center justify-center rounded-full bg-[#8B9B4C] text-[#1F240F] font-mono text-[9px] font-bold">
+                    {pendingRemindersCount}
                   </span>
-                  <span className="font-bold tracking-tight">Offline</span>
-                  {offlineCount > 0 && (
-                    <span className="px-1 py-0.2 rounded bg-amber-500/30 text-amber-300 text-[9px] font-bold">
-                      {offlineCount}
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    onClick={handleManualSync}
-                    title="Tap to retry connection & sync records"
-                    aria-label="Retry connection and sync records"
-                    className="ml-0.5 p-1 rounded-full bg-red-950/80 hover:bg-red-900/90 border border-red-700/60 text-red-200 hover:text-white flex items-center justify-center active:scale-90 transition-all"
-                  >
-                    <Icon name="sync" className="text-[11px] text-red-200 hover:text-white" />
-                  </button>
-                </div>
-              ) : (
-                /* State 5: Online Normal State */
+                )}
+              </button>
+
+              {/* PWA Install Action Button */}
+              {isInstallable && !isInstalled && (
                 <button
                   type="button"
-                  onClick={handleManualSync}
-                  title="Network online. Tap to check sync."
-                  className="flex items-center gap-1.5 pr-1 select-none hover:opacity-90 active:scale-95 transition-all"
+                  onClick={promptInstall}
+                  title="Install LAMBO on this device"
+                  className="h-8 px-2.5 rounded-full bg-[#8B9B4C] hover:bg-[#9EAF6D] text-[#1F240F] font-mono text-xs font-bold flex items-center gap-1.5 transition-colors shadow-sm"
                 >
-                  <span className="w-2 h-2 rounded-full bg-[#A4B566] shadow-[0_0_8px_#A4B566]" />
-                  <span className="font-mono text-[11px] font-semibold text-[#D8DFC8] hidden md:inline">
-                    Online
-                  </span>
-                  {offlineCount > 0 && (
-                    <span className="flex items-center gap-1 px-1.5 py-0.2 rounded-full bg-amber-500/20 border border-amber-500 text-amber-300 font-mono text-[10px] font-bold animate-pulse">
-                      <Icon name="cloud_upload" className="text-[12px]" />
-                      <span>{offlineCount}</span>
-                    </span>
-                  )}
+                  <Icon name="download" className="text-[14px]" />
+                  <span className="hidden sm:inline">Install</span>
                 </button>
               )}
 
-              {/* Divider */}
-              <div className="w-[1px] h-4 bg-[#525E31]/80" />
-
-              {/* Reminders Bell Button */}
-              <button
-                type="button"
-                onClick={() => {
-                  setShowReminders(!showReminders);
-                  setShowProfileMenu(false);
-                }}
-                aria-label="Care Reminders"
-                title="Care Reminders"
-                className="relative w-8 h-8 rounded-full flex items-center justify-center text-[#D8DFC8] hover:text-[#F0F3E8] hover:bg-[#38411F] transition-all"
-              >
-                <Icon name="notifications" className="text-[19px]" />
-                {pendingCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-[#D99B26] text-[#1D230E] font-mono text-[10px] font-bold flex items-center justify-center shadow-sm">
-                    {pendingCount}
-                  </span>
-                )}
-              </button>
-
-              {/* Campus Map Quick Button (Visible on desktop/tablet; hidden on mobile to maximize title room) */}
-              <button
-                type="button"
-                onClick={() => navigate('/map')}
-                aria-label="Campus Specimen Map"
-                title="Global Campus Specimen Map"
-                className="hidden sm:flex w-8 h-8 rounded-full items-center justify-center text-[#D8DFC8] hover:text-[#A4B566] hover:bg-[#38411F] transition-all"
-              >
-                <Icon name="map" className="text-[19px]" />
-              </button>
-
-              {/* Install App Quick Button - Visible on larger screens; mobile users install via Profile Menu */}
-              {!isInstalled && (
-                <>
-                  <button
-                    type="button"
-                    onClick={handleInstallClick}
-                    title="Install LAMBO App on this device"
-                    aria-label="Install App"
-                    className="hidden md:flex w-8 h-8 rounded-full items-center justify-center text-[#D8DFC8] hover:text-[#A4B566] hover:bg-[#38411F] transition-all"
-                  >
-                    <Icon name="install_mobile" className="text-[18px]" />
-                  </button>
-                  <div className="hidden md:block w-[1px] h-4 bg-[#525E31]/80" />
-                </>
-              )}
-
-              {/* Profile Avatar Button (Toggles Dropdown) */}
-              <button
-                type="button"
-                onClick={() => {
-                  setShowProfileMenu(!showProfileMenu);
-                  setShowReminders(false);
-                }}
-                className={`relative w-8 h-8 rounded-full overflow-hidden ring-2 ${
-                  String(user?.rollNumber).trim() === '9260572'
-                    ? 'ring-[#F5C26B] shadow-[0_0_8px_rgba(245,194,107,0.4)]'
-                    : 'ring-[#8B9B4C] hover:ring-[#A4B566]'
-                } transition-all focus:outline-none flex items-center justify-center bg-[#1D230E] cursor-pointer shrink-0`}
-                title="Account Menu"
-                aria-label="Account Profile Menu"
-              >
-                {user?.avatar ? (
-                  <img
-                    alt={user.name}
-                    className="w-full h-full object-cover"
-                    src={user.avatar}
-                  />
-                ) : (
-                  <span className={`font-mono text-xs font-bold ${
-                    String(user?.rollNumber).trim() === '9260572' ? 'text-[#F5C26B]' : 'text-[#A4B566]'
-                  }`}>
-                    {user?.name?.charAt(0)?.toUpperCase() || 'S'}
-                  </span>
-                )}
-              </button>
+              {/* User Avatar & Menu */}
+              <UserProfileMenu
+                isOpen={showProfileMenu}
+                onToggle={() => setShowProfileMenu(!showProfileMenu)}
+                onClose={() => setShowProfileMenu(false)}
+                user={user}
+                onOpenEditProfile={() => setShowEditProfile(true)}
+                onLogout={logout}
+              />
             </div>
-
-            {/* Profile Dropdown Menu */}
-            {showProfileMenu && (
-              <>
-                {/* Click-away backdrop */}
-                <div
-                  className="fixed inset-0 z-40"
-                  onClick={() => setShowProfileMenu(false)}
-                />
-
-                {/* Dropdown Card */}
-                <div className="absolute right-0 top-12 z-50 w-72 rounded-2xl bg-[#262C14] border border-[#5D6A37] shadow-2xl p-4 space-y-3 origin-top-right animate-pop-out">
-                  {/* User Details Header with quick edit indicator */}
-                  <div className="flex items-center gap-3 pb-3 border-b border-[#4F5A2D]">
-                    <div className="relative shrink-0">
-                      <div
-                        onClick={handleOpenEditProfile}
-                        title="Click to edit profile & photo"
-                        className={`relative group w-12 h-12 rounded-full overflow-hidden ring-2 ${
-                          String(user?.rollNumber).trim() === '9260572'
-                            ? 'ring-[#F5C26B] shadow-[0_0_12px_rgba(245,194,107,0.45)]'
-                            : 'ring-[#8B9B4C] hover:ring-[#A4B566]'
-                        } flex items-center justify-center bg-[#30371A] cursor-pointer transition-all`}
-                      >
-                        {user?.avatar ? (
-                          <img
-                            alt={user.name}
-                            className="w-full h-full object-cover group-hover:opacity-75 transition-opacity"
-                            src={user.avatar}
-                          />
-                        ) : (
-                          <span className={`font-mono text-sm font-bold ${
-                            String(user?.rollNumber).trim() === '9260572' ? 'text-[#F5C26B]' : 'text-[#A4B566]'
-                          }`}>
-                            {user?.name?.charAt(0)?.toUpperCase() || 'S'}
-                          </span>
-                        )}
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                          <Icon name="edit" className="text-white text-[16px]" />
-                        </div>
-                      </div>
-                      {String(user?.rollNumber).trim() === '9260572' && (
-                        <span className="absolute -top-1 -right-1 text-[13px] drop-shadow-md select-none" title="Special">
-                          👑
-                        </span>
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h4 className="font-display font-bold text-sm text-[#F0F3E8] truncate">
-                        {user?.name || 'Student Observer'}
-                      </h4>
-                      <span className="font-mono text-[11px] text-[#AAB596] block truncate">
-                        {user?.rollNumber || 'ID Unavailable'}
-                      </span>
-                      {user?.course && (
-                        <span className="font-mono text-[10px] text-[#8B9B4C] block truncate">
-                          {user.course}
-                        </span>
-                      )}
-                      {(user?.role === 'officer' || String(user?.rollNumber).trim() === '9260572') && (
-                        <div className="mt-1.5 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#D99B26]/20 border border-[#F5C26B]/80 text-[#F5C26B] font-mono text-[10px] font-bold uppercase tracking-wider select-none shadow-[0_0_8px_rgba(245,194,107,0.25)]">
-                          <Icon name="military_tech" className="text-[14px] text-[#F5C26B]" />
-                          <span>NSTP Officer</span>
-                        </div>
-                      )}
-                      {String(user?.rollNumber).trim() === '9260572' && (
-                        <div className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-[#D99B26]/30 via-[#E57373]/25 to-[#F5C26B]/30 border border-[#F5C26B]/80 shadow-[0_0_10px_rgba(245,194,107,0.35)] select-none">
-                          <span className="text-[10px] font-bold text-[#F5C26B] tracking-tight whitespace-nowrap">
-                            my baby the goat🗣️🗣️❤️🔥
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Network Status Badge */}
-                  <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-[#1D230E] border border-[#525E31]/60 text-xs font-mono">
-                    <span className="text-[#AAB596]">Network:</span>
-                    <div className="flex items-center gap-1.5">
-                      <span
-                        className={`w-2 h-2 rounded-full ${
-                          isOnline
-                            ? 'bg-[#A4B566] shadow-[0_0_6px_#A4B566]'
-                            : 'bg-[#E57373] animate-pulse'
-                        }`}
-                      />
-                      <span className={isOnline ? 'text-[#A4B566] font-semibold' : 'text-[#E57373] font-semibold'}>
-                        {isOnline ? 'Online' : 'Offline'}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Dropdown Actions */}
-                  <div className="space-y-1 pt-1">
-                    {/* NSTP Officer Command Portal (Visible to officers / supervisors) */}
-                    {(user?.role === 'officer' || String(user?.rollNumber).trim() === '9260572') && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowProfileMenu(false);
-                          navigate('/officer/dashboard');
-                        }}
-                        className="w-full px-3 py-2.5 rounded-xl text-left text-xs font-mono font-bold text-[#F5C26B] bg-[#30371A] hover:bg-[#3D4721] border border-[#D99B26]/50 transition-colors flex items-center gap-2.5 group shadow-sm"
-                      >
-                        <Icon name="military_tech" className="text-[18px] text-[#F5C26B] group-hover:scale-110 transition-transform" />
-                        <span>Officer Command Portal</span>
-                      </button>
-                    )}
-
-                    {/* Global Campus Map Button */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowProfileMenu(false);
-                        navigate('/map');
-                      }}
-                      className="w-full px-3 py-2.5 rounded-xl text-left text-xs font-mono font-medium text-[#D8DFC8] hover:bg-[#30371A] hover:text-[#F0F3E8] transition-colors flex items-center gap-2.5 group"
-                    >
-                      <Icon name="map" className="text-[18px] text-[#A4B566] group-hover:scale-110 transition-transform" />
-                      Global Campus Map
-                    </button>
-
-                    {/* Edit Profile & Photo Button */}
-                    <button
-                      type="button"
-                      onClick={handleOpenEditProfile}
-                      className="w-full px-3 py-2.5 rounded-xl text-left text-xs font-mono font-medium text-[#D8DFC8] hover:bg-[#30371A] hover:text-[#F0F3E8] transition-colors flex items-center gap-2.5 group"
-                    >
-                      <Icon name="manage_accounts" className="text-[18px] text-[#A4B566] group-hover:scale-110 transition-transform" />
-                      Edit Profile & Photo
-                    </button>
-
-                    {/* Install PWA App - ONLY visible if NOT installed */}
-                    {!isInstalled && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowProfileMenu(false);
-                          handleInstallClick();
-                        }}
-                        className="w-full px-3 py-2.5 rounded-xl text-left text-xs font-mono font-medium text-[#D8DFC8] hover:bg-[#30371A] hover:text-[#F0F3E8] transition-colors flex items-center gap-2.5"
-                      >
-                        <Icon name="install_mobile" className="text-[18px] text-[#A4B566]" />
-                        Install PWA App
-                      </button>
-                    )}
-
-                    {/* Logout Button */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowProfileMenu(false);
-                        logout();
-                      }}
-                      className="w-full px-3 py-2.5 rounded-xl text-left text-xs font-mono font-bold text-[#E57373] hover:bg-[#431B1B]/80 hover:text-[#FFCDD2] transition-colors flex items-center gap-2.5"
-                    >
-                      <Icon name="logout" className="text-[18px]" />
-                      Sign Out / Logout
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
           </div>
         </div>
       </header>
 
-      {/* Edit Profile & Photo Modal */}
-      {showEditProfile && typeof document !== 'undefined' && createPortal(
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="w-full max-w-md rounded-2xl bg-[#262C14] border border-[#5D6A37] shadow-2xl p-5 space-y-4 max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-[#4F5A2D] pb-3">
-              <div className="flex items-center gap-2.5">
-                <Icon name="manage_accounts" className="text-[#A4B566] text-[24px]" />
-                <div>
-                  <h3 className="font-display font-bold text-base text-[#F0F3E8]">
-                    Edit Student Profile
-                  </h3>
-                  <p className="font-mono text-[11px] text-[#AAB596]">
-                    Manage your account details & avatar
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowEditProfile(false)}
-                className="w-8 h-8 rounded-full bg-[#30371A] border border-[#525E31] text-[#AAB596] flex items-center justify-center hover:text-[#F0F3E8] transition-colors"
-              >
-                <Icon name="close" className="text-[18px]" />
-              </button>
-            </div>
+      {/* Reminders Drawer */}
+      <RemindersDrawer
+        isOpen={showReminders}
+        onClose={() => setShowReminders(false)}
+        reminders={reminders}
+        trees={trees}
+        onToggleReminder={toggleReminder}
+        onAddReminder={addReminder}
+        onDeleteReminder={deleteReminder}
+      />
 
-            {/* Error & Success Feedback */}
-            {profileError && (
-              <div className="p-3 rounded-xl bg-[#431B1B]/80 border border-[#E57373]/50 text-[#FFCDD2] text-xs font-mono flex items-center gap-2">
-                <Icon name="error" className="text-[18px] text-[#E57373]" />
-                <span>{profileError}</span>
-              </div>
-            )}
-            {profileSuccess && (
-              <div className="p-3 rounded-xl bg-[#1D331A]/80 border border-[#A4B566]/60 text-[#C5E1A5] text-xs font-mono flex items-center gap-2">
-                <Icon name="check_circle" className="text-[18px] text-[#A4B566]" />
-                <span>{profileSuccess}</span>
-              </div>
-            )}
+      {/* Offline Queue Modal */}
+      <OfflineQueueModal
+        isOpen={showQueueModal}
+        onClose={() => setShowQueueModal(false)}
+        queue={queue}
+        isSyncing={isSyncing}
+        onRetrySync={handleRetrySync}
+        onDeleteItem={deleteQueueItem}
+      />
 
-            <form onSubmit={handleSaveProfile} className="space-y-4">
-              {/* Profile Photo Uploader */}
-              <div className="flex items-center gap-4 p-3 rounded-xl bg-[#1D230E] border border-[#525E31]/60">
-                <div
-                  onClick={() => fileInputRef.current?.click()}
-                  className="relative group w-16 h-16 rounded-full overflow-hidden ring-2 ring-[#8B9B4C] hover:ring-[#A4B566] flex items-center justify-center bg-[#30371A] shrink-0 cursor-pointer shadow-md"
-                >
-                  {avatarPreview ? (
-                    <img
-                      alt="Avatar preview"
-                      className="w-full h-full object-cover group-hover:opacity-75 transition-opacity"
-                      src={avatarPreview}
-                    />
-                  ) : (
-                    <span className="font-mono text-xl font-bold text-[#A4B566]">
-                      {editName?.charAt(0)?.toUpperCase() || user?.name?.charAt(0)?.toUpperCase() || 'S'}
-                    </span>
-                  )}
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-white transition-opacity">
-                    <Icon name="photo_camera" className="text-[20px]" />
-                    <span className="text-[9px] font-mono">Change</span>
-                  </div>
-                </div>
-
-                <div className="min-w-0 flex-1 space-y-1.5">
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleAvatarSelect}
-                    accept="image/jpeg,image/png,image/webp"
-                    className="hidden"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="px-3 py-1.5 rounded-lg bg-[#30371A] hover:bg-[#3D4721] border border-[#525E31] text-xs font-mono text-[#F0F3E8] flex items-center gap-1.5 transition-colors"
-                  >
-                    <Icon name="upload" className="text-[16px] text-[#A4B566]" />
-                    {avatarPreview ? 'Choose Different Photo' : 'Upload Profile Photo'}
-                  </button>
-                  <p className="font-mono text-[10px] text-[#AAB596]">
-                    Supports JPG, PNG, WebP (max 10MB)
-                  </p>
-                </div>
-              </div>
-
-              {/* Full Name */}
-              <div className="space-y-1">
-                <label className="block text-xs font-mono font-medium text-[#C2CE9F]">
-                  Full Name
-                </label>
-                <input
-                  type="text"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  placeholder="e.g. Maria Clara"
-                  required
-                  className="w-full h-10 bg-[#1D230E] border border-[#525E31] rounded-xl px-3 text-sm text-[#F0F3E8] focus:outline-none focus:border-[#A4B566] transition-colors"
-                />
-              </div>
-
-              {/* Roll / Student ID (Read Only) */}
-              <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <label className="block text-xs font-mono font-medium text-[#C2CE9F]">
-                    Student / Roll Number
-                  </label>
-                  <span className="text-[10px] font-mono text-[#8B9B4C] flex items-center gap-1">
-                    <Icon name="lock" className="text-[12px]" />
-                    Permanent ID
-                  </span>
-                </div>
-                <input
-                  type="text"
-                  value={user?.rollNumber || ''}
-                  disabled
-                  className="w-full h-10 bg-[#171B0B] border border-[#3E4724] rounded-xl px-3 text-sm font-mono text-[#8B9B4C] cursor-not-allowed select-none opacity-80"
-                />
-              </div>
-
-              {/* Course / Section */}
-              <div className="space-y-1">
-                <label className="block text-xs font-mono font-medium text-[#C2CE9F]">
-                  Course / Program / Section
-                </label>
-                <input
-                  type="text"
-                  value={editCourse}
-                  onChange={(e) => setEditCourse(e.target.value)}
-                  placeholder="e.g. BS Forestry 2-A"
-                  className="w-full h-10 bg-[#1D230E] border border-[#525E31] rounded-xl px-3 text-sm text-[#F0F3E8] focus:outline-none focus:border-[#A4B566] transition-colors"
-                />
-              </div>
-
-              {/* Optional Password Update Section */}
-              <div className="pt-1 border-t border-[#4F5A2D]/60">
-                <button
-                  type="button"
-                  onClick={() => setShowPasswordFields(!showPasswordFields)}
-                  className="text-xs font-mono text-[#A4B566] hover:underline flex items-center gap-1 py-1"
-                >
-                  <Icon name={showPasswordFields ? 'expand_less' : 'expand_more'} className="text-[16px]" />
-                  {showPasswordFields ? 'Hide Password Change' : 'Change Password (Optional)'}
-                </button>
-
-                {showPasswordFields && (
-                  <div className="space-y-2.5 pt-2 animate-in fade-in">
-                    <div className="space-y-1">
-                      <label className="block text-xs font-mono font-medium text-[#C2CE9F]">
-                        Current Password
-                      </label>
-                      <input
-                        type="password"
-                        value={currentPassword}
-                        onChange={(e) => setCurrentPassword(e.target.value)}
-                        placeholder="Enter current password"
-                        className="w-full h-9 bg-[#1D230E] border border-[#525E31] rounded-xl px-3 text-xs text-[#F0F3E8] focus:outline-none focus:border-[#A4B566]"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="block text-xs font-mono font-medium text-[#C2CE9F]">
-                        New Password (min 6 characters)
-                      </label>
-                      <input
-                        type="password"
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        placeholder="Enter new password"
-                        className="w-full h-9 bg-[#1D230E] border border-[#525E31] rounded-xl px-3 text-xs text-[#F0F3E8] focus:outline-none focus:border-[#A4B566]"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex gap-2.5 pt-2">
-                <button
-                  type="submit"
-                  disabled={isSavingProfile}
-                  className="flex-1 h-10 rounded-xl bg-[#8B9B4C] hover:bg-[#9EAF6D] text-[#1F240F] font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
-                >
-                  {isSavingProfile ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-[#1F240F] border-t-transparent rounded-full animate-spin" />
-                      <span>Saving...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Icon name="save" className="text-[16px]" />
-                      <span>Save Changes</span>
-                    </>
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowEditProfile(false)}
-                  disabled={isSavingProfile}
-                  className="h-10 px-4 rounded-xl bg-[#30371A] hover:bg-[#3D4721] border border-[#525E31] text-xs font-mono text-[#D8DFC8] transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>,
-        document.body
-      )}
-
-      {/* Care Reminders Drawer / Popover Modal */}
-      {showReminders && typeof document !== 'undefined' && createPortal(
-        <div className="fixed inset-0 z-[100] flex items-start justify-end p-4 pt-20 bg-black/70 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="w-full max-w-sm rounded-2xl bg-[#262C14] border border-[#5D6A37] p-4 shadow-2xl space-y-3 animate-drawer-enter">
-            <div className="flex items-center justify-between border-b border-[#4F5A2D] pb-3">
-              <div className="flex items-center gap-2">
-                <Icon name="event_available" className="text-[#A4B566]" />
-                <div>
-                  <h3 className="font-headline-sm text-headline-sm text-[#F0F3E8] font-bold">
-                    Care Reminders
-                  </h3>
-                  <span className="font-label-sm text-label-sm text-[#C2CE9F]">
-                    {pendingCount} actions pending
-                  </span>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowReminders(false)}
-                className="w-7 h-7 rounded-full bg-[#30371A] border border-[#525E31] text-[#AAB596] flex items-center justify-center hover:text-[#F0F3E8]"
-              >
-                <Icon name="close" className="text-[16px]" />
-              </button>
-            </div>
-
-            {/* Web Push Notification Control Card */}
-            {isPushSupported() && (
-              <div className="p-3 rounded-xl bg-[#1D230E] border border-[#525E31] space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <Icon name={pushPermission === 'granted' ? 'notifications_active' : 'notifications_paused'} className="text-[#A4B566] text-[18px]" />
-                    <span className="font-mono text-xs font-bold text-[#F0F3E8]">
-                      Device Push Alerts
-                    </span>
-                  </div>
-                  <span
-                    className={`font-mono text-[10px] px-2 py-0.5 rounded-full border font-bold ${
-                      pushPermission === 'granted'
-                        ? 'bg-[#2E3C1B] text-[#A4B566] border-[#5D6F28]'
-                        : 'bg-[#3A331A] text-[#F5C26B] border-[#8D6B19]'
-                    }`}
-                  >
-                    {pushPermission === 'granted' ? 'ACTIVE' : 'INACTIVE'}
-                  </span>
-                </div>
-
-                <div className="flex gap-2 pt-0.5">
-                  {pushPermission !== 'granted' ? (
-                    <button
-                      type="button"
-                      onClick={handleEnablePush}
-                      disabled={isSubscribingPush}
-                      className="flex-1 h-8 rounded-lg bg-[#8B9B4C] hover:bg-[#9EAF6D] text-[#1F240F] font-mono text-xs font-bold flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
-                    >
-                      <Icon name="add_alert" className="text-[14px]" />
-                      <span>{isSubscribingPush ? 'Enabling...' : 'Enable Push Alerts'}</span>
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={handleTestPush}
-                      title="Send a test notification only to this device"
-                      className="flex-1 h-8 rounded-lg bg-[#30371A] hover:bg-[#3D4721] border border-[#525E31] text-[#A4B566] font-mono text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
-                    >
-                      <Icon name="send" className="text-[14px]" />
-                      <span>Test This Device</span>
-                    </button>
-                  )}
-                </div>
-
-                {pushMessage && (
-                  <p className="font-mono text-[10px] text-[#AAB596] pt-0.5 leading-tight">
-                    {pushMessage}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* Reminders List */}
-            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-              {reminders.length === 0 ? (
-                <div className="p-4 rounded-xl bg-[#1D230E] border border-[#525E31]/40 text-center text-xs font-mono text-[#AAB596]">
-                  No active care tasks scheduled.
-                </div>
-              ) : (
-                reminders.map((rem) => {
-                  const remId = rem._id || rem.id;
-                  const displayDate = rem.scheduledDate
-                    ? formatDate(rem.scheduledDate)
-                    : rem.dueDate || 'Today';
-                  return (
-                    <div
-                      key={remId}
-                      className={`p-3 rounded-xl border flex items-center justify-between gap-2.5 transition-all ${
-                        rem.completed
-                          ? 'bg-[#1D230E]/70 border-[#525E31]/40 opacity-60'
-                          : 'bg-[#30371A] border-[#525E31] hover:border-[#8B9B4C]'
-                      }`}
-                    >
-                      <div
-                        onClick={() => toggleReminder(remId)}
-                        className="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer"
-                      >
-                        <Icon name={rem.completed ? 'check_circle' : 'radio_button_unchecked'} className={`text-[20px] ${ rem.completed ? 'text-[#A4B566]' : 'text-[#AAB596]' }`} />
-                        <div className="min-w-0">
-                          <span
-                            className={`font-body-md text-body-md font-semibold truncate block ${
-                              rem.completed ? 'line-through text-[#AAB596]' : 'text-[#F0F3E8]'
-                            }`}
-                          >
-                            {rem.title}
-                          </span>
-                          <span className="font-label-sm text-label-sm text-[#C2CE9F] block truncate">
-                            {rem.treeId || rem.tree?.treeId || 'Specimen'} • {displayDate}
-                            {rem.repeatInterval && rem.repeatInterval !== 'none' && (
-                              <span className="ml-1 text-[#F5C26B]">({rem.repeatInterval})</span>
-                            )}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <span className="px-2 py-0.5 rounded-full bg-[#1D230E] border border-[#525E31] font-label-sm text-label-sm text-[#D8DFC8]">
-                          {rem.type}
-                        </span>
-                        {deleteReminder && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              deleteReminder(remId);
-                            }}
-                            className="text-[#AAB596] hover:text-[#E57373] p-1 transition-colors"
-                            title="Delete task"
-                          >
-                            <Icon name="delete" className="text-[16px]" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-
-            {/* Quick Add Reminder Form */}
-            {showNewReminderInput ? (
-              <form onSubmit={handleCreateReminder} className="pt-2 border-t border-[#4F5A2D] space-y-2">
-                <input
-                  type="text"
-                  placeholder="Task (e.g. Add organic compost)"
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  className="w-full h-9 bg-[#1D230E] border border-[#525E31] rounded-lg px-2.5 text-xs text-[#F0F3E8] focus:outline-none focus:border-[#A4B566]"
-                  autoFocus
-                  required
-                />
-                {/* Select Tree Dropdown */}
-                <div className="space-y-1">
-                  <label className="block text-[10px] font-mono text-[#AAB596] uppercase font-semibold">
-                    Monitored Specimen
-                  </label>
-                  <select
-                    value={newTreeId}
-                    onChange={(e) => setNewTreeId(e.target.value)}
-                    className="w-full h-8 bg-[#1D230E] border border-[#525E31] rounded-lg px-2 text-xs font-mono text-[#F0F3E8] focus:outline-none focus:border-[#A4B566]"
-                  >
-                    <option value="">Campus-wide / General Task</option>
-                    {trees.map((t) => (
-                      <option key={t.treeId} value={t.treeId}>
-                        #{t.treeId} — {t.nickname ? `${t.nickname} (${t.species})` : t.species}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-[10px] font-mono text-[#AAB596] uppercase font-semibold">
-                      Task Type
-                    </label>
-                    <select
-                      value={newType}
-                      onChange={(e) => setNewType(e.target.value)}
-                      className="w-full h-8 bg-[#1D230E] border border-[#525E31] rounded-lg px-2 text-xs font-mono text-[#F0F3E8] focus:outline-none focus:border-[#A4B566]"
-                    >
-                      <option value="watering">Watering</option>
-                      <option value="fertilizer">Fertilizer</option>
-                      <option value="inspection">Inspection</option>
-                      <option value="custom">Custom</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-mono text-[#AAB596] uppercase font-semibold">
-                      Recurrence
-                    </label>
-                    <select
-                      value={newInterval}
-                      onChange={(e) => setNewInterval(e.target.value)}
-                      className="w-full h-8 bg-[#1D230E] border border-[#525E31] rounded-lg px-2 text-xs font-mono text-[#F0F3E8] focus:outline-none focus:border-[#A4B566]"
-                    >
-                      <option value="none">One-time</option>
-                      <option value="daily">Daily</option>
-                      <option value="weekly">Weekly</option>
-                      <option value="biweekly">Biweekly</option>
-                      <option value="monthly">Monthly</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-[10px] font-mono text-[#AAB596]">Due Date</label>
-                    <input
-                      type="date"
-                      value={newDate}
-                      onChange={(e) => setNewDate(e.target.value)}
-                      required
-                      className="w-full h-8 bg-[#1D230E] border border-[#525E31] rounded-lg px-2 text-xs font-mono text-[#F0F3E8]"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-mono text-[#AAB596]">Time (Default 8AM)</label>
-                    <input
-                      type="time"
-                      value={newTime}
-                      onChange={(e) => setNewTime(e.target.value)}
-                      required
-                      className="w-full h-8 bg-[#1D230E] border border-[#525E31] rounded-lg px-2 text-xs font-mono text-[#F0F3E8]"
-                    />
-                  </div>
-                </div>
-                <div className="flex gap-2 pt-1">
-                  <button
-                    type="submit"
-                    className="flex-1 h-8 rounded-lg bg-[#8B9B4C] text-[#1F240F] font-mono text-xs font-bold uppercase hover:bg-[#9EAF6D]"
-                  >
-                    Save Reminder
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowNewReminderInput(false)}
-                    className="h-8 px-2 rounded-lg bg-[#30371A] border border-[#525E31] text-xs text-[#AAB596]"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setShowNewReminderInput(true)}
-                className="w-full py-2 rounded-xl bg-[#30371A] border border-[#525E31] text-[#D8DFC8] hover:text-[#F0F3E8] hover:border-[#8B9B4C] font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors"
-              >
-                <Icon name="add" className="text-[16px]" />
-                Add New Care Task
-              </button>
-            )}
-          </div>
-        </div>,
-        document.body
-      )}
+      {/* Edit Profile Modal */}
+      <EditProfileModal
+        isOpen={showEditProfile}
+        onClose={() => setShowEditProfile(false)}
+        user={user}
+        onUpdateProfile={updateProfile}
+      />
     </>
   );
 }
