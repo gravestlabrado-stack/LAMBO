@@ -1,6 +1,9 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import Icon from '../common/Icon';
+import ScannerControlsBar from './ScannerControlsBar';
+import ScannerStandbyOverlay from './ScannerStandbyOverlay';
+import { playTacticalChirp, triggerHaptic, invertImageBlob } from './scannerAudio';
 
 export default function QRScannerView({
   onScan,
@@ -22,55 +25,16 @@ export default function QRScannerView({
   const [cameras, setCameras] = useState([]);
   const [activeCameraIndex, setActiveCameraIndex] = useState(0);
 
-  // Throttling refs to prevent rapid-fire vibrations and duplicate processing
   const lastScanTimeRef = useRef(0);
   const lastHapticTimeRef = useRef(0);
   const lastScannedCodeRef = useRef('');
 
-  // Acoustic lock-on chirp using Web Audio API
-  const playTacticalChirp = () => {
-    try {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (!AudioCtx) return;
-      const ctx = new AudioCtx();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(1200, ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(1800, ctx.currentTime + 0.08);
-
-      gain.gain.setValueAtTime(0.25, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.08);
-
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-
-      osc.start();
-      osc.stop(ctx.currentTime + 0.08);
-    } catch (e) {
-      // Audio autoplay policy
-    }
-  };
-
-  // Mobile haptic vibration - gentle single pulse
-  const triggerHaptic = () => {
-    if (typeof navigator !== 'undefined' && navigator.vibrate) {
-      navigator.vibrate(35);
-    }
-  };
-
-  // Handle successful scan decode (Throttled to 2-3 times per second max)
   const handleDecodedText = useCallback(
     (decodedText) => {
       const now = Date.now();
-      // Minimum 400ms cooldown between detections (~2.5 times per second max)
-      if (now - lastScanTimeRef.current < 400) {
-        return;
-      }
+      if (now - lastScanTimeRef.current < 400) return;
       lastScanTimeRef.current = now;
 
-      // Trigger haptic and sound only for new codes, or at most once every 1200ms if held steady on same tag
       if (decodedText !== lastScannedCodeRef.current || now - lastHapticTimeRef.current > 1200) {
         lastHapticTimeRef.current = now;
         triggerHaptic();
@@ -85,33 +49,7 @@ export default function QRScannerView({
     [onScan]
   );
 
-  // Safely stop the camera
-  const stopCamera = async () => {
-    const scanner = scannerRef.current;
-    if (!scanner) return;
-
-    try {
-      if (scanner.isScanning) {
-        await scanner.stop();
-      }
-    } catch (e) {}
-
-    try {
-      if (!scanner.isScanning) {
-        scanner.clear();
-      }
-    } catch (e) {}
-
-    if (isMountedRef.current) {
-      setCameraActive(false);
-      setCameraLoading(false);
-      setTorchOn(false);
-      setTorchSupported(false);
-    }
-  };
-
-  // Start Camera with camera enumeration
-  const startCamera = async (specificCameraId = null) => {
+  const startCamera = useCallback(async (specificCameraId = null) => {
     if (isStartingRef.current) return;
     isStartingRef.current = true;
 
@@ -128,19 +66,16 @@ export default function QRScannerView({
 
       if (!scannerRef.current) {
         scannerRef.current = new Html5Qrcode(containerId, {
-          experimentalFeatures: {
-            useBarCodeDetectorIfSupported: true,
-          },
+          experimentalFeatures: { useBarCodeDetectorIfSupported: true },
           verbose: false,
         });
       }
       const scanner = scannerRef.current;
 
-      // Stop if currently active before re-starting
       if (scanner.isScanning) {
         try {
           await scanner.stop();
-        } catch (e) {}
+        } catch {}
       }
 
       if (!isMountedRef.current) {
@@ -150,14 +85,12 @@ export default function QRScannerView({
 
       const scanConfig = {
         fps: 15,
-        qrbox: (viewfinderWidth, viewfinderHeight) => {
-          const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-          const edge = Math.max(200, Math.floor(minEdge * 0.9));
+        qrbox: (w, h) => {
+          const edge = Math.max(200, Math.floor(Math.min(w, h) * 0.9));
           return { width: edge, height: edge };
         },
       };
 
-      // Query available camera devices
       let camList = [];
       try {
         camList = await Html5Qrcode.getCameras();
@@ -174,10 +107,7 @@ export default function QRScannerView({
         await scanner.start(specificCameraId, scanConfig, handleDecodedText, () => {});
         started = true;
       } else if (camList && camList.length > 0) {
-        // Prefer rear/environment camera on phones, or first device
-        const backCam = camList.find((c) =>
-          /back|rear|environment/i.test(c.label)
-        );
+        const backCam = camList.find((c) => /back|rear|environment/i.test(c.label));
         const selectedCam = backCam || camList[camList.length - 1] || camList[0];
         const camIdx = camList.findIndex((c) => c.id === selectedCam.id);
         setActiveCameraIndex(camIdx >= 0 ? camIdx : 0);
@@ -185,19 +115,16 @@ export default function QRScannerView({
         try {
           await scanner.start(selectedCam.id, scanConfig, handleDecodedText, () => {});
           started = true;
-        } catch (camErr) {
-          console.warn('[QRScannerView] Specific camera start failed, trying first available device:', camErr);
+        } catch {
           await scanner.start(camList[0].id, scanConfig, handleDecodedText, () => {});
           setActiveCameraIndex(0);
           started = true;
         }
       } else {
-        // Fallback to facingMode constraint
         try {
           await scanner.start({ facingMode: 'environment' }, scanConfig, handleDecodedText, () => {});
           started = true;
-        } catch (envErr) {
-          console.log('[QRScannerView] Environment facingMode failed, falling back to front camera:', envErr);
+        } catch {
           await scanner.start({ facingMode: 'user' }, scanConfig, handleDecodedText, () => {});
           started = true;
         }
@@ -207,7 +134,7 @@ export default function QRScannerView({
         try {
           if (scanner.isScanning) await scanner.stop();
           scanner.clear();
-        } catch (e) {}
+        } catch {}
         isStartingRef.current = false;
         return;
       }
@@ -217,7 +144,6 @@ export default function QRScannerView({
         setCameraLoading(false);
         setCameraError(null);
 
-        // Check torch support
         try {
           const videoElem = document.querySelector(`#${containerId} video`);
           if (videoElem && videoElem.srcObject) {
@@ -227,7 +153,7 @@ export default function QRScannerView({
               setTorchSupported(true);
             }
           }
-        } catch (e) {}
+        } catch {}
       }
     } catch (err) {
       if (!isMountedRef.current) {
@@ -238,7 +164,7 @@ export default function QRScannerView({
       let errMsg = 'Camera access was denied or no compatible camera hardware was detected.';
       const raw = err?.message || String(err || '');
       if (err?.name === 'NotFoundError' || /NotFoundError|Requested device not found/i.test(raw)) {
-        errMsg = 'No camera hardware detected on this device. You can upload an image of the QR tag or switch to Manual Tag Entry.';
+        errMsg = 'No camera hardware detected on this device. You can upload an image of the QR tag.';
       } else if (err?.name === 'NotAllowedError' || /Permission denied|NotAllowedError/i.test(raw)) {
         errMsg = 'Camera access was blocked by the browser. Please allow camera permissions in your address bar.';
       }
@@ -250,7 +176,7 @@ export default function QRScannerView({
     } finally {
       isStartingRef.current = false;
     }
-  };
+  }, [handleDecodedText, onError]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -262,22 +188,17 @@ export default function QRScannerView({
       if (scanner) {
         const cleanup = async () => {
           try {
-            if (scanner.isScanning) {
-              await scanner.stop();
-            }
-          } catch (e) {}
+            if (scanner.isScanning) await scanner.stop();
+          } catch {}
           try {
-            if (!scanner.isScanning) {
-              scanner.clear();
-            }
-          } catch (e) {}
+            if (!scanner.isScanning) scanner.clear();
+          } catch {}
         };
         cleanup();
       }
     };
-  }, []);
+  }, [startCamera]);
 
-  // Torch toggle handler
   const handleToggleTorch = async () => {
     if (!torchSupported || !cameraActive) return;
     try {
@@ -295,7 +216,6 @@ export default function QRScannerView({
     }
   };
 
-  // Flip / switch camera between rear and front if multiple available
   const handleSwitchCamera = () => {
     if (cameras.length <= 1) return;
     const nextIdx = (activeCameraIndex + 1) % cameras.length;
@@ -303,38 +223,6 @@ export default function QRScannerView({
     startCamera(cameras[nextIdx].id);
   };
 
-  // Helper to invert image luminance for dark-mode / white-on-black QR codes
-  const invertImageBlob = (file) => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      const url = URL.createObjectURL(file);
-      img.onload = () => {
-        URL.revokeObjectURL(url);
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
-        try {
-          const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          const d = imgData.data;
-          for (let i = 0; i < d.length; i += 4) {
-            d[i] = 255 - d[i];
-            d[i + 1] = 255 - d[i + 1];
-            d[i + 2] = 255 - d[i + 2];
-          }
-          ctx.putImageData(imgData, 0, 0);
-          canvas.toBlob((blob) => resolve(blob), 'image/png');
-        } catch (e) {
-          resolve(null);
-        }
-      };
-      img.onerror = () => resolve(null);
-      img.src = url;
-    });
-  };
-
-  // Decode QR from an uploaded photo using an isolated temporary reader
   const handleFileScan = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -354,8 +242,7 @@ export default function QRScannerView({
       let decodedText = null;
       try {
         decodedText = await fileScanner.scanFile(file, false);
-      } catch (err) {
-        // If standard decode failed, attempt color-inverted decode (for dark-mode QR tags)
+      } catch {
         try {
           const invertedBlob = await invertImageBlob(file);
           if (invertedBlob) {
@@ -371,7 +258,7 @@ export default function QRScannerView({
 
       try {
         fileScanner.clear();
-      } catch (err) {}
+      } catch {}
 
       if (decodedText) {
         playTacticalChirp();
@@ -380,7 +267,7 @@ export default function QRScannerView({
       } else {
         alert('Could not detect a clear QR barcode in this image. Please ensure the QR tag is clearly visible.');
       }
-    } catch (err) {
+    } catch {
       alert('Could not process this image. Please upload a clear photo of the specimen QR tag.');
     } finally {
       tempDiv.remove();
@@ -390,7 +277,7 @@ export default function QRScannerView({
 
   return (
     <div className="relative w-full aspect-[4/5] max-h-[520px] rounded-2xl overflow-hidden bg-[#111508] border border-[#5D6A37] shadow-2xl select-none">
-      {/* Underlying Camera Feed Container - always preserved with valid dimensions */}
+      {/* Underlying Camera Feed Container */}
       <div
         id={containerId}
         className={`absolute inset-0 w-full h-full object-cover [&>video]:w-full [&>video]:h-full [&>video]:object-cover ${
@@ -398,111 +285,30 @@ export default function QRScannerView({
         }`}
       />
 
-      {/* Field Background when camera is not actively streaming */}
+      {/* Camera Standby Overlay */}
       {!cameraActive && (
-        <div className="absolute inset-0 bg-[#14180A] z-10">
-          <img
-            src="https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?auto=format&fit=crop&w=1200&q=80"
-            alt="Field Camera View"
-            className="w-full h-full object-cover opacity-50 scale-105"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#14180A] via-[#14180A]/70 to-[#14180A]/40" />
-        </div>
-      )}
-
-      {/* Camera Standby / Prompt Overlay */}
-      {!cameraActive && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center z-20 pointer-events-auto">
-          <div className="w-14 h-14 rounded-full bg-[#1D230E]/90 border border-[#5D6A37] flex items-center justify-center text-[#A4B566] shadow-xl backdrop-blur-md">
-            <Icon name="photo_camera" className="w-8 h-8" />
-          </div>
-
-          <div className="space-y-1.5 mt-2">
-            <h4 className="font-headline-sm text-sm font-bold text-[#F0F3E8]">
-              {cameraLoading
-                ? 'Connecting to Camera Feed...'
-                : cameraError
-                ? 'Camera Hardware Notice'
-                : 'Field Camera Ready'}
-            </h4>
-            <p className="text-xs text-[#CCD6B8] max-w-xs mx-auto leading-relaxed">
-              {cameraLoading
-                ? 'Initializing optical sensors...'
-                : cameraError || 'Point camera at the QR tag attached to the tree stake.'}
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center justify-center gap-2 pt-3">
-            <button
-              type="button"
-              onClick={() => startCamera()}
-              disabled={cameraLoading}
-              className="h-10 px-4 rounded-xl bg-[#8B9B4C] hover:bg-[#9EAF6D] text-[#1F240F] font-mono text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-md active:scale-95 transition-all"
-            >
-              <Icon name="photo_camera" className="w-4.5 h-4.5" />
-              <span>{cameraLoading ? 'Starting...' : 'Start Camera'}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="h-10 px-3.5 rounded-xl bg-[#30371A] hover:bg-[#3D4721] text-[#CCD6B8] border border-[#525E31] font-mono text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 active:scale-95 transition-all"
-            >
-              <Icon name="upload_file" className="w-4 h-4" />
-              <span>Upload QR Image</span>
-            </button>
-          </div>
-        </div>
+        <ScannerStandbyOverlay
+          cameraLoading={cameraLoading}
+          cameraError={cameraError}
+          onStartCamera={() => startCamera()}
+          onUploadClick={() => fileInputRef.current?.click()}
+        />
       )}
 
       {/* Ambient Lighting Gradient Overlay */}
       <div className="absolute inset-0 bg-gradient-to-b from-[#14180A]/60 via-transparent to-[#14180A]/80 pointer-events-none z-15" />
 
       {/* Top Controls Bar */}
-      <div className="absolute top-3 inset-x-3 flex items-center justify-end z-30 pointer-events-auto">
-        {/* Action Controls: Flip Camera, Torch, Upload QR */}
-        <div className="flex items-center gap-2">
-          {cameras.length > 1 && (
-            <button
-              type="button"
-              onClick={handleSwitchCamera}
-              className="w-9 h-9 rounded-full bg-[#191E0D]/90 border border-[#4E5B2E] text-[#D8DFC8] flex items-center justify-center backdrop-blur-md active:scale-95 transition-all hover:border-[#8B9B4C]"
-              title="Flip Camera (Front/Rear)"
-            >
-              <Icon name="flip_camera_ios" className="w-4.5 h-4.5" />
-            </button>
-          )}
+      <ScannerControlsBar
+        cameras={cameras}
+        onSwitchCamera={handleSwitchCamera}
+        torchSupported={torchSupported}
+        torchOn={torchOn}
+        onToggleTorch={handleToggleTorch}
+        onUploadClick={() => fileInputRef.current?.click()}
+      />
 
-          {torchSupported && (
-            <button
-              type="button"
-              onClick={handleToggleTorch}
-              className={`w-9 h-9 rounded-full flex items-center justify-center border backdrop-blur-md active:scale-95 transition-all ${
-                torchOn
-                  ? 'bg-[#A4B566] text-[#1D230E] border-[#A4B566]'
-                  : 'bg-[#191E0D]/90 border-[#4E5B2E] text-[#D8DFC8]'
-              }`}
-              title="Toggle Flashlight / Torch"
-            >
-              <Icon
-                name={torchOn ? 'flashlight_on' : 'flashlight_off'}
-                className="w-4.5 h-4.5"
-              />
-            </button>
-          )}
-
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="w-9 h-9 rounded-full bg-[#191E0D]/90 border border-[#4E5B2E] text-[#D8DFC8] flex items-center justify-center backdrop-blur-md active:scale-95 transition-all hover:border-[#8B9B4C]"
-            title="Scan QR from Gallery Image"
-          >
-            <Icon name="photo_library" className="w-4.5 h-4.5" />
-          </button>
-        </div>
-      </div>
-
-      {/* Clean Scanner Status Indicator (Clean, uncluttered, no bulky corners) */}
+      {/* Clean Scanner Status Indicator */}
       <div className="absolute top-16 inset-x-0 flex justify-center pointer-events-none z-25">
         <div className="flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#191E0D]/90 border border-[#525E31] backdrop-blur-md text-[#F0F3E8] shadow-lg">
           <Icon

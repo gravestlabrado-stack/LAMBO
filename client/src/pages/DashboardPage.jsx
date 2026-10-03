@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useTrees } from '../context/TreeContext';
-import { formatRelativeTime } from '../utils/formatters';
 import Icon from '../components/common/Icon';
 
 export default function DashboardPage() {

@@ -71,7 +71,6 @@ export default function GrowthTimeline({
         <div className="absolute left-2.5 top-3 bottom-6 w-0.5 bg-[#4F5A2D]" />
 
         {sortedLogs.map((log, index) => {
-          const isLatest = index === 0;
           const auditor = log.loggedBy;
           const targetTree = tree || log.tree;
           const activeUser = currentUser || currentUserId;

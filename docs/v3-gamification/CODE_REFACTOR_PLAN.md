@@ -128,4 +128,49 @@ Refactoring is executed in 6 sequential milestones, with automated `oxlint` and 
 - [x] Create `client/src/components/growth/ObservationMetricsInputs.jsx` (Height, stem caliper, foliage, growth stage)
 - [x] Refactor `client/src/components/growth/GrowthEntryForm.jsx` from 545 lines down to 198 lines.
 - [x] Fixed oxlint warnings in `RegisterTreePage.jsx` and `GrowthLogsPage.jsx` (unused variables, error alerts).
-- [x] **Verification:** Verified clean lint and Vite production build with zero errors. All 6 milestones complete!
+- [x] **Verification:** Verified clean lint and Vite production build with zero errors. All 6 initial milestones complete and committed!
+
+---
+
+### 🟩 Milestone 7: Backend Reminder Domain Service (`server/src/services/reminderService.js`) — ✅ COMPLETED
+- [x] Create `server/src/services/reminderService.js` (Encapsulating reminder CRUD, recurrence logic, push notifications dispatch, subscriber cleanups)
+- [x] Refactor `server/src/controllers/reminderController.js` to thin controller (393 → 125 lines)
+- [x] **Verification:** Verified server syntax and route integrity.
+
+---
+
+### 🟩 Milestone 8: Modular Specimen Registration (`RegisterTreePage.jsx`) — ✅ COMPLETED
+- [x] Create `client/src/components/tree/register/RegistrationLocationSection.jsx` (Map pin placement, sector dropdown, dynamic zone creation)
+- [x] Create `client/src/components/tree/register/RegistrationTaxonomySection.jsx` (Species selection, custom input, nickname tag)
+- [x] Create `client/src/components/tree/register/RegistrationPhotoSection.jsx` (Camera shutter, photo gallery, client-side canvas compression, health & stage)
+- [x] Create `client/src/components/tree/register/RegistrationMetricsSection.jsx` (Baseline height, stem caliper, foliage, notes)
+- [x] Refactor `client/src/pages/RegisterTreePage.jsx` from 741 lines down to 252 lines orchestrator.
+- [x] **Verification:** Verified clean build and oxlint with zero errors.
+
+---
+
+### 🟩 Milestone 9: Modular Campus Map System (`CampusMapPage.jsx`) — ✅ COMPLETED
+- [x] Create `client/src/components/map/mapIcons.js` (DivIcon generators, user GPS beacon, health color mapping)
+- [x] Create `client/src/components/map/MapFilterToolbar.jsx` (Search/scope toggle, vitality filter pills, CTU Barili center, live GPS find button)
+- [x] Create `client/src/components/map/MapLegendOverlay.jsx` (Tactical health matrix HUD overlay)
+- [x] Refactor `client/src/pages/CampusMapPage.jsx` from 526 lines down to 260 lines orchestrator.
+- [x] **Verification:** Verified clean build and oxlint with zero errors.
+
+---
+
+### 🟩 Milestone 10: Modular Growth Logs & Observation Ledger (`GrowthLogsPage.jsx`) — ✅ COMPLETED
+- [x] Create `client/src/components/growth/LogsToolbar.jsx` (Fast actions, SheetJS export button, status notifications)
+- [x] Create `client/src/components/growth/LogsSpecimenCard.jsx` (Active focus dropdown, telemetry summary metric cards)
+- [x] Create `client/src/components/growth/GrowthLogExport.js` (Pure SheetJS Excel workbook generation)
+- [x] Refactor `client/src/pages/GrowthLogsPage.jsx` from 594 lines down to 290 lines orchestrator.
+- [x] **Verification:** Verified clean build and oxlint with zero errors.
+
+---
+
+### 🟩 Milestone 11: Modular Tactical QR Scanner & Audio Utilities (`QRScannerView.jsx`) — ✅ COMPLETED
+- [x] Create `client/src/components/scan/scannerAudio.js` (Web Audio API acoustic chirp, haptics, canvas luminance inverter)
+- [x] Create `client/src/components/scan/ScannerControlsBar.jsx` (Switch camera, flashlight torch, gallery QR upload)
+- [x] Create `client/src/components/scan/ScannerStandbyOverlay.jsx` (Standby field backdrop, hardware status, camera start)
+- [x] Refactor `client/src/components/scan/QRScannerView.jsx` from 531 lines down to 260 lines orchestrator.
+- [x] **Verification:** Verified clean build and oxlint with zero errors. All 11 v2.5 refactoring milestones completed!
+

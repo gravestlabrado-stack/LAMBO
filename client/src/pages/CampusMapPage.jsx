@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import Icon from '../components/common/Icon';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import treeService from '../services/treeService';
@@ -10,71 +9,11 @@ import { CAMPUS_COORDINATES } from '../utils/constants';
 import { getCurrentCoordinates } from '../utils/geolocation';
 import { getStoredTrees } from '../utils/offlineStorage';
 import MarkerClusterGroup from '../components/map/MarkerClusterGroup';
+import MapFilterToolbar from '../components/map/MapFilterToolbar';
+import MapLegendOverlay from '../components/map/MapLegendOverlay';
+import { createPinIcon, createUserGpsIcon, getHealthColor } from '../components/map/mapIcons';
+import Icon from '../components/common/Icon';
 
-// Custom Tactical Leaflet Pin Icons with health status colors & owner indicator
-const createPinIcon = (color, isOwner = false) => {
-  return L.divIcon({
-    className: 'custom-tree-pin',
-    html: `
-      <div style="
-        background-color: ${color};
-        width: ${isOwner ? '30px' : '26px'};
-        height: ${isOwner ? '30px' : '26px'};
-        border-radius: 50% 50% 50% 0;
-        transform: rotate(-45deg);
-        border: 2px solid ${isOwner ? '#FFFFFF' : '#F0F3E8'};
-        box-shadow: 0 4px 12px rgba(0,0,0,0.6)${isOwner ? ', 0 0 10px ' + color : ''};
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-      ">
-        <span style="
-          transform: rotate(45deg);
-          color: #1D230E;
-          font-size: ${isOwner ? '16px' : '14px'};
-          font-weight: bold;
-          line-height: 1;
-        ">🌱</span>
-      </div>
-    `,
-    iconSize: isOwner ? [30, 30] : [26, 26],
-    iconAnchor: isOwner ? [15, 30] : [13, 26],
-    popupAnchor: [0, -28],
-  });
-};
-
-// User GPS Beacon Pin Icon
-const createUserGpsIcon = () =>
-  L.divIcon({
-    className: 'user-gps-beacon',
-    html: `
-      <div style="position: relative; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;">
-        <div style="
-          position: absolute;
-          inset: 0;
-          border-radius: 50%;
-          background: #4285F4;
-          opacity: 0.4;
-          animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
-        "></div>
-        <div style="
-          position: relative;
-          width: 16px;
-          height: 16px;
-          border-radius: 50%;
-          background: #4285F4;
-          border: 3px solid #FFFFFF;
-          box-shadow: 0 0 10px #4285F4;
-        "></div>
-      </div>
-    `,
-    iconSize: [26, 26],
-    iconAnchor: [13, 13],
-    popupAnchor: [0, -14],
-  });
-
-// Map controller to fly smoothly when a target location is triggered
 function MapFlyToHandler({ target, zoom = 17 }) {
   const map = useMap();
   useEffect(() => {
@@ -85,7 +24,6 @@ function MapFlyToHandler({ target, zoom = 17 }) {
   return null;
 }
 
-// Initial bounds fitter (only runs once on initial tree data load if no manual target requested)
 function MapBoundsController({ trees, hasManualTarget }) {
   const map = useMap();
   const hasFittedRef = useRef(false);
@@ -112,7 +50,6 @@ function MapBoundsController({ trees, hasManualTarget }) {
 }
 
 export default function CampusMapPage() {
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const focusTreeId = searchParams.get('focus');
   const { user } = useAuth();
@@ -127,10 +64,9 @@ export default function CampusMapPage() {
     }
   });
   const [loading, setLoading] = useState(allTrees.length === 0);
-  const [scope, setScope] = useState('all'); // 'all' (Global Campus) | 'my' (My Plants/Trees)
+  const [scope, setScope] = useState('all');
   const [selectedHealth, setSelectedHealth] = useState('All');
 
-  // Location states
   const [flyTarget, setFlyTarget] = useState(null);
   const [userLocation, setUserLocation] = useState(null);
   const [userAccuracy, setUserAccuracy] = useState(null);
@@ -138,11 +74,9 @@ export default function CampusMapPage() {
   const [locationError, setLocationError] = useState('');
   const [hasManualTarget, setHasManualTarget] = useState(false);
 
-  // Default campus center coordinates: CTU Barili Campus (Cagay, Barili, Cebu)
-  const defaultCenter = [CAMPUS_COORDINATES.lat, CAMPUS_COORDINATES.lng];
+  const defaultCenter = useMemo(() => [CAMPUS_COORDINATES.lat, CAMPUS_COORDINATES.lng], []);
 
-  // Fetch all campus trees from backend API with offline cache fallback
-  const fetchMapTrees = async () => {
+  const fetchMapTrees = useCallback(async () => {
     try {
       if (allTrees.length === 0) setLoading(true);
       const res = await treeService.getTrees({ all: 'true' });
@@ -167,17 +101,16 @@ export default function CampusMapPage() {
             setAllTrees(userTrees);
           }
         }
-      } catch (e) {}
+      } catch {}
     } finally {
       setLoading(false);
     }
-  };
+  }, [allTrees.length, campusCatalog, userTrees]);
 
   useEffect(() => {
     fetchMapTrees();
-  }, []);
+  }, [fetchMapTrees]);
 
-  // Handle URL focus parameter (?focus=LMB-0002)
   useEffect(() => {
     if (focusTreeId && allTrees.length > 0) {
       const target = allTrees.find(
@@ -192,7 +125,6 @@ export default function CampusMapPage() {
     }
   }, [focusTreeId, allTrees]);
 
-  // Filter trees based on Scope (All vs My Trees)
   const scopedTrees = useMemo(() => {
     if (scope === 'my') {
       const currentUserId = user?._id || user?.id;
@@ -204,7 +136,6 @@ export default function CampusMapPage() {
     return allTrees;
   }, [allTrees, scope, user]);
 
-  // Filter trees based on Health Status
   const displayedTrees = useMemo(() => {
     return scopedTrees.filter((tree) => {
       if (selectedHealth === 'All') return true;
@@ -224,7 +155,31 @@ export default function CampusMapPage() {
     });
   }, [scopedTrees, selectedHealth]);
 
-  // Robust User GPS locator with auto-fallback
+  const healthCounts = useMemo(() => {
+    const counts = {
+      All: scopedTrees.length,
+      Thriving: 0,
+      'Stable / Fair': 0,
+      'Distressed / At Risk': 0,
+      'Dead / Mortality': 0,
+    };
+    for (const t of scopedTrees) {
+      if (t.healthStatus === 'Thriving' || t.healthStatus === 'Healthy') counts.Thriving++;
+      else if (t.healthStatus === 'Stable / Fair' || t.healthStatus === 'Monitoring') counts['Stable / Fair']++;
+      else if (t.healthStatus === 'Distressed / At Risk' || t.healthStatus === 'Needs Attention') counts['Distressed / At Risk']++;
+      else if (t.healthStatus === 'Dead / Mortality' || t.status === 'dead') counts['Dead / Mortality']++;
+    }
+    return counts;
+  }, [scopedTrees]);
+
+  const myTreesCount = useMemo(() => {
+    const currentUserId = user?._id || user?.id;
+    return allTrees.filter((t) => {
+      const ownerId = t.owner?._id || t.owner;
+      return ownerId && currentUserId && String(ownerId) === String(currentUserId);
+    }).length;
+  }, [allTrees, user]);
+
   const handleLocateUser = async () => {
     setIsLocating(true);
     setLocationError('');
@@ -244,90 +199,27 @@ export default function CampusMapPage() {
     }
   };
 
-  // Reset to CTU Barili Campus Center
   const handleResetToCampus = () => {
     setHasManualTarget(true);
     setLocationError('');
     setFlyTarget([CAMPUS_COORDINATES.lat, CAMPUS_COORDINATES.lng]);
   };
 
-  // Health color mapping
-  const getHealthColor = (status) => {
-    switch (status) {
-      case 'Thriving':
-      case 'Healthy':
-        return '#A4B566';
-      case 'Stable / Fair':
-      case 'Monitoring':
-        return '#D99B26';
-      case 'Distressed / At Risk':
-      case 'Needs Attention':
-        return '#E57373';
-      case 'Dead / Mortality':
-        return '#757575';
-      default:
-        return '#A4B566';
-    }
-  };
-
-  const myTreesCount = allTrees.filter((t) => {
-    const ownerId = t.owner?._id || t.owner;
-    const currentUserId = user?._id || user?.id;
-    return ownerId && currentUserId && String(ownerId) === String(currentUserId);
-  }).length;
-
   return (
     <div className="space-y-4 pb-8">
-      {/* Page Title & Scope Toggle */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="font-label-sm text-label-sm text-[#A4B566] uppercase font-mono tracking-wider">
-              GEOSPATIAL TELEMETRY
-            </span>
-            <span className="text-[11px] font-mono text-[#D8DFC8] bg-[#1D230E] px-2 py-0.5 rounded-full border border-[#525E31]">
-              CTU Barili Campus
-            </span>
-          </div>
-          <h2 className="font-headline-md text-headline-md text-[#F0F3E8] font-bold">
-            Campus Specimen Map
-          </h2>
-          <p className="font-body-sm text-body-sm text-[#CCD6B8]">
-            Interactive GPS locations &amp; real-time health telemetry across Cebu Technological University – Barili Campus
-          </p>
-        </div>
+      <MapFilterToolbar
+        scope={scope}
+        onScopeChange={setScope}
+        totalTrees={allTrees.length}
+        myTreesCount={myTreesCount}
+        selectedHealth={selectedHealth}
+        onHealthChange={setSelectedHealth}
+        healthCounts={healthCounts}
+        onResetCampus={handleResetToCampus}
+        onLocateUser={handleLocateUser}
+        isLocating={isLocating}
+      />
 
-        {/* Global vs Personal Scope Toggle */}
-        <div className="inline-flex p-1 rounded-2xl bg-[#1D230E] border border-[#525E31] self-start sm:self-auto shadow-sm">
-          <button
-            type="button"
-            onClick={() => setScope('all')}
-            className={`px-4 py-2 rounded-xl font-mono text-xs font-bold transition-all flex items-center gap-1.5 ${
-              scope === 'all'
-                ? 'bg-[#8B9B4C] text-[#1F240F] shadow-md'
-                : 'text-[#D8DFC8] hover:text-[#F0F3E8] hover:bg-[#30371A]'
-            }`}
-          >
-            <Icon name="public" className="text-[17px]" />
-            <span>All Campus ({allTrees.length})</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setScope('my')}
-            className={`px-4 py-2 rounded-xl font-mono text-xs font-bold transition-all flex items-center gap-1.5 ${
-              scope === 'my'
-                ? 'bg-[#8B9B4C] text-[#1F240F] shadow-md'
-                : 'text-[#D8DFC8] hover:text-[#F0F3E8] hover:bg-[#30371A]'
-            }`}
-          >
-            <Icon name="person" className="text-[17px]" />
-            <span>My Plants &amp; Trees ({myTreesCount})</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Location Error Banner */}
       {locationError && (
         <div className="p-3 rounded-xl bg-[#431B1B]/85 border border-[#E57373]/60 text-xs font-mono text-[#FFCDD2] flex items-center justify-between gap-3 animate-in fade-in">
           <div className="flex items-center gap-2">
@@ -337,78 +229,12 @@ export default function CampusMapPage() {
           <button
             type="button"
             onClick={() => setLocationError('')}
-            className="text-[#FFCDD2] hover:text-white"
+            className="text-[#FFCDD2] hover:text-white cursor-pointer"
           >
             <Icon name="close" className="text-[16px]" />
           </button>
         </div>
       )}
-
-      {/* Health Status Filter Pills & Quick Location Buttons */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-        <div className="flex flex-wrap items-center gap-2">
-          {['All', 'Thriving', 'Stable / Fair', 'Distressed / At Risk', 'Dead / Mortality'].map((f) => {
-            const count =
-              f === 'All'
-                ? scopedTrees.length
-                : scopedTrees.filter((t) => {
-                    if (f === 'Thriving') return t.healthStatus === 'Thriving' || t.healthStatus === 'Healthy';
-                    if (f === 'Stable / Fair') return t.healthStatus === 'Stable / Fair' || t.healthStatus === 'Monitoring';
-                    if (f === 'Distressed / At Risk') return t.healthStatus === 'Distressed / At Risk' || t.healthStatus === 'Needs Attention';
-                    if (f === 'Dead / Mortality') return t.healthStatus === 'Dead / Mortality' || t.status === 'dead';
-                    return t.healthStatus === f;
-                  }).length;
-
-            return (
-              <button
-                key={f}
-                onClick={() => setSelectedHealth(f)}
-                className={`px-3.5 py-1.5 rounded-full font-mono text-xs font-bold transition-all active:scale-95 whitespace-nowrap ${
-                  selectedHealth === f
-                    ? 'bg-[#8B9B4C] text-[#1F240F] shadow-sm'
-                    : 'bg-[#262C14] text-[#CCD6B8] border border-[#4F5A2D] hover:bg-[#30371A]'
-                }`}
-              >
-                {f} ({count})
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="flex items-center gap-2 ml-auto">
-          {/* Quick Center to CTU Barili Campus */}
-          <button
-            type="button"
-            onClick={handleResetToCampus}
-            className="h-9 px-3 rounded-xl bg-[#262C14] hover:bg-[#30371A] border border-[#525E31] text-[#C2CE9F] text-xs font-mono font-semibold flex items-center gap-1.5 transition-colors shadow-sm"
-            title="Center map on CTU Barili Campus"
-          >
-            <Icon name="school" className="text-[16px] text-[#A4B566]" />
-            <span>CTU Barili</span>
-          </button>
-
-          {/* Find My Location (GPS) */}
-          <button
-            type="button"
-            onClick={handleLocateUser}
-            disabled={isLocating}
-            className="h-9 px-3.5 rounded-xl bg-[#30371A] hover:bg-[#3D4721] active:scale-95 border border-[#525E31] text-[#A4B566] text-xs font-mono font-semibold flex items-center gap-1.5 transition-colors shadow-sm disabled:opacity-50"
-            title="Find and center on your live GPS location"
-          >
-            {isLocating ? (
-              <>
-                <div className="w-3.5 h-3.5 border-2 border-[#A4B566] border-t-transparent rounded-full animate-spin" />
-                <span>Locating...</span>
-              </>
-            ) : (
-              <>
-                <Icon name="my_location" className="text-[16px]" />
-                <span>Find My Location</span>
-              </>
-            )}
-          </button>
-        </div>
-      </div>
 
       {/* Leaflet Interactive Map Container */}
       <div className="relative w-full h-[560px] rounded-2xl overflow-hidden border border-[#5D6A37] shadow-2xl bg-[#1D230E] z-0">
@@ -419,7 +245,6 @@ export default function CampusMapPage() {
           scrollWheelZoom={true}
           style={{ height: '100%', width: '100%' }}
         >
-          {/* Map Tile Layer: OpenStreetMap with maxZoom 22 (scaled beyond zoom 19) */}
           <TileLayer
             maxZoom={22}
             maxNativeZoom={19}
@@ -438,7 +263,7 @@ export default function CampusMapPage() {
           <MapBoundsController trees={displayedTrees} hasManualTarget={hasManualTarget} />
           <MapFlyToHandler target={flyTarget} />
 
-          {/* User's Current GPS Location Marker with Accuracy Circle */}
+          {/* User's Live GPS Pin & Accuracy Radar */}
           {userLocation && (
             <>
               {userAccuracy && (
@@ -474,7 +299,6 @@ export default function CampusMapPage() {
             </>
           )}
 
-          {/* Tactical Marker Cluster Group */}
           <MarkerClusterGroup
             trees={displayedTrees}
             currentUserId={user?._id || user?.id}
@@ -483,7 +307,6 @@ export default function CampusMapPage() {
           />
         </MapContainer>
 
-        {/* Loading Overlay */}
         {loading && (
           <div className="absolute inset-0 bg-[#1D230E]/70 backdrop-blur-xs flex items-center justify-center z-[1000]">
             <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-[#262C14] border border-[#525E31] text-[#F0F3E8] font-mono text-xs shadow-xl">
@@ -493,32 +316,7 @@ export default function CampusMapPage() {
           </div>
         )}
 
-        {/* HUD Map Overlay Legend */}
-        <div className="absolute bottom-4 left-4 z-[1000] p-3 rounded-xl bg-[#1D230E]/90 border border-[#525E31] backdrop-blur-md text-xs font-mono space-y-1.5 shadow-xl pointer-events-auto">
-          <span className="text-[#A4B566] font-bold block text-[10px] uppercase tracking-wider">
-            Specimen Health Matrix
-          </span>
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#A4B566] shadow-[0_0_6px_#A4B566]" />
-            <span className="text-[#F0F3E8] text-[11px]">Thriving</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#D99B26] shadow-[0_0_6px_#D99B26]" />
-            <span className="text-[#F0F3E8] text-[11px]">Stable / Fair</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#E57373] shadow-[0_0_6px_#E57373]" />
-            <span className="text-[#F0F3E8] text-[11px]">Distressed</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#757575] shadow-[0_0_6px_#757575]" />
-            <span className="text-[#F0F3E8] text-[11px]">Dead / Mortality</span>
-          </div>
-          <div className="pt-1 border-t border-[#525E31]/60 flex items-center gap-1.5 text-[10px] text-[#C2CE9F]">
-            <span className="w-2 h-2 rounded-full border border-white bg-[#8B9B4C]" />
-            <span>White ring = Your plant</span>
-          </div>
-        </div>
+        <MapLegendOverlay />
       </div>
     </div>
   );

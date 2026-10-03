@@ -6,7 +6,7 @@ import { compressImage } from '../../utils/imageCompressor';
  * Camera and gallery photo picker with client-side canvas compression pipeline
  */
 export default function ObservationPhotoPicker({
-  photoFile,
+  photoFile: _photoFile,
   photoPreview,
   onPhotoSelected,
   onRemovePhoto,
