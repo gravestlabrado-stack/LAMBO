@@ -162,5 +162,5 @@ LAMBO v2 transforms the platform from an individual cadet logging tool into an i
 
 ### Tasks:
 - [x] Tag git history with `v1.0.0` baseline (`git tag -a v1.0.0 10584ec -m "Release v1.0.0: Baseline botanical monitoring platform"`).
-- [ ] Commit v2 changes and push to GitHub `dev` and `main` branches.
-- [ ] Tag `v2.0.0` and publish official GitHub Release with formatted release notes from `docs/RELEASES.md`.
+- [x] Commit v2 changes and push to GitHub `dev` and `main` branches.
+- [x] Tag `v2.0.0` and publish official GitHub Release with formatted release notes from `docs/RELEASES.md`.
