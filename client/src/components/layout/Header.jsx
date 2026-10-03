@@ -395,9 +395,10 @@ export default function Header({ title = 'Dashboard', subtitle = 'LAMBO V1.0' })
                     type="button"
                     onClick={handleManualSync}
                     title="Tap to retry connection & sync records"
-                    className="ml-0.5 px-1.5 py-0.5 rounded bg-red-950/80 hover:bg-red-900 border border-red-700/60 text-white font-mono text-[9px] font-bold uppercase tracking-wider active:scale-95 transition-all"
+                    aria-label="Retry connection and sync records"
+                    className="ml-0.5 p-1 rounded-full bg-red-950/80 hover:bg-red-900/90 border border-red-700/60 text-red-200 hover:text-white flex items-center justify-center active:scale-90 transition-all"
                   >
-                    Retry
+                    <Icon name="sync" className="text-[11px] text-red-200 hover:text-white" />
                   </button>
                 </div>
               ) : (
