@@ -3,7 +3,8 @@
 > **Document Type:** Strategic Proposal & Design Specification for Stakeholder Review  
 > **Prepared For:** NSTP Instructors, Forestry Coordinators, and Project Reviewers  
 > **Target Release:** LAMBO v3.0 (Gamification, Field Integrity & Architecture Release)  
-> **Status:** 🟡 **Open for Review & Feedback**
+> **Status:** 🟡 **Open for Review & Feedback**  
+> **Formats Available:** 📄 [**Open Formatted PDF (Ready to Share)**](./NSTP_STAKEHOLDER_REVIEW_PROPOSAL.pdf) • 🌐 [**Interactive HTML (Copy to Google Docs)**](./NSTP_STAKEHOLDER_REVIEW_PROPOSAL.html)
 
 ---
 
@@ -102,6 +103,8 @@ sequenceDiagram
     Cadet->>App: Plants new seedling & earns "🌱 Phoenix Wildling" Badge!
 ```
 
+![Figure 1.1: Automated Sequence of the Honest Mortality & Autopsy Protocol](./autopsy_sequence_diagram.png)
+
 #### Why This Eliminates Plant Swapping:
 - **Zero Loss of XP or Standing:** An honest death report grants full XP credit and a prestigious "Scientific Integrity" badge.
 - **Zero Financial Cost:** The student does not need to spend money buying a replacement plant at a market.
@@ -167,6 +170,8 @@ graph TD
         P3["3. Rotating Weekly Consistency Board<br/>(Resets every 7 days)"]
     end
 ```
+
+![Figure 1.2: Three-Pillar Non-Toxic Recognition Architecture](./leaderboard_structure_diagram.png)
 
 ### Pillar 1: Degree Program / Course Cohort Hubs
 - Students and instructors can filter the dashboard by degree program (e.g. **DVM** - Doctor of Veterinary Medicine, **BSA** - BS Agriculture, **BSF** - BS Forestry).
