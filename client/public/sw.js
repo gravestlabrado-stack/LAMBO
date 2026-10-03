@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lambo-v2-cache';
+const CACHE_NAME = 'lambo-v2.1-cache';
 const PRECACHE_ASSETS = [
   '/',
   '/index.html',
@@ -94,7 +94,7 @@ self.addEventListener('fetch', (event) => {
       }
       return fetch(request)
         .then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200) {
+          if (networkResponse && (networkResponse.status === 200 || networkResponse.type === 'opaque')) {
             const copy = networkResponse.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
           }

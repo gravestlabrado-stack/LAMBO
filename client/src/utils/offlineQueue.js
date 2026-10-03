@@ -1,32 +1,9 @@
-const DB_NAME = 'lambo_offline_db';
-const DB_VERSION = 1;
-const STORE_NAME = 'growth_logs_queue';
+import { openDB, applyOptimisticLog, STORES } from './offlineStorage';
+
+const STORE_NAME = STORES.LOGS_QUEUE;
 
 /**
- * Open or create the IndexedDB database
- */
-function openDB() {
-  return new Promise((resolve, reject) => {
-    if (typeof window === 'undefined' || !('indexedDB' in window)) {
-      return reject(new Error('IndexedDB not supported in this browser.'));
-    }
-
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-    request.onupgradeneeded = (event) => {
-      const db = event.target.result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME, { keyPath: 'id' });
-      }
-    };
-
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-}
-
-/**
- * Store a new growth log observation into IndexedDB offline queue
+ * Store a new growth log observation into IndexedDB offline queue and apply optimistic local updates
  */
 export async function enqueueOfflineLog(logData) {
   const db = await openDB();
@@ -63,7 +40,14 @@ export async function enqueueOfflineLog(logData) {
     const store = tx.objectStore(STORE_NAME);
     const req = store.put(record);
 
-    req.onsuccess = () => {
+    req.onsuccess = async () => {
+      // Optimistically update the cached specimen and timeline in IndexedDB
+      try {
+        await applyOptimisticLog(record);
+      } catch (e) {
+        console.warn('[OfflineQueue] Non-fatal optimistic update warning:', e);
+      }
+
       // Notify application listeners that an offline record was enqueued
       window.dispatchEvent(new CustomEvent('lambo_offline_changed', { detail: { action: 'enqueue', record } }));
       resolve(record);

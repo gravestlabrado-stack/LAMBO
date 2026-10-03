@@ -11,6 +11,13 @@ import GrowthEntryForm from '../components/growth/GrowthEntryForm';
 import { formatDate } from '../utils/formatters';
 import { canUserLogTree } from '../utils/permissions';
 
+import {
+  getStoredTrees,
+  getStoredTreeLogs,
+  saveStoredTrees,
+  saveStoredTreeLogs,
+} from '../utils/offlineStorage';
+
 export default function GrowthLogsPage() {
   const { id: paramTreeId } = useParams();
   const [searchParams] = useSearchParams();
@@ -23,6 +30,7 @@ export default function GrowthLogsPage() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isOffline, setIsOffline] = useState(typeof navigator !== 'undefined' && !navigator.onLine);
 
   // Modals
   const [showLogModal, setShowLogModal] = useState(false);
@@ -30,12 +38,25 @@ export default function GrowthLogsPage() {
   const [exporting, setExporting] = useState(false);
   const [exportNotice, setExportNotice] = useState(null);
 
-  // 1. Fetch available trees
+  // 1. Fetch available trees with offline fallback
   const loadTrees = useCallback(async () => {
+    // Immediate offline cache check
+    const cachedTrees = await getStoredTrees();
+    if (cachedTrees && cachedTrees.length > 0) {
+      setTrees(cachedTrees);
+      if (!selectedTreeId) {
+        setSelectedTreeId(cachedTrees[0].treeId);
+      }
+    }
+
     try {
       const res = await treeService.getTrees({ all: 'true', limit: 100 });
       const treeList = res.data || [];
-      setTrees(treeList);
+      if (treeList.length > 0) {
+        setTrees(treeList);
+        saveStoredTrees(treeList);
+        setIsOffline(false);
+      }
 
       // Determine active tree
       if (!selectedTreeId && treeList.length > 0) {
@@ -49,25 +70,72 @@ export default function GrowthLogsPage() {
         if (found) setSelectedTreeId(found.treeId);
       }
     } catch (err) {
-      console.error('[GrowthLogsPage] Error loading trees:', err);
+      console.warn('[GrowthLogsPage] Network unavailable, relying on IndexedDB:', err.message);
+      setIsOffline(true);
+      if (!cachedTrees || cachedTrees.length === 0) {
+        const fallback = await getStoredTrees();
+        if (fallback && fallback.length > 0) {
+          setTrees(fallback);
+          if (!selectedTreeId) setSelectedTreeId(fallback[0].treeId);
+        }
+      }
     }
   }, [paramTreeId, selectedTreeId]);
 
-  // 2. Fetch logs for current selected tree or all logs
+  // 2. Fetch logs for current selected tree or all logs with offline fallback
   const loadLogs = useCallback(async (treeIdTarget) => {
     setLoading(true);
     setError(null);
+
+    // Immediate check in IndexedDB
+    if (treeIdTarget) {
+      const cached = await getStoredTreeLogs(treeIdTarget);
+      if (cached && cached.length > 0) {
+        setLogs(cached);
+        setLoading(false);
+      }
+    }
+
     try {
       const params = treeIdTarget ? { tree: treeIdTarget, limit: 100 } : { limit: 100 };
       const res = await growthLogService.getLogs(params);
-      setLogs(res.data || []);
+      const fetchedLogs = res.data || [];
+      setLogs(fetchedLogs);
+      setIsOffline(false);
+      if (treeIdTarget && fetchedLogs.length > 0) {
+        saveStoredTreeLogs(treeIdTarget, fetchedLogs);
+      }
     } catch (err) {
-      console.error('[GrowthLogsPage] Error loading logs:', err);
-      setError('Unable to retrieve growth telemetry logs.');
+      console.warn('[GrowthLogsPage] Error loading live logs, checking IndexedDB:', err.message);
+      setIsOffline(true);
+      if (treeIdTarget) {
+        const cached = await getStoredTreeLogs(treeIdTarget);
+        if (cached && cached.length > 0) {
+          setLogs(cached);
+          setError(null);
+          return;
+        }
+      }
+      setError('Unable to retrieve growth telemetry logs. Connect to campus network to sync.');
     } finally {
       setLoading(false);
     }
   }, []);
+
+  // Listen for optimistic offline log updates
+  useEffect(() => {
+    const handleTreeUpdated = async (e) => {
+      const { treeId } = e.detail || {};
+      if (!selectedTreeId || treeId === selectedTreeId) {
+        const updatedLogs = await getStoredTreeLogs(selectedTreeId || treeId);
+        if (updatedLogs && updatedLogs.length > 0) {
+          setLogs(updatedLogs);
+        }
+      }
+    };
+    window.addEventListener('lambo_tree_updated', handleTreeUpdated);
+    return () => window.removeEventListener('lambo_tree_updated', handleTreeUpdated);
+  }, [selectedTreeId]);
 
   useEffect(() => {
     loadTrees();
@@ -283,6 +351,26 @@ export default function GrowthLogsPage() {
         <div className="flex items-center gap-2.5 py-2.5 px-4 rounded-xl bg-[#4A1E1E] border border-[#8C3A3A] text-xs font-mono text-[#F5C6C6] shadow-md animate-in fade-in slide-in-from-top-1">
           <Icon name="error" className="text-[18px] text-[#FF8585]" />
           <span>Failed to compile spreadsheet. Please try again.</span>
+        </div>
+      )}
+
+      {/* Offline Mode Banner */}
+      {isOffline && (
+        <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-amber-950/40 border border-amber-600/40 text-amber-200 text-xs font-mono">
+          <div className="flex items-center gap-2">
+            <Icon name="cloud_off" className="text-base text-amber-400" />
+            <span>Offline Mode — viewing cached growth logs</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              loadTrees();
+              if (selectedTreeId) loadLogs(selectedTreeId);
+            }}
+            className="px-2.5 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-[10px] font-bold uppercase tracking-wider"
+          >
+            Retry Sync
+          </button>
         </div>
       )}
 

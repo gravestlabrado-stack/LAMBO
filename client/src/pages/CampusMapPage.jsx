@@ -8,6 +8,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useTrees } from '../context/TreeContext';
 import { CAMPUS_COORDINATES } from '../utils/constants';
 import { getCurrentCoordinates } from '../utils/geolocation';
+import { getStoredTrees } from '../utils/offlineStorage';
 import MarkerClusterGroup from '../components/map/MarkerClusterGroup';
 
 // Custom Tactical Leaflet Pin Icons with health status colors & owner indicator
@@ -153,13 +154,18 @@ export default function CampusMapPage() {
     } catch (err) {
       console.warn('[CampusMap] Offline or error loading campus trees, falling back to cache:', err.message);
       try {
-        const cached = localStorage.getItem('lambo_cached_all_trees') || localStorage.getItem('lambo_cached_campus_catalog');
-        if (cached) {
-          setAllTrees(JSON.parse(cached));
-        } else if (campusCatalog && campusCatalog.length > 0) {
-          setAllTrees(campusCatalog);
-        } else if (userTrees && userTrees.length > 0) {
-          setAllTrees(userTrees);
+        const stored = await getStoredTrees();
+        if (stored && stored.length > 0) {
+          setAllTrees(stored);
+        } else {
+          const cached = localStorage.getItem('lambo_cached_all_trees') || localStorage.getItem('lambo_cached_campus_catalog');
+          if (cached) {
+            setAllTrees(JSON.parse(cached));
+          } else if (campusCatalog && campusCatalog.length > 0) {
+            setAllTrees(campusCatalog);
+          } else if (userTrees && userTrees.length > 0) {
+            setAllTrees(userTrees);
+          }
         }
       } catch (e) {}
     } finally {

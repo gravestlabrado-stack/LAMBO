@@ -7,6 +7,7 @@ import treeService from '../services/treeService';
 import { useAuth } from '../hooks/useAuth';
 import { useTrees } from '../context/TreeContext';
 import { canUserLogTree } from '../utils/permissions';
+import { getStoredTreeById } from '../utils/offlineStorage';
 import Icon from '../components/common/Icon';
 
 /**
@@ -75,7 +76,8 @@ export default function ScanPage() {
       if (res.data) {
         setDetectedSpecimen(res.data);
       } else {
-        const localTree = getTreeById(cleanId);
+        const stored = await getStoredTreeById(cleanId);
+        const localTree = stored || getTreeById(cleanId);
         if (localTree) {
           setDetectedSpecimen(localTree);
         } else {
@@ -84,7 +86,8 @@ export default function ScanPage() {
       }
     } catch (err) {
       console.warn('[ScanPage] Specimen lookup error, checking local cache:', err.message);
-      const localTree = getTreeById(cleanId);
+      const stored = await getStoredTreeById(cleanId);
+      const localTree = stored || getTreeById(cleanId);
       if (localTree) {
         setDetectedSpecimen(localTree);
       } else {

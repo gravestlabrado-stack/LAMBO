@@ -11,6 +11,12 @@ import { formatDate, formatRelativeTime } from '../utils/formatters';
 import { useAuth } from '../hooks/useAuth';
 import { useTrees } from '../context/TreeContext';
 import { canUserLogTree } from '../utils/permissions';
+import {
+  getStoredTreeById,
+  saveStoredTrees,
+  getStoredTreeLogs,
+  saveStoredTreeLogs,
+} from '../utils/offlineStorage';
 
 export default function TreeProfilePage() {
   const { id } = useParams();
@@ -21,6 +27,7 @@ export default function TreeProfilePage() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isOffline, setIsOffline] = useState(false);
 
   // Modals
   const [showLogModal, setShowLogModal] = useState(false);
@@ -38,23 +45,81 @@ export default function TreeProfilePage() {
   const [isDownloadingQR, setIsDownloadingQR] = useState(false);
   const [qrDownloadNotice, setQrDownloadNotice] = useState(null);
 
+  // Immediately read from IndexedDB on startup
+  useEffect(() => {
+    if (id) {
+      getStoredTreeById(id)
+        .then((cachedTree) => {
+          if (cachedTree) {
+            setTree(cachedTree);
+            setLoading(false);
+          }
+        })
+        .catch(() => {});
+
+      getStoredTreeLogs(id)
+        .then((cachedLogs) => {
+          if (cachedLogs && cachedLogs.length > 0) {
+            setLogs(cachedLogs);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [id]);
+
+  // Listen for optimistic offline updates
+  useEffect(() => {
+    const handleTreeUpdated = async (e) => {
+      const { treeId } = e.detail || {};
+      if (treeId === id || tree?._id === treeId || tree?.treeId === treeId) {
+        const updated = await getStoredTreeById(id);
+        if (updated) setTree(updated);
+        const updatedLogs = await getStoredTreeLogs(id);
+        if (updatedLogs) setLogs(updatedLogs);
+      }
+    };
+    window.addEventListener('lambo_tree_updated', handleTreeUpdated);
+    return () => window.removeEventListener('lambo_tree_updated', handleTreeUpdated);
+  }, [id, tree]);
+
   const fetchTreeData = async () => {
-    setLoading(true);
     setError(null);
     try {
       const res = await treeService.getTreeById(id);
       const treeData = res.data;
       setTree(treeData);
+      setIsOffline(false);
+      saveStoredTrees([treeData]);
 
       // Fetch logs for this tree
-      const logsRes = await growthLogService.getLogs({
-        tree: treeData._id || treeData.treeId,
-        limit: 100,
-      });
-      setLogs(logsRes.data || []);
+      try {
+        const logsRes = await growthLogService.getLogs({
+          tree: treeData._id || treeData.treeId,
+          limit: 100,
+        });
+        const fetchedLogs = logsRes.data || [];
+        setLogs(fetchedLogs);
+        saveStoredTreeLogs(treeData._id, fetchedLogs);
+      } catch (logErr) {
+        console.warn('[TreeProfilePage] Failed to load live logs, checking cache:', logErr.message);
+        const cachedLogs = await getStoredTreeLogs(treeData._id || id);
+        if (cachedLogs && cachedLogs.length > 0) setLogs(cachedLogs);
+      }
     } catch (err) {
-      console.error('[TreeProfilePage] Failed to load tree:', err);
-      setError('Specimen record not found or server is unreachable.');
+      console.warn('[TreeProfilePage] Network fetch failed, reading from IndexedDB:', err.message);
+      try {
+        const cached = await getStoredTreeById(id);
+        if (cached) {
+          setTree(cached);
+          setIsOffline(true);
+          const cachedLogs = await getStoredTreeLogs(cached._id || id);
+          if (cachedLogs && cachedLogs.length > 0) setLogs(cachedLogs);
+        } else {
+          setError('Specimen record not found or server is unreachable.');
+        }
+      } catch {
+        setError('Specimen record not found or server is unreachable.');
+      }
     } finally {
       setLoading(false);
     }
@@ -273,6 +338,22 @@ export default function TreeProfilePage() {
           </Link>
         </div>
       </div>
+
+      {/* Offline Mode Banner */}
+      {isOffline && (
+        <div className="rounded-xl bg-[#2D2712] border border-[#F5C26B]/50 px-4 py-2.5 flex items-center justify-between text-xs text-[#F5C26B] font-mono animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <Icon name="cloud_off" className="w-4 h-4 text-[#F5C26B]" />
+            <span>Offline Mode — viewing cached specimen telemetry</span>
+          </div>
+          <button
+            onClick={fetchTreeData}
+            className="px-2 py-0.5 rounded bg-[#F5C26B]/20 hover:bg-[#F5C26B]/30 font-bold uppercase tracking-wider text-[10px] cursor-pointer"
+          >
+            Retry Sync
+          </button>
+        </div>
+      )}
 
       {/* Hero Photo Banner */}
       <div className="relative w-full h-64 sm:h-72 rounded-2xl overflow-hidden shadow-lg border border-[#4F5A2D] bg-[#1D230E]">
