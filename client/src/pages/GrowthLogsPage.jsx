@@ -16,6 +16,7 @@ import {
   getStoredTreeLogs,
   saveStoredTrees,
   saveStoredTreeLogs,
+  notifyConnectionStatus,
 } from '../utils/offlineStorage';
 
 export default function GrowthLogsPage() {
@@ -56,6 +57,7 @@ export default function GrowthLogsPage() {
         setTrees(treeList);
         saveStoredTrees(treeList);
         setIsOffline(false);
+        notifyConnectionStatus('online');
       }
 
       // Determine active tree
@@ -72,6 +74,7 @@ export default function GrowthLogsPage() {
     } catch (err) {
       console.warn('[GrowthLogsPage] Network unavailable, relying on IndexedDB:', err.message);
       setIsOffline(true);
+      notifyConnectionStatus('offline');
       if (!cachedTrees || cachedTrees.length === 0) {
         const fallback = await getStoredTrees();
         if (fallback && fallback.length > 0) {
@@ -82,6 +85,26 @@ export default function GrowthLogsPage() {
     }
   }, [paramTreeId, selectedTreeId]);
 
+  // Helper to strictly prevent duplicate entries from appearing in the ledger
+  const deduplicateLogs = (rawLogs) => {
+    if (!Array.isArray(rawLogs)) return [];
+    const seenIds = new Set();
+    const seenSignatures = new Set();
+    return rawLogs.filter((l) => {
+      if (!l) return false;
+      const id = String(l._id || l.id || '');
+      if (id && seenIds.has(id)) return false;
+      if (id) seenIds.add(id);
+
+      const timeKey = l.loggedAt ? Math.floor(new Date(l.loggedAt).getTime() / 30000) : '';
+      const sig = `${l.tree?._id || l.tree || ''}_${l.height}_${l.notes || ''}_${timeKey}`;
+      if (seenSignatures.has(sig)) return false;
+      seenSignatures.add(sig);
+
+      return true;
+    });
+  };
+
   // 2. Fetch logs for current selected tree or all logs with offline fallback
   const loadLogs = useCallback(async (treeIdTarget) => {
     setLoading(true);
@@ -91,7 +114,7 @@ export default function GrowthLogsPage() {
     if (treeIdTarget) {
       const cached = await getStoredTreeLogs(treeIdTarget);
       if (cached && cached.length > 0) {
-        setLogs(cached);
+        setLogs(deduplicateLogs(cached));
         setLoading(false);
       }
     }
@@ -99,19 +122,21 @@ export default function GrowthLogsPage() {
     try {
       const params = treeIdTarget ? { tree: treeIdTarget, limit: 100 } : { limit: 100 };
       const res = await growthLogService.getLogs(params);
-      const fetchedLogs = res.data || [];
+      const fetchedLogs = deduplicateLogs(res.data || []);
       setLogs(fetchedLogs);
       setIsOffline(false);
+      notifyConnectionStatus('online');
       if (treeIdTarget && fetchedLogs.length > 0) {
         saveStoredTreeLogs(treeIdTarget, fetchedLogs);
       }
     } catch (err) {
       console.warn('[GrowthLogsPage] Error loading live logs, checking IndexedDB:', err.message);
       setIsOffline(true);
+      notifyConnectionStatus('offline');
       if (treeIdTarget) {
         const cached = await getStoredTreeLogs(treeIdTarget);
         if (cached && cached.length > 0) {
-          setLogs(cached);
+          setLogs(deduplicateLogs(cached));
           setError(null);
           return;
         }
@@ -129,7 +154,7 @@ export default function GrowthLogsPage() {
       if (!selectedTreeId || treeId === selectedTreeId) {
         const updatedLogs = await getStoredTreeLogs(selectedTreeId || treeId);
         if (updatedLogs && updatedLogs.length > 0) {
-          setLogs(updatedLogs);
+          setLogs(deduplicateLogs(updatedLogs));
         }
       }
     };
@@ -351,26 +376,6 @@ export default function GrowthLogsPage() {
         <div className="flex items-center gap-2.5 py-2.5 px-4 rounded-xl bg-[#4A1E1E] border border-[#8C3A3A] text-xs font-mono text-[#F5C6C6] shadow-md animate-in fade-in slide-in-from-top-1">
           <Icon name="error" className="text-[18px] text-[#FF8585]" />
           <span>Failed to compile spreadsheet. Please try again.</span>
-        </div>
-      )}
-
-      {/* Offline Mode Banner */}
-      {isOffline && (
-        <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-amber-950/40 border border-amber-600/40 text-amber-200 text-xs font-mono">
-          <div className="flex items-center gap-2">
-            <Icon name="cloud_off" className="text-base text-amber-400" />
-            <span>Offline Mode — viewing cached growth logs</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              loadTrees();
-              if (selectedTreeId) loadLogs(selectedTreeId);
-            }}
-            className="px-2.5 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-[10px] font-bold uppercase tracking-wider"
-          >
-            Retry Sync
-          </button>
         </div>
       )}
 

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lambo-v2.1-cache';
+const CACHE_NAME = 'lambo-v2.2-cache';
 const PRECACHE_ASSETS = [
   '/',
   '/index.html',

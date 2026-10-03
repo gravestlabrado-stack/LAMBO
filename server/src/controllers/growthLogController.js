@@ -179,6 +179,33 @@ const createGrowthLog = async (req, res, next) => {
       });
     }
 
+    // Deduplication guard: prevent identical concurrent or double-clicked submissions
+    const parsedLoggedAt = loggedAt ? new Date(loggedAt) : new Date();
+    const duplicateQuery = {
+      tree: targetTree._id,
+      loggedBy: req.user._id,
+      $or: [
+        ...(loggedAt ? [{ loggedAt: parsedLoggedAt }] : []),
+        {
+          createdAt: { $gte: new Date(Date.now() - 15000) },
+          height: parseFloat(height),
+          notes: notes ? notes.trim() : '',
+        },
+      ],
+    };
+
+    const existingLog = await GrowthLog.findOne(duplicateQuery);
+    if (existingLog) {
+      const populatedExisting = await GrowthLog.findById(existingLog._id)
+        .populate('tree', 'treeId species nickname healthStatus currentStage')
+        .populate('loggedBy', 'name rollNumber course');
+      return res.status(200).json({
+        success: true,
+        message: 'Growth log entry already recorded',
+        data: populatedExisting,
+      });
+    }
+
     const log = await GrowthLog.create({
       tree: targetTree._id,
       loggedBy: req.user._id,

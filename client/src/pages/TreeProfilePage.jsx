@@ -16,6 +16,7 @@ import {
   saveStoredTrees,
   getStoredTreeLogs,
   saveStoredTreeLogs,
+  notifyConnectionStatus,
 } from '../utils/offlineStorage';
 
 export default function TreeProfilePage() {
@@ -89,6 +90,7 @@ export default function TreeProfilePage() {
       const treeData = res.data;
       setTree(treeData);
       setIsOffline(false);
+      notifyConnectionStatus('online');
       saveStoredTrees([treeData]);
 
       // Fetch logs for this tree
@@ -107,11 +109,12 @@ export default function TreeProfilePage() {
       }
     } catch (err) {
       console.warn('[TreeProfilePage] Network fetch failed, reading from IndexedDB:', err.message);
+      setIsOffline(true);
+      notifyConnectionStatus('offline');
       try {
         const cached = await getStoredTreeById(id);
         if (cached) {
           setTree(cached);
-          setIsOffline(true);
           const cachedLogs = await getStoredTreeLogs(cached._id || id);
           if (cachedLogs && cachedLogs.length > 0) setLogs(cachedLogs);
         } else {
@@ -338,22 +341,6 @@ export default function TreeProfilePage() {
           </Link>
         </div>
       </div>
-
-      {/* Offline Mode Banner */}
-      {isOffline && (
-        <div className="rounded-xl bg-[#2D2712] border border-[#F5C26B]/50 px-4 py-2.5 flex items-center justify-between text-xs text-[#F5C26B] font-mono animate-in fade-in">
-          <div className="flex items-center gap-2">
-            <Icon name="cloud_off" className="w-4 h-4 text-[#F5C26B]" />
-            <span>Offline Mode — viewing cached specimen telemetry</span>
-          </div>
-          <button
-            onClick={fetchTreeData}
-            className="px-2 py-0.5 rounded bg-[#F5C26B]/20 hover:bg-[#F5C26B]/30 font-bold uppercase tracking-wider text-[10px] cursor-pointer"
-          >
-            Retry Sync
-          </button>
-        </div>
-      )}
 
       {/* Hero Photo Banner */}
       <div className="relative w-full h-64 sm:h-72 rounded-2xl overflow-hidden shadow-lg border border-[#4F5A2D] bg-[#1D230E]">

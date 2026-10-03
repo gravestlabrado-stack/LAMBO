@@ -11,8 +11,17 @@ const getCadetRoster = async (req, res, next) => {
   try {
     const students = await User.find({})
       .select('-password')
-      .sort({ role: -1, name: 1 })
       .lean();
+
+    // Prioritize officers at the top of the roster, followed by cadets
+    students.sort((a, b) => {
+      const aIsOfficer = a.role === 'officer' ? 1 : 0;
+      const bIsOfficer = b.role === 'officer' ? 1 : 0;
+      if (aIsOfficer !== bIsOfficer) {
+        return bIsOfficer - aIsOfficer;
+      }
+      return (a.name || '').localeCompare(b.name || '');
+    });
 
     const now = new Date();
 

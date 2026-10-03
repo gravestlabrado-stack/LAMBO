@@ -16,6 +16,24 @@ export const STORES = {
 };
 
 /**
+ * Dispatch storage activity event for header indicator animation
+ */
+export function notifyStorageActivity(action = 'saving') {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('lambo_storage_activity', { detail: { action } }));
+  }
+}
+
+/**
+ * Dispatch global connectivity status
+ */
+export function notifyConnectionStatus(status = 'online') {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('lambo_connection_status', { detail: { status } }));
+  }
+}
+
+/**
  * Open or upgrade the IndexedDB database
  */
 export function openDB() {
@@ -72,6 +90,7 @@ export function openDB() {
  */
 export async function saveStoredTrees(treeList) {
   if (!Array.isArray(treeList) || treeList.length === 0) return;
+  notifyStorageActivity('saving');
   try {
     const db = await openDB();
     const tx = db.transaction(STORES.TREES, 'readwrite');
@@ -89,6 +108,7 @@ export async function saveStoredTrees(treeList) {
         try {
           localStorage.setItem('lambo_cached_trees_count', String(treeList.length));
         } catch {}
+        setTimeout(() => notifyStorageActivity('saved'), 700);
         resolve(true);
       };
       tx.onerror = () => reject(tx.error);
@@ -172,10 +192,25 @@ export async function getStoredTreeById(idOrTreeId) {
  */
 export async function saveStoredTreeLogs(treeId, logsList) {
   if (!treeId || !Array.isArray(logsList)) return;
+  const cleanId = String(treeId).trim();
+  notifyStorageActivity('saving');
   try {
     const db = await openDB();
     const tx = db.transaction(STORES.TREE_LOGS, 'readwrite');
     const store = tx.objectStore(STORES.TREE_LOGS);
+
+    // Prune stale or duplicate logs for this tree that are not in the new incoming list
+    const incomingIds = new Set(logsList.map((l) => String(l._id || l.id)).filter(Boolean));
+    const req = store.getAll();
+    req.onsuccess = () => {
+      const existing = req.result || [];
+      for (const item of existing) {
+        const itemTree = typeof item.tree === 'object' ? item.tree?._id || item.tree?.treeId : item.tree;
+        if ((String(itemTree) === cleanId || String(item.treeId) === cleanId) && !incomingIds.has(String(item._id))) {
+          store.delete(item._id);
+        }
+      }
+    };
 
     for (const log of logsList) {
       if (log && log._id) {
@@ -184,7 +219,10 @@ export async function saveStoredTreeLogs(treeId, logsList) {
     }
 
     return new Promise((resolve, reject) => {
-      tx.oncomplete = () => resolve(true);
+      tx.oncomplete = () => {
+        setTimeout(() => notifyStorageActivity('saved'), 700);
+        resolve(true);
+      };
       tx.onerror = () => reject(tx.error);
     });
   } catch (err) {
@@ -208,9 +246,25 @@ export async function getStoredTreeLogs(treeId) {
 
       req.onsuccess = () => {
         const allLogs = req.result || [];
+        const seenIds = new Set();
+        const seenSignatures = new Set();
+
         const filtered = allLogs.filter((l) => {
+          if (!l) return false;
           const lTree = typeof l.tree === 'object' ? l.tree?._id || l.tree?.treeId : l.tree;
-          return String(lTree) === cleanId || String(l.treeId) === cleanId;
+          const matches = String(lTree) === cleanId || String(l.treeId) === cleanId;
+          if (!matches) return false;
+
+          const id = String(l._id || l.id || '');
+          if (id && seenIds.has(id)) return false;
+          if (id) seenIds.add(id);
+
+          const timeKey = l.loggedAt ? Math.floor(new Date(l.loggedAt).getTime() / 30000) : '';
+          const sig = `${l.height}_${l.notes || ''}_${timeKey}`;
+          if (seenSignatures.has(sig)) return false;
+          seenSignatures.add(sig);
+
+          return true;
         });
         filtered.sort((a, b) => new Date(b.loggedAt) - new Date(a.loggedAt));
         resolve(filtered);
@@ -232,13 +286,17 @@ export async function getStoredTreeLogs(treeId) {
  */
 export async function saveOfficerRoster(roster) {
   if (!Array.isArray(roster)) return;
+  notifyStorageActivity('saving');
   try {
     const db = await openDB();
     const tx = db.transaction(STORES.OFFICER_DATA, 'readwrite');
     const store = tx.objectStore(STORES.OFFICER_DATA);
     store.put({ key: 'roster', data: roster, cachedAt: new Date().toISOString() });
     return new Promise((resolve) => {
-      tx.oncomplete = () => resolve(true);
+      tx.oncomplete = () => {
+        setTimeout(() => notifyStorageActivity('saved'), 700);
+        resolve(true);
+      };
     });
   } catch (err) {
     console.warn('[OfflineStorage] Failed to cache officer roster:', err);
@@ -345,6 +403,7 @@ export async function getStoredCadetDetails(cadetId) {
  */
 export async function applyOptimisticLog(logData) {
   if (!logData) return;
+  notifyStorageActivity('saving');
   const targetId = logData.tree || logData.treeId;
 
   try {
@@ -393,6 +452,7 @@ export async function applyOptimisticLog(logData) {
 
     await new Promise((resolve) => {
       tx.oncomplete = () => {
+        setTimeout(() => notifyStorageActivity('saved'), 700);
         window.dispatchEvent(
           new CustomEvent('lambo_tree_updated', {
             detail: { treeId: targetId, log: optimisticLog, tree },

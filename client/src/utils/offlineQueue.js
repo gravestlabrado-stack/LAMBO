@@ -99,18 +99,26 @@ export async function removeOfflineLog(id) {
   }
 }
 
+let isSyncInProgress = false;
+
 /**
  * Synchronize all queued offline growth entries with the backend server
  */
 export async function syncOfflineQueue(growthLogService) {
+  if (isSyncInProgress) {
+    const pending = (await getOfflineLogs()).length;
+    return { synced: 0, failed: 0, pending };
+  }
   if (typeof navigator !== 'undefined' && !navigator.onLine) {
     return { synced: 0, failed: 0, pending: (await getOfflineLogs()).length };
   }
 
-  const logs = await getOfflineLogs();
-  if (!logs || logs.length === 0) {
-    return { synced: 0, failed: 0, pending: 0 };
-  }
+  isSyncInProgress = true;
+  try {
+    const logs = await getOfflineLogs();
+    if (!logs || logs.length === 0) {
+      return { synced: 0, failed: 0, pending: 0 };
+    }
 
   let synced = 0;
   let failed = 0;
@@ -159,11 +167,14 @@ export async function syncOfflineQueue(growthLogService) {
     }
   }
 
-  window.dispatchEvent(
-    new CustomEvent('lambo_offline_synced', {
-      detail: { synced, failed, remaining: logs.length - synced },
-    })
-  );
+      window.dispatchEvent(
+        new CustomEvent('lambo_offline_synced', {
+          detail: { synced, failed, remaining: logs.length - synced },
+        })
+      );
 
-  return { synced, failed, remaining: logs.length - synced };
-}
+      return { synced, failed, remaining: logs.length - synced };
+    } finally {
+      isSyncInProgress = false;
+    }
+  }

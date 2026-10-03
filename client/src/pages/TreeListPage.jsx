@@ -5,7 +5,7 @@ import treeService from '../services/treeService';
 import TreeCard from '../components/tree/TreeCard';
 import { GROWTH_STAGES, HEALTH_STATUSES } from '../utils/constants';
 import Icon from '../components/common/Icon';
-import { getStoredTrees, saveStoredTrees } from '../utils/offlineStorage';
+import { getStoredTrees, saveStoredTrees, notifyConnectionStatus } from '../utils/offlineStorage';
 
 export default function TreeListPage() {
   const { user } = useAuth();
@@ -38,14 +38,16 @@ export default function TreeListPage() {
       const treeList = res.data || [];
       setTrees(treeList);
       setIsOffline(false);
+      notifyConnectionStatus('online');
       saveStoredTrees(treeList);
     } catch (err) {
       console.warn('[TreeListPage] Network error, reading from IndexedDB:', err);
+      setIsOffline(true);
+      notifyConnectionStatus('offline');
       try {
         const cached = await getStoredTrees();
         if (cached && cached.length > 0) {
           setTrees(cached);
-          setIsOffline(true);
         } else {
           setError('Unable to load forestry specimens. Please check your network connection.');
         }
@@ -263,21 +265,6 @@ export default function TreeListPage() {
         </div>
       </div>
 
-      {/* Offline Cached Mode Notice */}
-      {isOffline && trees.length > 0 && (
-        <div className="rounded-xl bg-[#2D2712] border border-[#F5C26B]/50 px-4 py-2.5 flex items-center justify-between text-xs text-[#F5C26B] font-mono animate-in fade-in">
-          <div className="flex items-center gap-2">
-            <Icon name="cloud_off" className="w-4 h-4 text-[#F5C26B]" />
-            <span>Offline Mode — viewing cached campus directory ({filteredTrees.length} specimens)</span>
-          </div>
-          <button
-            onClick={fetchTrees}
-            className="px-2 py-0.5 rounded bg-[#F5C26B]/20 hover:bg-[#F5C26B]/30 font-bold uppercase tracking-wider text-[10px] cursor-pointer"
-          >
-            Check Sync
-          </button>
-        </div>
-      )}
 
       {/* Error Banner if any */}
       {error && (

@@ -13,6 +13,7 @@ import {
   saveOfficerStats,
   getStoredCadetDetails,
   saveCadetDetails,
+  notifyConnectionStatus,
 } from '../utils/offlineStorage';
 
 export default function OfficerDashboardPage() {
@@ -76,10 +77,13 @@ export default function OfficerDashboardPage() {
         setRoster(rosterData);
         setStats(statsData);
         setIsOffline(false);
+        notifyConnectionStatus('online');
         saveOfficerRoster(rosterData);
         saveOfficerStats(statsData);
       } catch (err) {
         console.warn('[OfficerDashboard] Network error, reading from IndexedDB:', err);
+        setIsOffline(true);
+        notifyConnectionStatus('offline');
         try {
           const [cachedRoster, cachedStats] = await Promise.all([
             getStoredOfficerRoster(),
@@ -88,7 +92,6 @@ export default function OfficerDashboardPage() {
           if (cachedRoster && cachedRoster.length > 0) {
             setRoster(cachedRoster);
             setStats(cachedStats);
-            setIsOffline(true);
             setError('');
           } else {
             setError(
@@ -165,7 +168,7 @@ export default function OfficerDashboardPage() {
 
   // Filtered Roster
   const filteredRoster = useMemo(() => {
-    return roster.filter((cadet) => {
+    const list = roster.filter((cadet) => {
       // 1. Role filter (all / cadet / officer)
       if (roleFilter === 'cadet' && cadet.role === 'officer') return false;
       if (roleFilter === 'officer' && cadet.role !== 'officer') return false;
@@ -184,6 +187,16 @@ export default function OfficerDashboardPage() {
         cadet.complianceStatus === complianceFilter;
 
       return matchesSearch && matchesFilter;
+    });
+
+    // Pinned: Officers appear first with badges, then cadets alphabetically
+    return [...list].sort((a, b) => {
+      const aIsOfficer = a.role === 'officer' ? 1 : 0;
+      const bIsOfficer = b.role === 'officer' ? 1 : 0;
+      if (aIsOfficer !== bIsOfficer) {
+        return bIsOfficer - aIsOfficer;
+      }
+      return (a.name || '').localeCompare(b.name || '');
     });
   }, [roster, searchQuery, complianceFilter, roleFilter]);
 
@@ -321,22 +334,6 @@ export default function OfficerDashboardPage() {
         <div className="rounded-xl bg-[#431B1B] border border-[#E57373] text-[#FFCDD2] p-4 text-xs font-mono flex items-center gap-2.5">
           <Icon name="error" className="w-5 h-5" />
           <span>{error}</span>
-        </div>
-      )}
-
-      {/* Offline Mode Banner */}
-      {isOffline && roster.length > 0 && (
-        <div className="rounded-xl bg-[#2D2712] border border-[#F5C26B]/50 px-4 py-2.5 flex items-center justify-between text-xs text-[#F5C26B] font-mono animate-in fade-in">
-          <div className="flex items-center gap-2">
-            <Icon name="cloud_off" className="w-4 h-4 text-[#F5C26B]" />
-            <span>Offline Mode — viewing cached personnel roster ({roster.length} members)</span>
-          </div>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-2 py-0.5 rounded bg-[#F5C26B]/20 hover:bg-[#F5C26B]/30 font-bold uppercase tracking-wider text-[10px] cursor-pointer"
-          >
-            Retry Sync
-          </button>
         </div>
       )}
 
