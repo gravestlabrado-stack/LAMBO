@@ -15,12 +15,16 @@ A student-centered progressive web application for tracking and monitoring wildl
 
 All formal technical architecture, release notes, and operational guides are organized in the [`docs/`](./docs) directory:
 
-- 🚀 [**v2.0 Implementation Blueprint**](./docs/v2_PLAN.md) — Phased engineering plan for the Command & Inspection release.
+- 🗂️ [**Master Documentation Hub**](./docs/README.md) — Comprehensive guide to all releases, plans, and technical manuals.
+- 🎮 [**v3.0 Gamification & Modular Architecture**](./docs/v3-gamification/v3_PLAN.md) — Implementation blueprint for XP, ranks, anti-cheat, and refactoring.
+- 🛡️ [**v3 Anti-Cheat & Plant Integrity Analysis**](./docs/v3-gamification/ANTI_CHEAT_ANALYSIS.md) — Preventing Goodhart's law, plant swapping, and fake telemetry.
+- 🏗️ [**v3 Code Refactoring Plan**](./docs/v3-gamification/CODE_REFACTOR_PLAN.md) — Modularization roadmap for 500+ line components.
+- 🚀 [**v2.0 Implementation Blueprint**](./docs/v2-features/v2_PLAN.md) — Engineering plan for Command & Inspection release.
+- 🎖️ [**NSTP Officer & Instructor Field Manual**](./docs/v2-features/OFFICER_GUIDE.md) — Cadet inspection, photo verification, and Excel grade exporting.
 - 📖 [**Architecture in Plain English**](./docs/PLAIN_ENGLISH_GUIDE.md) — Non-technical guide for evaluators, teachers, and students.
 - 🏷️ [**GitHub Versioning & Tagging Guide**](./docs/GITHUB_WORKFLOW.md) — Step-by-step SemVer, Git tag, and GitHub Release manual.
 - 📋 [**Release Notes & Changelog**](./docs/RELEASES.md) — Detailed changelog for v1.0.0 and v2.0.0.
-- 🏛️ [**System Architecture & Engineering**](./docs/ARCHITECTURE.md) — Data models, RBAC, mandatory photo pipeline, and v3 gamification foundation.
-- 🎖️ [**NSTP Officer & Instructor Field Manual**](./docs/OFFICER_GUIDE.md) — Cadets inspection, photo verification, and Excel grade exporting.
+- 🏛️ [**System Architecture & Engineering**](./docs/ARCHITECTURE.md) — Data models, RBAC, offline sync, and modular expansion.
 
 ---
 
